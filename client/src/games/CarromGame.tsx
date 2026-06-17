@@ -1265,7 +1265,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     });
 
     // Draw Discs
-    discs.forEach(d => {
+    discsRef.current.forEach(d => {
       if (d.isPocketed) return;
 
       // Beveled coin drop shadow
