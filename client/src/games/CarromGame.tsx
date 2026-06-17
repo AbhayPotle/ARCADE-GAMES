@@ -1345,9 +1345,9 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     });
 
     // Draw Slingshot pull-back aiming guide
-    const isMyTurn = turnRef.current === currentUser.id;
-    const isBotAiming = turnRef.current !== currentUser.id && (botPlayStateRef.current === 'aiming' || botPlayStateRef.current === 'aligning');
-    if ((isMyTurn || isBotAiming) && !isStrikerFlickedRef.current) {
+    const showPlayerAiming = turnRef.current === currentUser.id && isAimingRef.current;
+    const showBotAiming = turnRef.current !== currentUser.id && botPlayStateRef.current === 'aiming';
+    if ((showPlayerAiming || showBotAiming) && !isStrikerFlickedRef.current) {
       const striker = discsRef.current.find(d => d.type === 'striker');
       if (striker) {
         const dx = Math.cos(shotAngleRef.current);
