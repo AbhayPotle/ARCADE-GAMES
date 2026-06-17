@@ -1,0 +1,65 @@
+{
+  "users": [
+    {
+      "id": "6642185e-4c83-4acf-aa58-4a878fd7bba4",
+      "username": "Abhay14",
+      "passwordHash": "$2a$10$3yO1L3GJF8z4.oUmx2jHGOAo9shkJbCv8rqM4v7njghWkhwUZ0FCm",
+      "avatar": "avatar_1",
+      "xp": 25,
+      "level": 1,
+      "coins": 110,
+      "ranking": "Bronze IV",
+      "achievements": [],
+      "friendsList": [],
+      "favoriteGames": [],
+      "createdAt": "2026-06-15T08:48:17.913Z"
+    }
+  ],
+  "matches": [],
+  "tournaments": [
+    {
+      "id": "tour-1",
+      "gameId": "chess",
+      "title": "Neon Chess Cyber Cup",
+      "entryFee": 10,
+      "prizePool": 100,
+      "maxPlayers": 16,
+      "registeredPlayers": [],
+      "status": "upcoming",
+      "startDate": "2026-06-16T08:36:36.111Z",
+      "winnerId": null
+    },
+    {
+      "id": "tour-2",
+      "gameId": "carrom",
+      "title": "Retro Carrom Showdown",
+      "entryFee": 5,
+      "prizePool": 50,
+      "maxPlayers": 8,
+      "registeredPlayers": [],
+      "status": "upcoming",
+      "startDate": "2026-06-17T08:36:36.111Z",
+      "winnerId": null
+    },
+    {
+      "id": "tour-3",
+      "gameId": "racing",
+      "title": "Cyberpunk Grand Prix",
+      "entryFee": 15,
+      "prizePool": 150,
+      "maxPlayers": 20,
+      "registeredPlayers": [],
+      "status": "upcoming",
+      "startDate": "2026-06-18T08:36:36.111Z",
+      "winnerId": null
+    }
+  ],
+  "leaderboards": [
+    {
+      "gameId": "chess",
+      "username": "Abhay14",
+      "score": 100,
+      "updatedAt": "2026-06-15T09:55:07.304Z"
+    }
+  ]
+}

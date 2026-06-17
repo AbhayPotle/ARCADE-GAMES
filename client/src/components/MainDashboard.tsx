@@ -1,0 +1,518 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getGamesList, GameRegistryItem as GameCatalogItem } from '../games/registry';
+const GAMES = getGamesList();
+import { api } from '../services/api';
+import { audioSynth } from '../services/audio';
+import { getAvatarEmoji } from './RightSidebar';
+
+interface MainDashboardProps {
+  currentUser: any;
+  onSelectGame: (gameId: string) => void;
+  onLogout: () => void;
+}
+
+export default function MainDashboard({ currentUser, onSelectGame, onLogout }: MainDashboardProps) {
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [leaderboardGame, setLeaderboardGame] = useState<string>('typing_warriors');
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  
+  // Custom states
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [showShopModal, setShowShopModal] = useState(false);
+  const [dailyClaimMsg, setDailyClaimMsg] = useState('');
+  const [upgrades, setUpgrades] = useState<Record<string, number>>({ engine: 1, tires: 1, stability: 1 });
+
+  const categories = ['All', 'Board Games', 'Racing', 'Educational Games', 'Puzzle Games', 'Sports', 'Strategy', 'Multiplayer Battle Games'];
+  const featuredGames = GAMES.slice(0, 4); // First 4 are featured
+
+  useEffect(() => {
+    loadDashboardStats();
+    loadLeaderboard();
+    loadTournaments();
+    
+    // Carousel rotation
+    const carouselInterval = setInterval(() => {
+      setCarouselIndex(prev => (prev + 1) % featuredGames.length);
+    }, 6000);
+
+    return () => clearInterval(carouselInterval);
+  }, [currentUser]);
+
+  useEffect(() => {
+    loadLeaderboard();
+  }, [leaderboardGame]);
+
+  const loadDashboardStats = async () => {
+    try {
+      const res = await api.getUserProfile(currentUser.id);
+      setProfileData(res);
+      if (res?.profile?.upgrades) {
+        setUpgrades(res.profile.upgrades);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const loadLeaderboard = async () => {
+    setLoadingLeaderboard(true);
+    try {
+      const data = await api.getLeaderboard(leaderboardGame);
+      setLeaderboardData(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
+  const loadTournaments = async () => {
+    try {
+      const data = await api.getTournaments();
+      setTournaments(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleJoinTournament = async (tourId: string) => {
+    audioSynth.playClick();
+    try {
+      await api.joinTournament(tourId);
+      alert('Node registered for tournament. Entry fee deducted.');
+      loadTournaments();
+      loadDashboardStats();
+    } catch (err: any) {
+      alert(err.message || 'Failed to join tournament');
+      audioSynth.playError();
+    }
+  };
+
+  const handleClaimDaily = async () => {
+    audioSynth.playClick();
+    try {
+      const res = await api.claimDaily();
+      setDailyClaimMsg(`Claimed ${res.coinsClaimed} Cyber-Coins!`);
+      audioSynth.playAchievement();
+      loadDashboardStats();
+    } catch (err: any) {
+      setDailyClaimMsg(err.message || 'Already claimed today.');
+      audioSynth.playError();
+    }
+  };
+
+  const handlePurchaseUpgrade = async (upgradeType: string, cost: number) => {
+    audioSynth.playClick();
+    try {
+      const res = await api.purchaseUpgrade(upgradeType, cost);
+      alert(`Upgraded ${upgradeType.toUpperCase()} successfully!`);
+      audioSynth.playAchievement();
+      loadDashboardStats();
+    } catch (err: any) {
+      alert(err.message || 'Upgrade failed. Check coins level.');
+      audioSynth.playError();
+    }
+  };
+
+  const filteredGames = selectedCategory === 'All'
+    ? GAMES
+    : GAMES.filter(g => g.category === selectedCategory);
+
+  // Playlists
+  const multiplayerArenaGames = GAMES.filter(g => ['chess', 'carrom', 'velocity_x', 'typing_warriors'].includes(g.id));
+  const racingHubGames = GAMES.filter(g => ['velocity_x'].includes(g.id));
+  const eduHubGames = GAMES.filter(g => g.category === 'Educational Games');
+
+  return (
+    <div className="flex-1 overflow-y-auto p-6 space-y-8 relative z-10 select-none">
+      
+      {/* Top Banner Header with live count telemetry */}
+      <header className="flex flex-col md:flex-row md:items-center md:justify-between p-4 glass-panel rounded-xl border border-neon-cyan/15 space-y-4 md:space-y-0 relative overflow-hidden">
+        <div className="absolute top-0 right-10 text-[9px] font-mono text-cyan-400/40 animate-pulse">
+          // LATENCY: 24ms | NODES_CONNECTED: 1,482
+        </div>
+
+        <div className="flex items-center space-x-3">
+          <span className="text-3xl p-2 bg-cyber-purple/50 border border-neon-cyan/20 rounded-lg">
+            {getAvatarEmoji(profileData?.profile?.avatar || currentUser.avatar)}
+          </span>
+          <div>
+            <h2 className="text-lg font-bold font-orbitron text-white truncate flex items-center space-x-2">
+              <span>{currentUser.username}</span>
+              <span className="text-[10px] text-neon-cyan px-2 py-0.5 border border-neon-cyan/30 rounded bg-neon-cyan/5">
+                {profileData?.profile?.ranking || currentUser.ranking || 'Bronze IV'}
+              </span>
+            </h2>
+            <div className="flex items-center space-x-4 mt-1 text-xs text-gray-400">
+              <div className="flex items-center space-x-1">
+                <span>XP Level:</span>
+                <span className="text-neon-cyan font-bold">{profileData?.profile?.level || currentUser.level}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <span>Cyber-Coins:</span>
+                <span className="text-neon-yellow font-bold">🪙 {profileData?.profile?.coins || currentUser.coins}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Level XP Bar */}
+        <div className="flex-1 max-w-xs px-4">
+          <div className="flex justify-between text-[10px] font-orbitron text-gray-400 mb-1">
+            <span>XP MATRIX PROGRESS</span>
+            <span>{(profileData?.profile?.xp || 0)} / {((profileData?.profile?.level || 1) * 100)}</span>
+          </div>
+          <div className="w-full bg-black/50 border border-white/5 h-2 rounded-full overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-neon-cyan to-neon-magenta h-full shadow-[0_0_8px_rgba(0,240,255,0.4)]"
+              style={{
+                width: `${Math.min(100, ((profileData?.profile?.xp || 0) / ((profileData?.profile?.level || 1) * 100)) * 100)}%`
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex space-x-2">
+          <button
+            onClick={() => { audioSynth.playClick(); setShowShopModal(true); }}
+            className="text-xs font-orbitron border border-neon-yellow/30 text-neon-yellow px-3 py-1.5 rounded hover:bg-neon-yellow hover:text-black transition-colors"
+          >
+            🛒 TUNING_SHOP
+          </button>
+          <button
+            onClick={() => { audioSynth.playClick(); onLogout(); }}
+            className="text-xs font-orbitron border border-red-500/30 text-red-400 px-3 py-1.5 rounded hover:bg-red-500 hover:text-black transition-colors"
+          >
+            // DISCONNECT
+          </button>
+        </div>
+      </header>
+
+      {/* Featured Games Carousel (Next-Gen visual effects) */}
+      <section className="relative overflow-hidden rounded-xl h-64 md:h-80 bg-gradient-to-r from-indigo-950 via-cyber-dark to-purple-950 border border-neon-cyan/15 flex flex-col justify-center p-8 md:p-12">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={carouselIndex}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-3"
+          >
+            <span className="text-xs uppercase font-orbitron text-neon-cyan tracking-widest block">// FEATURED HERO RELEASE</span>
+            <h1 className="text-3xl md:text-5xl font-black font-orbitron tracking-wider text-white glow-text-cyan max-w-2xl leading-none">
+              {featuredGames[carouselIndex].title.toUpperCase()}
+            </h1>
+            <p className="text-xs md:text-sm text-gray-400 mt-3 max-w-md font-sans">
+              {featuredGames[carouselIndex].description}
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                onClick={() => { audioSynth.playClick(); onSelectGame(featuredGames[carouselIndex].id); }}
+                className="px-5 py-2.5 bg-neon-cyan text-black hover:bg-neon-cyan/85 font-orbitron font-bold text-xs uppercase tracking-wider rounded cursor-pointer shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all"
+              >
+                LAUNCH SIMULATOR
+              </button>
+              <button
+                onClick={() => setCarouselIndex(prev => (prev + 1) % featuredGames.length)}
+                className="px-4 py-2.5 bg-transparent border border-white/20 text-white hover:border-white/50 hover:bg-white/5 font-orbitron font-bold text-xs uppercase tracking-wider rounded transition-all"
+              >
+                NEXT PREVIEW &gt;
+              </button>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </section>
+
+      {/* Grid Split Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Left Columns: catalog lists & hubs */}
+        <div className="lg:col-span-2 space-y-8" id="catalog-section">
+          
+          {/* Main Category Catalog bar */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-extrabold font-orbitron tracking-wider text-white flex items-center space-x-2">
+                <span className="text-neon-cyan">//</span>
+                <span>GRID GAME CATALOG</span>
+              </h3>
+              <div className="flex overflow-x-auto pb-1 gap-1.5 max-w-md scrollbar-thin">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => { setSelectedCategory(cat); audioSynth.playHover(); }}
+                    className={`px-3 py-1 rounded text-xs font-orbitron transition-all shrink-0 ${
+                      selectedCategory === cat
+                        ? 'bg-neon-cyan/15 border border-neon-cyan text-neon-cyan shadow-[0_0_8px_rgba(0,240,255,0.2)]'
+                        : 'bg-cyber-dark border border-white/5 text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredGames.map((game) => (
+                <div
+                  key={game.id}
+                  onClick={() => {
+                    audioSynth.playClick();
+                    onSelectGame(game.id);
+                  }}
+                  className="group glass-panel rounded-lg overflow-hidden border border-white/5 hover:border-neon-cyan/30 transition-all duration-300 relative cursor-pointer hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(0,240,255,0.05)]"
+                >
+                  <div className={`h-24 bg-gradient-to-r ${game.bannerGradient} flex items-center justify-between p-4 relative`}>
+                    <span className="text-4xl filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-300">
+                      {game.icon}
+                    </span>
+                    <span className="text-[9px] font-orbitron px-2 py-0.5 border border-neon-cyan bg-cyber-black text-neon-cyan rounded-md">
+                      PLAY NOW
+                    </span>
+                  </div>
+                  <div className="p-4 bg-cyber-dark/80 relative">
+                    <h4 className="text-sm font-extrabold font-orbitron text-white group-hover:text-neon-cyan transition-colors">
+                      {game.title}
+                    </h4>
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-2 min-h-8">
+                      {game.description}
+                    </p>
+                    <div className="flex items-center justify-between mt-4 border-t border-white/5 pt-3 text-[10px] font-mono text-gray-400">
+                      <span>{game.category}</span>
+                      <div className="flex space-x-2">
+                        <span className="px-1.5 py-0.5 bg-black/40 border border-white/5 rounded">
+                          {game.players}
+                        </span>
+                        <span className="px-1.5 py-0.5 bg-black/40 border border-white/5 rounded">
+                          {game.difficulty}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Multiplayer Arena Playlist */}
+          <div className="space-y-4 pt-4 border-t border-white/5">
+            <h3 className="text-lg font-extrabold font-orbitron tracking-wider text-white flex items-center space-x-2">
+              <span className="text-neon-magenta">//</span>
+              <span>MULTIPLAYER ARENA PLAYLIST</span>
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {multiplayerArenaGames.map(game => (
+                <div
+                  key={game.id}
+                  onClick={() => onSelectGame(game.id)}
+                  className="p-3 bg-cyber-dark/80 border border-neon-magenta/20 hover:border-neon-magenta rounded-lg cursor-pointer transition-all flex flex-col justify-between h-28"
+                >
+                  <div className="flex justify-between items-start">
+                    <span className="text-2xl">{game.icon}</span>
+                    <span className="text-[8px] font-orbitron bg-neon-magenta/10 text-neon-magenta px-1 rounded">SYNC_OK</span>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold font-orbitron text-white leading-tight">{game.title}</h4>
+                    <p className="text-[9px] text-gray-500 font-mono mt-0.5">{game.players}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Racing Hub Playlist */}
+          <div className="space-y-4 pt-4 border-t border-white/5">
+            <h3 className="text-lg font-extrabold font-orbitron tracking-wider text-white flex items-center space-x-2">
+              <span className="text-neon-green">//</span>
+              <span>VECTOR RACING HUB</span>
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {racingHubGames.map(game => (
+                <div
+                  key={game.id}
+                  onClick={() => onSelectGame(game.id)}
+                  className="p-3 bg-cyber-dark/80 border border-neon-green/20 hover:border-neon-green rounded-lg cursor-pointer transition-all flex flex-col justify-between h-28"
+                >
+                  <div className="flex justify-between items-start">
+                    <span className="text-2xl">{game.icon}</span>
+                    <span className="text-[8px] font-orbitron bg-neon-green/10 text-neon-green px-1 rounded">SPEED</span>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold font-orbitron text-white leading-tight">{game.title}</h4>
+                    <p className="text-[9px] text-gray-500 font-mono mt-0.5">{game.players}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Right Columns: Widgets */}
+        <div className="space-y-6">
+          
+          {/* Daily Claims Widget */}
+          <div className="glass-panel rounded-xl p-4 bg-cyber-dark/70 border border-neon-cyan/15 space-y-3">
+            <h4 className="text-xs font-bold font-orbitron text-neon-cyan tracking-wider uppercase">// DAILY ENCRYPTED CREDITS</h4>
+            <p className="text-[10px] text-gray-400">Claim 100 free Cyber-Coins once every 24 hours to invest in vehicle tunings or skins.</p>
+            {dailyClaimMsg && <p className="text-xs text-neon-yellow font-mono">{dailyClaimMsg}</p>}
+            <button
+              onClick={handleClaimDaily}
+              className="w-full py-2 bg-transparent border border-neon-cyan hover:bg-neon-cyan hover:text-black font-orbitron text-xs rounded transition-all"
+            >
+              CLAIM DATA PACKET
+            </button>
+          </div>
+
+          {/* Tournaments Grid */}
+          <div className="glass-panel rounded-xl p-4 bg-cyber-dark/70 border border-neon-cyan/15 space-y-4">
+            <h4 className="text-xs font-bold font-orbitron text-neon-magenta tracking-wider uppercase">// TOURNAMENTS</h4>
+            <div className="space-y-3">
+              {tournaments.map((tour) => (
+                <div key={tour.id} className="p-3 bg-black/40 border border-neon-magenta/20 rounded flex flex-col justify-between space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h5 className="font-bold text-xs font-orbitron text-white leading-tight">{tour.title}</h5>
+                      <span className="text-[8px] text-gray-500 font-mono">GAME: {tour.gameId.toUpperCase()}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] font-mono border-t border-white/5 pt-2">
+                    <span className="text-neon-yellow">Pool: 🪙 {tour.prizePool}</span>
+                    <button
+                      onClick={() => handleJoinTournament(tour.id)}
+                      className="px-2 py-1 bg-neon-magenta/20 border border-neon-magenta text-neon-magenta hover:bg-neon-magenta hover:text-black text-[9px] rounded font-orbitron"
+                    >
+                      JOIN Node
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Highest Leaderboards */}
+          <div className="glass-panel rounded-xl p-4 bg-cyber-dark/70 border border-neon-cyan/15 space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold font-orbitron text-neon-cyan tracking-wider uppercase">// HIGHEST STATS</h4>
+              <select
+                value={leaderboardGame}
+                onChange={(e) => setLeaderboardGame(e.target.value)}
+                className="bg-black text-[10px] font-orbitron text-neon-cyan border border-neon-cyan/25 rounded px-2 py-0.5 focus:outline-none"
+              >
+                <option value="typing_warriors">TYPING WARRIORS</option>
+                <option value="chess">CHESS LEGENDS</option>
+                <option value="carrom">CARROM MASTERS</option>
+                <option value="velocity_x">VELOCITY X</option>
+              </select>
+            </div>
+
+            {loadingLeaderboard ? (
+              <div className="text-center text-xs text-gray-500 py-6">SCANNING...</div>
+            ) : leaderboardData.length === 0 ? (
+              <div className="text-center text-xs text-gray-500 py-6 font-mono">NO RECORDS TRANSMITTED</div>
+            ) : (
+              <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                {leaderboardData.map((ent, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 rounded bg-black/30 text-xs font-mono border border-white/5"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <span className={`font-orbitron font-extrabold w-4 text-center ${
+                        idx === 0 ? 'text-neon-yellow' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-orange-500' : 'text-gray-500'
+                      }`}>
+                        #{idx + 1}
+                      </span>
+                      <span className="font-semibold text-gray-200">{ent.username}</span>
+                    </div>
+                    <span className="text-neon-cyan font-bold font-orbitron text-[11px]">
+                      {ent.score} PTS
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* Shop Customizer Modal overlay */}
+      {showShopModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fade-in font-mono">
+          <div className="w-full max-w-md glass-panel p-6 rounded-xl border border-neon-yellow/20 bg-cyber-dark text-xs text-white space-y-4">
+            <div className="flex justify-between items-center border-b border-white/10 pb-2">
+              <span className="text-neon-yellow font-bold font-orbitron text-sm">// TUNING & PERFORMANCE UPGRADES</span>
+              <button onClick={() => setShowShopModal(false)} className="text-gray-400 hover:text-white">✕</button>
+            </div>
+
+            <p className="text-gray-400 text-[10px]">
+              Spend your Cyber-Coins to purchase ship stability cores, racing engine upgrades, or specialized tire treads.
+            </p>
+
+            <div className="space-y-4">
+              <div className="p-3 bg-black/40 border border-white/5 rounded flex justify-between items-center">
+                <div>
+                  <h5 className="font-bold text-white font-orbitron">ENGINE DRIVE THRUST (Velocity X)</h5>
+                  <p className="text-[10px] text-gray-400">Current Level: {upgrades.engine || 1} / 5</p>
+                </div>
+                <button
+                  onClick={() => handlePurchaseUpgrade('engine', 100)}
+                  className="px-3 py-1.5 bg-neon-yellow text-black font-orbitron font-bold rounded hover:bg-neon-yellow/85"
+                >
+                  UPGRADE [100🪙]
+                </button>
+              </div>
+
+              <div className="p-3 bg-black/40 border border-white/5 rounded flex justify-between items-center">
+                <div>
+                  <h5 className="font-bold text-white font-orbitron">HIGH-TRACTION TREADS (Velocity X)</h5>
+                  <p className="text-[10px] text-gray-400">Current Level: {upgrades.tires || 1} / 5</p>
+                </div>
+                <button
+                  onClick={() => handlePurchaseUpgrade('tires', 80)}
+                  className="px-3 py-1.5 bg-neon-yellow text-black font-orbitron font-bold rounded hover:bg-neon-yellow/85"
+                >
+                  UPGRADE [80🪙]
+                </button>
+              </div>
+
+              <div className="p-3 bg-black/40 border border-white/5 rounded flex justify-between items-center">
+                <div>
+                  <h5 className="font-bold text-white font-orbitron">STABILITY DAMPENER (Velocity X / Storms)</h5>
+                  <p className="text-[10px] text-gray-400">Current Level: {upgrades.stability || 1} / 5</p>
+                </div>
+                <button
+                  onClick={() => handlePurchaseUpgrade('stability', 80)}
+                  className="px-3 py-1.5 bg-neon-yellow text-black font-orbitron font-bold rounded hover:bg-neon-yellow/85"
+                >
+                  UPGRADE [80🪙]
+                </button>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <button
+                onClick={() => setShowShopModal(false)}
+                className="px-4 py-1.5 border border-white/20 text-gray-400 hover:text-white rounded text-[10px]"
+              >
+                CLOSE SHOP
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
