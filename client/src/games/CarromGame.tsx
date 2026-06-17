@@ -59,6 +59,15 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   const [gameOver, setGameOver] = useState(false);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
 
+  const [scorePopups, setScorePopups] = useState<{ id: number; x: number; y: number; text: string }[]>([]);
+  const addScorePopup = (x: number, y: number, text: string) => {
+    const id = Date.now() + Math.random();
+    setScorePopups(prev => [...prev, { id, x, y, text }]);
+    setTimeout(() => {
+      setScorePopups(prev => prev.filter(p => p.id !== id));
+    }, 1200);
+  };
+
   // Slingshot aiming states
   const [isAiming, setIsAiming] = useState(false);
   const [aimStart, setAimStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -285,7 +294,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           return;
         }
 
-        const botColor = myColorType === 'white' ? 'black' : 'white';
+        const botColor = myColorTypeRef.current === 'white' ? 'black' : 'white';
         const myTargets = targets.filter(t => t.type === botColor || t.type === 'queen');
         const chosenPucks = myTargets.length > 0 ? myTargets : targets;
         
@@ -299,7 +308,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         let bestShot: any = null;
         let maxScore = -Infinity;
 
-        if (difficulty !== 'easy') {
+        if (difficultyRef.current !== 'easy') {
           chosenPucks.forEach(puck => {
             pocketsList.forEach(pocket => {
               const pdx = puck.x - pocket.x;
@@ -345,7 +354,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         let chosenAngle = Math.PI / 2;
         let chosenPower = 60;
 
-        if (bestShot && (difficulty === 'hard' || (difficulty === 'medium' && Math.random() > 0.35))) {
+        if (bestShot && (difficultyRef.current === 'hard' || (difficultyRef.current === 'medium' && Math.random() > 0.35))) {
           chosenX = bestShot.x;
           chosenAngle = bestShot.angle;
           chosenPower = bestShot.power;
@@ -362,10 +371,10 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         }
 
         // Apply noise relative to bot difficulty
-        if (difficulty === 'easy') {
+        if (difficultyRef.current === 'easy') {
           chosenAngle += (Math.random() - 0.5) * 0.12; // ±3.4 degrees
           chosenPower = 40 + Math.floor(Math.random() * 25); // 40-65
-        } else if (difficulty === 'medium') {
+        } else if (difficultyRef.current === 'medium') {
           chosenAngle += (Math.random() - 0.5) * 0.04; // ±1.1 degrees
           chosenPower = Math.min(100, chosenPower + (Math.floor(Math.random() * 14) - 7));
         }
@@ -615,6 +624,23 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           audioSynth.playPocket();
           createPocketBlastSparks(p.x, p.y, d.color);
 
+          // Add score popup visually above pocket
+          const isPlayerTurn = turnRef.current === currentUser.id;
+          let popupText = '';
+          if (d.type === 'queen') {
+            popupText = '👑 +50 QUEEN!';
+          } else if (d.type === 'striker') {
+            popupText = '⚠️ FOUL!';
+          } else {
+            const currentStrikerColor = turnRef.current === currentUser.id ? myColorTypeRef.current : (myColorTypeRef.current === 'white' ? 'black' : 'white');
+            if (d.type === currentStrikerColor) {
+              popupText = isPlayerTurn ? '⭐ +10 PUCK' : 'OPPONENT +10';
+            } else {
+              popupText = isPlayerTurn ? 'OPPONENT +10' : '⭐ +10 PUCK';
+            }
+          }
+          addScorePopup(p.x, p.y - 10, popupText);
+
           // Add to current shot pocketed coins list
           pocketedThisTurnRef.current.push(d.type);
         }
@@ -844,7 +870,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   };
 
   const drawStrikerSkin = (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) => {
-    if (strikerSkin === 'tron') {
+    if (strikerSkinRef.current === 'tron') {
       // Neon Cyan Tron Skin
       const tronGrad = ctx.createRadialGradient(x, y, 1, x, y, radius);
       tronGrad.addColorStop(0, '#020d18');
@@ -874,7 +900,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       ctx.beginPath();
       ctx.arc(x, y, 2.5, 0, Math.PI * 2);
       ctx.fill();
-    } else if (strikerSkin === 'royal') {
+    } else if (strikerSkinRef.current === 'royal') {
       // Royal Gold Purple
       const royalGrad = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, radius);
       royalGrad.addColorStop(0, '#be95c4');
@@ -901,7 +927,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         ctx.lineTo(x + Math.cos(ang) * (radius - 5), y + Math.sin(ang) * (radius - 5));
         ctx.stroke();
       }
-    } else if (strikerSkin === 'ruby') {
+    } else if (strikerSkinRef.current === 'ruby') {
       // Crimson Gem Ruby Facets
       const rubyGrad = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, radius);
       rubyGrad.addColorStop(0, '#ff007f');
@@ -1346,6 +1372,15 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   const shotPowerRef = useRef(shotPower);
   shotPowerRef.current = shotPower;
 
+  const strikerSkinRef = useRef(strikerSkin);
+  strikerSkinRef.current = strikerSkin;
+
+  const difficultyRef = useRef(difficulty);
+  difficultyRef.current = difficulty;
+
+  const myColorTypeRef = useRef(myColorType);
+  myColorTypeRef.current = myColorType;
+
   const triggerShotWithValues = (angle: number, power: number) => {
     if (isStrikerFlickedRef.current || turnRef.current !== currentUser.id) return;
 
@@ -1516,114 +1551,246 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     { x: BOARD_SIZE - POCKET_RADIUS, y: POCKET_RADIUS }
   ];
 
+  const whitePotted = discs.filter(d => d.type === 'white' && d.isPocketed).length;
+  const blackPotted = discs.filter(d => d.type === 'black' && d.isPocketed).length;
+
+  const myScore = myColorType === 'white' ? scores.white : scores.black;
+  const opScore = myColorType === 'white' ? scores.black : scores.white;
+  const totalScore = myScore + opScore;
+  const winProb = totalScore === 0 ? 50 : Math.min(95, Math.max(5, Math.round((myScore / totalScore) * 100)));
+
   return (
-    <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-6 gap-8 w-full h-full min-h-0 bg-gradient-to-br from-[#050505] via-[#0a1128] to-[#030209] relative overflow-hidden select-none">
+    <div className="flex-1 flex flex-col w-full h-full min-h-0 bg-gradient-to-br from-[#0c1445] via-[#0f2354] to-[#0a1128] text-white font-sans relative overflow-hidden select-none">
       
-      {/* Dynamic esports spotlights sweeping across wrapper background */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00f5ff]/5 rounded-full blur-[130px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#8a2be2]/5 rounded-full blur-[130px] pointer-events-none" />
+      {/* Poki-style Floating Geometric backdrop elements */}
+      <div className="poki-shape shape-circle top-[-50px] left-[-50px]" />
+      <div className="poki-shape shape-square bottom-[10%] right-[-30px]" />
+      <div className="poki-shape shape-triangle top-[30%] right-[20%]" />
 
-      {/* 2D Canvas with Turn-based Cinematic scale zoom */}
-      <div className="flex flex-col items-center z-10">
-        <canvas
-          ref={canvasRef}
-          width={BOARD_SIZE}
-          height={BOARD_SIZE}
-          onPointerDown={handleCanvasPointerDown}
-          className={`rounded-2xl bg-[#ebd2a3] cursor-pointer transition-all duration-700 ${
-            turn === currentUser.id && !isStrikerFlicked
-              ? 'scale-[1.03] border-[10px] border-[#FFD700] shadow-[0_25px_60px_rgba(0,245,255,0.22)]'
-              : 'scale-100 border-[10px] border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)]'
-          }`}
-        />
+      {/* 1. Top Navigation Bar */}
+      <nav className="w-full h-14 px-6 flex items-center justify-between border-b border-white/10 bg-white/5 backdrop-blur-md z-20">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => onComplete(myScore)}
+            className="px-3 py-1.5 rounded-lg bg-[#FF6B6B] hover:bg-[#FF6B6B]/80 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            ← Leave
+          </button>
+          <span className="font-orbitron font-extrabold text-lg text-transparent bg-clip-text bg-gradient-to-r from-[#00D4FF] to-[#FFD93D] tracking-wider">
+            ARCADEVERSE
+          </span>
+        </div>
         
-        {/* Striker Slider control */}
-        {turn === currentUser.id && !isStrikerFlicked && (
-          <div className="w-full max-w-[400px] mt-4 px-2 space-y-1">
-            <div className="flex justify-between text-[10px] text-[#00f5ff]/70 font-mono">
-              <span className="uppercase tracking-widest font-orbitron font-bold">striker_align_slider</span>
-              <span>x: {Math.round(strikerX)}</span>
+        <div className="px-4 py-1 rounded-full bg-white/10 border border-white/10 text-xs font-bold font-orbitron uppercase tracking-widest text-[#00D4FF] animate-pulse">
+          {turn === currentUser.id ? '⚡ YOUR TURN ACTIVE' : '⌛ OPPONENT FLICKING...'}
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-[#FFD93D]/30 text-[#FFD93D] font-bold text-xs font-mono">
+            🪙 1,250 COINS
+          </div>
+          <button
+            onClick={() => {
+              const isMuted = audioSynth.toggleMute();
+              audioSynth.playClick();
+            }}
+            className="p-1.5 rounded-lg bg-white/10 border border-white/10 hover:border-[#00D4FF]/50 text-gray-300 hover:text-white transition-all text-xs font-orbitron"
+          >
+            🔊 AUDIO
+          </button>
+        </div>
+      </nav>
+
+      {/* 2. Main Body Layout (Left Sidebar + Center Play Area) */}
+      <div className="flex-1 flex flex-row w-full min-h-0 overflow-hidden">
+        
+        {/* LEFT SIDEBAR: Player Card, Missions, Shop */}
+        <aside className="w-64 h-full p-4 flex flex-col gap-4 border-r border-white/10 bg-white/5 backdrop-blur-md overflow-y-auto hidden md:flex shrink-0">
+          
+          {/* Player Profile Card */}
+          <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2.5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#00D4FF] to-[#6C63FF] border-2 border-white flex items-center justify-center font-orbitron font-extrabold text-white text-base shadow-[0_0_15px_rgba(0,212,255,0.4)]">
+                {currentUser.username[0].toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-extrabold text-white truncate">{currentUser.username.toUpperCase()}</p>
+                <p className="text-[10px] text-[#00D4FF] font-bold tracking-widest font-orbitron">👑 GRANDMASTER</p>
+              </div>
             </div>
-            <input
-              type="range"
-              min={50}
-              max={BOARD_SIZE - 50}
-              value={strikerX}
-              disabled={isAiming}
-              onChange={(e) => handleStrikerSlider(parseInt(e.target.value))}
-              className="w-full h-2 bg-[#050505] border border-[#00f5ff]/20 rounded-lg appearance-none cursor-pointer accent-[#00f5ff] disabled:opacity-40"
+
+            {/* Win Probability Bar */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-[9px] font-bold text-gray-400">
+                <span>WIN PROBABILITY:</span>
+                <span className="text-[#00D4FF]">{winProb}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden border border-white/5">
+                <div
+                  style={{ width: `${winProb}%` }}
+                  className="h-full bg-gradient-to-r from-[#00D4FF] to-[#4ECDC4] rounded-full transition-all duration-1000 shadow-[0_0_8px_#00D4FF]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Missions Panel */}
+          <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <h5 className="font-orbitron font-bold text-[10px] text-gray-400 tracking-wider uppercase">// DAILY MISSION</h5>
+            <div className="space-y-2.5">
+              <div className="text-[11px] leading-relaxed">
+                <div className="flex justify-between font-bold text-white mb-0.5">
+                  <span>🎯 Faction Pucks</span>
+                  <span className="text-[#00D4FF]">{Math.min(3, myColorType === 'white' ? whitePotted : blackPotted)}/3</span>
+                </div>
+                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    style={{ width: `${(Math.min(3, myColorType === 'white' ? whitePotted : blackPotted) / 3) * 100}%` }}
+                    className="h-full bg-[#FFD93D] rounded-full transition-all duration-500"
+                  />
+                </div>
+              </div>
+
+              <div className="text-[11px] leading-relaxed">
+                <div className="flex justify-between font-bold text-white mb-0.5">
+                  <span>👑 Gem Queen Pocket</span>
+                  <span className="text-[#FF6B6B]">{discs.some(d => d.type === 'queen' && d.isPocketed) ? 'CLAIMED' : '0/1'}</span>
+                </div>
+                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    style={{ width: discs.some(d => d.type === 'queen' && d.isPocketed) ? '100%' : '0%' }}
+                    className="h-full bg-[#FF6B6B] rounded-full transition-all duration-500"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Striker Skin shop */}
+          <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <h5 className="font-orbitron font-bold text-[10px] text-gray-400 tracking-wider uppercase">// STRIKER SKINS SHOP</h5>
+            <div className="grid grid-cols-2 gap-1.5">
+              {(['classic', 'tron', 'royal', 'ruby'] as const).map(skin => (
+                <button
+                  key={skin}
+                  onClick={() => { audioSynth.playClick(); setStrikerSkin(skin); }}
+                  className={`p-2 rounded-lg border text-center font-bold text-[10px] uppercase transition-all cursor-pointer ${
+                    strikerSkin === skin
+                      ? 'bg-gradient-to-br from-[#00D4FF] to-[#6C63FF] text-white border-white shadow-[0_0_12px_rgba(0,212,255,0.4)]'
+                      : 'bg-black/40 text-gray-300 border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  <div className="text-[14px] mb-1">
+                    {skin === 'classic' && '🪙'}
+                    {skin === 'tron' && '🥏'}
+                    {skin === 'royal' && '👑'}
+                    {skin === 'ruby' && '💎'}
+                  </div>
+                  {skin}
+                </button>
+              ))}
+            </div>
+          </div>
+
+        </aside>
+
+        {/* RIGHT AREA: Opponent avatar, Carrom Board Canvas, Bottom controls */}
+        <main className="flex-1 h-full p-4 flex flex-col items-center justify-center relative overflow-y-auto min-w-0">
+          
+          {/* Opponent Profile HUD Banner (Centered above the canvas) */}
+          <div className="w-full max-w-[420px] mb-4 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF6B6B] to-[#8a2be2] border-2 border-white/30 flex items-center justify-center text-lg">
+                🤖
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white font-orbitron tracking-wider">A.I. CYBER_BOT</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
+                  <span className="text-[9px] text-[#4ECDC4] font-bold uppercase tracking-widest truncate max-w-[120px]">
+                    {botPlayState === 'idle' ? 'connected' : `${botPlayState}...`}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Score Register Panel */}
+            <div className="flex items-center gap-4">
+              <div className="text-center font-mono">
+                <p className="text-[8px] text-gray-400">IVORY (WHITE)</p>
+                <p className="text-sm font-bold text-[#FFD93D]">{scores.white}</p>
+              </div>
+              <div className="h-6 w-px bg-white/15" />
+              <div className="text-center font-mono">
+                <p className="text-[8px] text-gray-400">PURPLE (BLACK)</p>
+                <p className="text-sm font-bold text-[#6C63FF]">{scores.black}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Board Canvas Wrapper with Floating Score Popups Container */}
+          <div className="relative">
+            <canvas
+              ref={canvasRef}
+              width={BOARD_SIZE}
+              height={BOARD_SIZE}
+              onPointerDown={handleCanvasPointerDown}
+              className={`rounded-3xl bg-[#ebd2a3] cursor-pointer transition-all duration-700 ${
+                turn === currentUser.id && !isStrikerFlicked
+                  ? 'scale-[1.03] border-[12px] border-[#FFD93D] shadow-[0_25px_65px_rgba(0,212,255,0.22)]'
+                  : 'scale-100 border-[12px] border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)]'
+              }`}
             />
-          </div>
-        )}
-      </div>
 
-      {/* Futuristic Cyber-Luxury Esports HUD */}
-      <div className="w-full md:w-60 glass-panel rounded-xl p-5 flex flex-col h-[380px] md:h-[450px] font-mono text-xs border border-[#00f0ff]/30 justify-between bg-[#050505]/90 text-gray-100 shadow-[0_0_25px_rgba(0,240,255,0.15)] z-10">
-        <div>
-          <h4 className="text-[#00f5ff] font-bold font-orbitron uppercase tracking-widest border-b border-[#00f5ff]/20 pb-2 mb-3 shadow-[0_1px_0_rgba(0,245,255,0.1)]">
-            // CYBER_BOARD REGISTER
-          </h4>
-
-          {/* Active Opponent Info */}
-          <div className="flex items-center gap-3 p-2 rounded bg-black/40 border border-[#ff007f]/20 mb-3">
-            <div className="relative">
-              <div className="w-8 h-8 rounded-full bg-[#ff007f]/10 border border-[#ff007f]/40 flex items-center justify-center text-[#ff007f] font-orbitron font-bold text-xs">
-                {turn !== currentUser.id ? '🤖' : '👤'}
-              </div>
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-neon-green border-2 border-black animate-pulse" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[10px] font-bold text-white font-orbitron uppercase tracking-wide truncate">
-                {turn !== currentUser.id ? '🤖 A.I. CYBER_BOT' : currentUser.username.toUpperCase()}
-              </div>
-              <div className="text-[8px] text-[#00f5ff]/70 font-mono tracking-wider truncate">
-                {turn !== currentUser.id ? 'analyzing_grids...' : 'awaiting_flick...'}
-              </div>
+            {/* Floating Score Popups rendering overlay */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+              {scorePopups.map(pop => (
+                <div
+                  key={pop.id}
+                  style={{ left: pop.x - 40, top: pop.y - 12 }}
+                  className="absolute w-20 text-center text-yellow-300 font-extrabold text-[11px] animate-float-fade font-orbitron drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)] z-30"
+                >
+                  {pop.text}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Faction and Status */}
-          <div className="space-y-1.5 mb-3 text-[10px]">
-            <div className="flex justify-between">
-              <span className="text-gray-400">YOUR_FACTION:</span>
-              <span className={myColorType === 'white' ? 'text-[#FFD700] font-bold' : 'text-[#8a2be2] font-bold'}>
-                {myColorType === 'white' ? 'GOLD_IVORY' : 'DEEP_PURPLE'}
-              </span>
-            </div>
+          {/* Bottom Game Controls */}
+          <div className="w-full max-w-[420px] mt-4 flex flex-col gap-3">
             
-            {/* Custom Striker Skin Selector */}
-            <div className="flex flex-col gap-1 border-t border-[#00f5ff]/15 pt-2 mt-2">
-              <span className="text-[8px] text-[#00f5ff]/60 uppercase tracking-widest font-orbitron">STRIKER SKIN:</span>
-              <div className="grid grid-cols-4 gap-1">
-                {(['classic', 'tron', 'royal', 'ruby'] as const).map(skin => (
-                  <button
-                    key={skin}
-                    onClick={() => { audioSynth.playClick(); setStrikerSkin(skin); }}
-                    className={`px-0.5 py-1 rounded text-[8px] uppercase font-bold border transition-all cursor-pointer ${
-                      strikerSkin === skin
-                        ? 'bg-[#00f5ff] text-black border-[#00f5ff] shadow-[0_0_8px_rgba(0,245,255,0.4)]'
-                        : 'bg-black/50 text-[#00f5ff]/70 border-[#00f5ff]/20 hover:border-[#00f5ff]/50'
-                    }`}
-                  >
-                    {skin}
-                  </button>
-                ))}
+            {/* Striker Slider control */}
+            {turn === currentUser.id && !isStrikerFlicked && (
+              <div className="px-1 space-y-1">
+                <div className="flex justify-between text-[10px] text-gray-300 font-mono font-bold tracking-widest uppercase">
+                  <span>Flick Position</span>
+                  <span className="text-[#00D4FF]">x: {Math.round(strikerX)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={50}
+                  max={BOARD_SIZE - 50}
+                  value={strikerX}
+                  disabled={isAiming}
+                  onChange={(e) => handleStrikerSlider(parseInt(e.target.value))}
+                  className="w-full h-2 bg-[#0a1128] border border-white/10 rounded-lg appearance-none cursor-pointer accent-[#00D4FF] disabled:opacity-40"
+                />
               </div>
-            </div>
+            )}
 
-            {/* Interactive Bot Difficulty Select */}
-            <div className="flex flex-col gap-1 border-t border-[#00f5ff]/15 pt-2 mt-2">
-              <span className="text-[8px] text-gray-400 uppercase tracking-widest font-orbitron">BOT DIFFICULTY:</span>
-              <div className="grid grid-cols-3 gap-1">
+            {/* Bottom HUD: Bot Difficulty List */}
+            <div className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10">
+              <span className="text-[9px] font-bold text-gray-400 font-orbitron uppercase tracking-widest ml-1">Bot Diff:</span>
+              <div className="flex gap-1">
                 {(['easy', 'medium', 'hard'] as const).map(diff => (
                   <button
                     key={diff}
                     disabled={isStrikerFlicked}
                     onClick={() => { audioSynth.playClick(); setDifficulty(diff); }}
-                    className={`px-1 py-1 rounded text-[8px] uppercase font-bold border transition-colors cursor-pointer ${
+                    className={`px-3 py-1 rounded-lg text-[9px] uppercase font-bold border transition-all cursor-pointer ${
                       difficulty === diff
-                        ? 'bg-[#FFD700] text-black border-[#FFD700] shadow-[0_0_6px_rgba(255,215,0,0.3)]'
-                        : 'bg-black/50 text-[#FFD700]/70 border-[#FFD700]/20 hover:border-[#FFD700]/50'
+                        ? 'bg-[#FFD93D] text-black border-[#FFD93D] shadow-[0_0_8px_rgba(255,217,61,0.4)]'
+                        : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'
                     } disabled:opacity-50`}
                   >
                     {diff}
@@ -1631,44 +1798,11 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
                 ))}
               </div>
             </div>
+
           </div>
 
-          {/* Scores board */}
-          <span className="text-[9px] text-[#00f5ff]/50 uppercase font-orbitron tracking-wider">// SCORE REGISTER</span>
-          <div className="grid grid-cols-2 gap-2 mt-1 mb-3">
-            <div className="bg-black/50 border border-[#00f5ff]/15 p-2 rounded text-center">
-              <p className="text-[8px] text-gray-400 uppercase">WHITE</p>
-              <p className="text-[#FFD700] font-bold text-sm">{scores.white}</p>
-            </div>
-            <div className="bg-black/50 border border-[#00f5ff]/15 p-2 rounded text-center">
-              <p className="text-[8px] text-gray-400 uppercase">BLACK</p>
-              <p className="text-[#8a2be2] font-bold text-sm">{scores.black}</p>
-            </div>
-          </div>
-        </div>
+        </main>
 
-        {/* Slingshot Instructions HUD */}
-        {turn === currentUser.id && !isStrikerFlicked ? (
-          <div className="space-y-2.5 pt-2 border-t border-[#00f5ff]/20">
-            <div className="text-[9px] text-[#00f5ff]/85 leading-normal bg-black/60 p-2 rounded border border-[#00f5ff]/20 font-sans">
-              <span className="text-[#FFD700] font-bold font-orbitron block mb-1 uppercase">// SLINGSHOT CONTROL</span>
-              Position the slider, then **Click & Drag Backwards** on the striker to aim. Release to fire!
-            </div>
-
-            <div className="flex justify-between text-[10px] font-mono">
-              <span className="text-gray-400">STRIKE_FORCE:</span>
-              <span className="text-[#00f5ff] font-bold">{shotPower}%</span>
-            </div>
-          </div>
-        ) : (
-          <div className="p-2.5 bg-black/50 rounded border border-[#ff007f]/20 text-center text-[#ff007f] text-[9px] leading-relaxed animate-pulse font-orbitron uppercase tracking-wider">
-            {botPlayState === 'thinking' && '🤖 BOT_THINKING_STRATEGY...'}
-            {botPlayState === 'aligning' && '🤖 BOT_SLIDING_STRIKER...'}
-            {botPlayState === 'aiming' && '🤖 BOT_CHARGING_POWER...'}
-            {botPlayState === 'shooting' && '🤖 BOT_RELEASING_STRIKER...'}
-            {botPlayState === 'idle' && '⌛ WAITING_FOR_OPPONENT...'}
-          </div>
-        )}
       </div>
 
     </div>
