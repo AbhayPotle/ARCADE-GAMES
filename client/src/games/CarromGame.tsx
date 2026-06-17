@@ -63,9 +63,22 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   const [isAiming, setIsAiming] = useState(false);
   const [aimStart, setAimStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [aimCurrent, setAimCurrent] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [strikerSkin, setStrikerSkin] = useState<'classic' | 'tron' | 'royal' | 'ruby'>('classic');
+
+  // Relative drag tracking refs
+  const dragStartXRef = useRef<number>(0);
+  const dragStartYRef = useRef<number>(0);
+
+  // Screen shake and slow-motion refs
+  const shakeIntensityRef = useRef<number>(0);
+  const slowMoRatioRef = useRef<number>(1.0);
+
+  // Bot thinking and aiming visual pullback tracking
+  const botThinkingFramesRef = useRef<number>(0);
+  const botAimFramesRef = useRef<number>(0);
 
   // Bot play sequence state machine
-  const [botPlayState, setBotPlayState] = useState<'idle' | 'aligning' | 'aiming' | 'shooting'>('idle');
+  const [botPlayState, setBotPlayState] = useState<'idle' | 'thinking' | 'aligning' | 'aiming' | 'shooting'>('idle');
   const botTargetXRef = useRef<number>(BOARD_SIZE / 2);
   const botTargetAngleRef = useRef<number>(0);
   const botTargetPuckRef = useRef<Disc | null>(null);
@@ -252,27 +265,122 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       striker.vx = 0;
       striker.vy = 0;
       striker.isPocketed = false;
-
-      // Select target coin
-      const targets = list.filter(d => !d.isPocketed && d.type !== 'striker');
-      if (targets.length === 0) return;
-
-      const botColor = myColorType === 'white' ? 'black' : 'white';
-      const myTargets = targets.filter(t => t.type === botColor || t.type === 'queen');
-      const chosenTarget = myTargets.length > 0 ? myTargets[Math.floor(Math.random() * myTargets.length)] : targets[Math.floor(Math.random() * targets.length)];
-
-      botTargetPuckRef.current = chosenTarget;
-      
-      // Target coordinate clamped to baseline range
-      const targetX = Math.min(320, Math.max(80, chosenTarget.x));
-      botTargetXRef.current = targetX;
-      setBotPlayState('aligning');
+      setStrikerX(striker.x);
       setDiscs(list);
+
+      // Start bot thinking timer (60 frames = 1.0 second delay)
+      botThinkingFramesRef.current = 60;
+      setBotPlayState('thinking');
+      return;
+    }
+
+    if (botPlayState === 'thinking') {
+      if (botThinkingFramesRef.current > 0) {
+        botThinkingFramesRef.current--;
+      } else {
+        // Select target coin
+        const targets = list.filter(d => !d.isPocketed && d.type !== 'striker');
+        if (targets.length === 0) {
+          setBotPlayState('idle');
+          return;
+        }
+
+        const botColor = myColorType === 'white' ? 'black' : 'white';
+        const myTargets = targets.filter(t => t.type === botColor || t.type === 'queen');
+        const chosenPucks = myTargets.length > 0 ? myTargets : targets;
+        
+        const pocketsList = [
+          { x: POCKET_RADIUS, y: POCKET_RADIUS },
+          { x: BOARD_SIZE - POCKET_RADIUS, y: POCKET_RADIUS },
+          { x: POCKET_RADIUS, y: BOARD_SIZE - POCKET_RADIUS },
+          { x: BOARD_SIZE - POCKET_RADIUS, y: BOARD_SIZE - POCKET_RADIUS }
+        ];
+
+        let bestShot: any = null;
+        let maxScore = -Infinity;
+
+        if (difficulty !== 'easy') {
+          chosenPucks.forEach(puck => {
+            pocketsList.forEach(pocket => {
+              const pdx = puck.x - pocket.x;
+              const pdy = puck.y - pocket.y;
+              const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
+              if (pdist === 0) return;
+
+              // Ideal collision position for the striker: 
+              const rSum = striker.radius + puck.radius;
+              const cx = puck.x + (pdx / pdist) * rSum;
+              const cy = puck.y + (pdy / pdist) * rSum;
+
+              // Find striker x position on baseline (y = 50) that aligns with cx, cy
+              const dyLine = cy - pocket.y;
+              if (Math.abs(dyLine) < 1) return;
+
+              const intersectX = pocket.x + (cx - pocket.x) * (50 - pocket.y) / dyLine;
+
+              if (intersectX >= 80 && intersectX <= 320) {
+                const sdx = cx - intersectX;
+                const sdy = cy - 50;
+                const angle = Math.atan2(sdy, sdx);
+
+                // Distance calculations for power estimation
+                const distToPuck = Math.sqrt(sdx * sdx + sdy * sdy);
+                const totalDist = distToPuck + pdist;
+                let power = Math.min(95, Math.max(45, Math.round(totalDist * 0.20)));
+
+                // Add margin for clean rebounds
+                power = Math.min(98, power + 10);
+                const score = 1000 - pdist - distToPuck * 0.5;
+
+                if (score > maxScore) {
+                  maxScore = score;
+                  bestShot = { x: intersectX, angle, power };
+                }
+              }
+            });
+          });
+        }
+
+        let chosenX = BOARD_SIZE / 2;
+        let chosenAngle = Math.PI / 2;
+        let chosenPower = 60;
+
+        if (bestShot && (difficulty === 'hard' || (difficulty === 'medium' && Math.random() > 0.35))) {
+          chosenX = bestShot.x;
+          chosenAngle = bestShot.angle;
+          chosenPower = bestShot.power;
+        } else {
+          // Direct hit fallback target
+          const fallbackTarget = chosenPucks[Math.floor(Math.random() * chosenPucks.length)];
+          if (fallbackTarget) {
+            chosenX = Math.min(320, Math.max(80, fallbackTarget.x));
+            const sdx = fallbackTarget.x - chosenX;
+            const sdy = fallbackTarget.y - 50;
+            chosenAngle = Math.atan2(sdy, sdx);
+            chosenPower = 55 + Math.floor(Math.random() * 25);
+          }
+        }
+
+        // Apply noise relative to bot difficulty
+        if (difficulty === 'easy') {
+          chosenAngle += (Math.random() - 0.5) * 0.12; // ±3.4 degrees
+          chosenPower = 40 + Math.floor(Math.random() * 25); // 40-65
+        } else if (difficulty === 'medium') {
+          chosenAngle += (Math.random() - 0.5) * 0.04; // ±1.1 degrees
+          chosenPower = Math.min(100, chosenPower + (Math.floor(Math.random() * 14) - 7));
+        }
+
+        botTargetXRef.current = chosenX;
+        botTargetAngleRef.current = chosenAngle;
+        botTargetPowerRef.current = chosenPower;
+
+        setBotPlayState('aligning');
+      }
       return;
     }
 
     if (botPlayState === 'aligning') {
-      const step = 4;
+      const step = 2.5; // Slower, more natural sliding speed
       if (Math.abs(striker.x - botTargetXRef.current) > step) {
         striker.x += Math.sign(botTargetXRef.current - striker.x) * step;
         striker.y = 50;
@@ -284,43 +392,32 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         setStrikerX(striker.x);
         setDiscs(list);
 
-        // Transition directly to shooting (instant aim)
-        const target = botTargetPuckRef.current;
-        if (target) {
-          const dx = target.x - striker.x;
-          const dy = target.y - striker.y;
-          const baseAngle = Math.atan2(dy, dx);
-          
-          // Difficulty configurations (easy, medium, hard)
-          let noise = 0;
-          let calculatedPower = 50;
-          if (difficulty === 'easy') {
-            noise = (Math.random() - 0.5) * 0.12; // ±3.4 degrees
-            calculatedPower = 45 + Math.floor(Math.random() * 25); // 45 - 70
-          } else if (difficulty === 'medium') {
-            noise = (Math.random() - 0.5) * 0.04; // ±1.1 degrees
-            calculatedPower = 55 + Math.floor(Math.random() * 25); // 55 - 80
-          } else {
-            noise = 0; // perfect aim (zero noise)
-            calculatedPower = 60 + Math.floor(Math.random() * 30); // 60 - 90
-          }
+        // Initiate visual aiming/pullback sequence (70 frames = ~1.2s aiming time)
+        botAimFramesRef.current = 70;
+        setIsAiming(true);
+        setBotPlayState('aiming');
+      }
+      return;
+    }
 
-          const finalAngle = baseAngle + noise;
-          setShotAngle(finalAngle);
-          setShotPower(calculatedPower);
-          
-          // Move directly to shooting
-          setBotPlayState('shooting');
-        } else {
-          setBotPlayState('idle');
-        }
+    if (botPlayState === 'aiming') {
+      if (botAimFramesRef.current > 0) {
+        botAimFramesRef.current--;
+        const progress = 1 - (botAimFramesRef.current / 70);
+        
+        // Linear increase of power and visual pullback representation
+        const currentPower = Math.round(botTargetPowerRef.current * progress);
+        setShotPower(currentPower);
+        setShotAngle(botTargetAngleRef.current);
+      } else {
+        setIsAiming(false);
+        setBotPlayState('shooting');
       }
       return;
     }
 
     if (botPlayState === 'shooting') {
       setBotPlayState('idle');
-      
       audioSynth.playCarromStrike(shotPower);
       setIsStrikerFlicked(true);
 
@@ -346,6 +443,43 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     let moving = false;
     const list = [...discs];
 
+    // Decay screen shake
+    if (shakeIntensityRef.current > 0) {
+      shakeIntensityRef.current = Math.max(0, shakeIntensityRef.current - 0.25);
+    }
+
+    // Proximity to pockets check for slow-motion
+    const pockets = [
+      { x: POCKET_RADIUS, y: POCKET_RADIUS },
+      { x: BOARD_SIZE - POCKET_RADIUS, y: BOARD_SIZE - POCKET_RADIUS },
+      { x: POCKET_RADIUS, y: BOARD_SIZE - POCKET_RADIUS },
+      { x: BOARD_SIZE - POCKET_RADIUS, y: POCKET_RADIUS }
+    ];
+
+    let nearPocket = false;
+    list.forEach(d => {
+      if (d.isPocketed || d.type === 'striker') return;
+      const speed = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
+      if (speed < 0.6) return;
+
+      pockets.forEach(p => {
+        const dx = d.x - p.x;
+        const dy = d.y - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 45 && dist > POCKET_RADIUS) {
+          nearPocket = true;
+        }
+      });
+    });
+
+    if (nearPocket) {
+      slowMoRatioRef.current = Math.max(0.32, slowMoRatioRef.current - 0.08);
+    } else {
+      slowMoRatioRef.current = Math.min(1.0, slowMoRatioRef.current + 0.12);
+    }
+
+    const speedFactor = slowMoRatioRef.current;
+
     list.forEach(d => {
       if (d.isPocketed) return;
 
@@ -362,10 +496,10 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         }
       }
 
-      d.x += d.vx;
-      d.y += d.vy;
-      d.vx *= FRICTION;
-      d.vy *= FRICTION;
+      d.x += d.vx * speedFactor;
+      d.y += d.vy * speedFactor;
+      d.vx *= Math.pow(FRICTION, speedFactor);
+      d.vy *= Math.pow(FRICTION, speedFactor);
 
       if (Math.abs(d.vx) < 0.05) d.vx = 0;
       if (Math.abs(d.vy) < 0.05) d.vy = 0;
@@ -455,17 +589,16 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
             const cx = d1.x + nx * d1.radius;
             const cy = d1.y + ny * d1.radius;
             createImpactSparks(cx, cy, d1.color, d2.color);
+
+            // Screen shake for powerful striker impacts
+            if (isStrikerOverlap && Math.abs(normalVelocity) > 1.8) {
+              shakeIntensityRef.current = Math.min(10, Math.abs(normalVelocity) * 2.5);
+            }
           }
         }
       }
     }
 
-    const pockets = [
-      { x: POCKET_RADIUS, y: POCKET_RADIUS },
-      { x: BOARD_SIZE - POCKET_RADIUS, y: BOARD_SIZE - POCKET_RADIUS },
-      { x: POCKET_RADIUS, y: BOARD_SIZE - POCKET_RADIUS },
-      { x: BOARD_SIZE - POCKET_RADIUS, y: POCKET_RADIUS }
-    ];
 
     list.forEach(d => {
       if (d.isPocketed) return;
@@ -710,7 +843,124 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     }
   };
 
+  const drawStrikerSkin = (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) => {
+    if (strikerSkin === 'tron') {
+      // Neon Cyan Tron Skin
+      const tronGrad = ctx.createRadialGradient(x, y, 1, x, y, radius);
+      tronGrad.addColorStop(0, '#020d18');
+      tronGrad.addColorStop(0.65, '#05223c');
+      tronGrad.addColorStop(0.92, '#00f0ff');
+      tronGrad.addColorStop(1, '#020d18');
+      ctx.fillStyle = tronGrad;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pulsing neon rings
+      ctx.strokeStyle = '#00f5ff';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(x, y, radius - 3, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ff007f';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(x, y, radius - 7, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // Center glowing dot
+      ctx.fillStyle = '#00f5ff';
+      ctx.beginPath();
+      ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (strikerSkin === 'royal') {
+      // Royal Gold Purple
+      const royalGrad = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, radius);
+      royalGrad.addColorStop(0, '#be95c4');
+      royalGrad.addColorStop(0.4, '#5c068c');
+      royalGrad.addColorStop(0.8, '#ffd700');
+      royalGrad.addColorStop(1, '#85581a');
+      ctx.fillStyle = royalGrad;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Royal emblem crown lines
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 0.5, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // Golden spokes
+      for (let a = 0; a < 6; a++) {
+        const ang = (a * Math.PI) / 3;
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(ang) * 2, y + Math.sin(ang) * 2);
+        ctx.lineTo(x + Math.cos(ang) * (radius - 5), y + Math.sin(ang) * (radius - 5));
+        ctx.stroke();
+      }
+    } else if (strikerSkin === 'ruby') {
+      // Crimson Gem Ruby Facets
+      const rubyGrad = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, radius);
+      rubyGrad.addColorStop(0, '#ff007f');
+      rubyGrad.addColorStop(0.5, '#c1121f');
+      rubyGrad.addColorStop(0.85, '#660708');
+      rubyGrad.addColorStop(1, '#ff007f');
+      ctx.fillStyle = rubyGrad;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Diametric flares
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = 0.8;
+      for (let a = 0; a < 4; a++) {
+        const ang = (a * Math.PI) / 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + Math.cos(ang) * (radius - 3), y + Math.sin(ang) * (radius - 3));
+        ctx.stroke();
+      }
+    } else {
+      // Classic tournament brass gold
+      const goldGrad = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, radius);
+      goldGrad.addColorStop(0, '#fff3b0');
+      goldGrad.addColorStop(0.35, '#ffd166');
+      goldGrad.addColorStop(0.8, '#b58900');
+      goldGrad.addColorStop(1, '#3d2414');
+      ctx.fillStyle = goldGrad;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#3d2414';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 0.5, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      for (let s = 0; s < 4; s++) {
+        const ang = (s * Math.PI) / 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + Math.cos(ang) * (radius - 4), y + Math.sin(ang) * (radius - 4));
+        ctx.stroke();
+      }
+    }
+  };
+
   const drawBoard = (ctx: CanvasRenderingContext2D) => {
+    ctx.save();
+    
+    // Apply dynamic screen shake offsets
+    if (shakeIntensityRef.current > 0) {
+      const dx = (Math.random() - 0.5) * shakeIntensityRef.current;
+      const dy = (Math.random() - 0.5) * shakeIntensityRef.current;
+      ctx.translate(dx, dy);
+    }
+
     ctx.clearRect(0, 0, BOARD_SIZE, BOARD_SIZE);
 
     // 1. Classic Light Wood Tarmac Background with radial grain glow
@@ -724,15 +974,36 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     ctx.fillStyle = woodGrad;
     ctx.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
 
-    // Outer rich walnut borders
+    // High-gloss polished lacquer reflection diagonal band
+    const glossGrad = ctx.createLinearGradient(0, 0, BOARD_SIZE, BOARD_SIZE);
+    glossGrad.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
+    glossGrad.addColorStop(0.35, 'rgba(255, 255, 255, 0.12)');
+    glossGrad.addColorStop(0.4, 'rgba(255, 255, 255, 0.24)');
+    glossGrad.addColorStop(0.45, 'rgba(255, 255, 255, 0.12)');
+    glossGrad.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+    ctx.fillStyle = glossGrad;
+    ctx.fillRect(14, 14, BOARD_SIZE - 28, BOARD_SIZE - 28);
+
+    // Outer rich gold-bevel border
     ctx.lineWidth = 14;
-    ctx.strokeStyle = '#5c3a21';
-    ctx.strokeRect(0, 0, BOARD_SIZE, BOARD_SIZE);
+    const goldGrad = ctx.createLinearGradient(0, 0, BOARD_SIZE, BOARD_SIZE);
+    goldGrad.addColorStop(0, '#85581A');
+    goldGrad.addColorStop(0.3, '#E6B830');
+    goldGrad.addColorStop(0.5, '#FFD700');
+    goldGrad.addColorStop(0.7, '#E6B830');
+    goldGrad.addColorStop(1, '#85581A');
+    ctx.strokeStyle = goldGrad;
+    ctx.strokeRect(7, 7, BOARD_SIZE - 14, BOARD_SIZE - 14);
+
+    // Deep mahogany frame inside
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#3d1c02';
+    ctx.strokeRect(12, 12, BOARD_SIZE - 24, BOARD_SIZE - 24);
 
     // Inner thin border line
     ctx.lineWidth = 1.5;
     ctx.strokeStyle = 'rgba(92, 58, 33, 0.4)';
-    ctx.strokeRect(10, 10, BOARD_SIZE - 20, BOARD_SIZE - 20);
+    ctx.strokeRect(16, 16, BOARD_SIZE - 32, BOARD_SIZE - 32);
 
     // Center concentric circles
     ctx.strokeStyle = 'rgba(92, 58, 33, 0.35)';
@@ -782,7 +1053,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       ctx.stroke();
     });
 
-    // FIXED: Baseline red dots individually
+    // Baseline red dots
     ctx.fillStyle = '#b7094c';
     [
       { x: 50, y: BOARD_SIZE - 50 },
@@ -799,11 +1070,20 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     pockets.forEach(p => {
       ctx.beginPath();
       ctx.arc(p.x, p.y, POCKET_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = '#060a12';
+      ctx.fillStyle = '#020305';
+      ctx.fill();
+
+      // 3D pocket shadow
+      const pocketInner = ctx.createRadialGradient(p.x, p.y, POCKET_RADIUS - 6, p.x, p.y, POCKET_RADIUS);
+      pocketInner.addColorStop(0, 'rgba(0, 0, 0, 0.85)');
+      pocketInner.addColorStop(1, 'rgba(0, 245, 255, 0.35)');
+      ctx.fillStyle = pocketInner;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, POCKET_RADIUS, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.lineWidth = 2.0;
-      ctx.strokeStyle = '#c68b59';
+      ctx.strokeStyle = '#FFD700'; // Gold metallic rim
       ctx.beginPath();
       ctx.arc(p.x, p.y, POCKET_RADIUS, 0, Math.PI * 2);
       ctx.stroke();
@@ -813,47 +1093,67 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     discs.forEach(d => {
       if (d.isPocketed) return;
 
+      // Beveled coin drop shadow
       ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,0.4)';
-      ctx.shadowBlur = 6;
-      ctx.shadowOffsetY = 2;
-
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 3.5;
       ctx.beginPath();
       ctx.arc(d.x, d.y, d.radius, 0, Math.PI * 2);
       ctx.fillStyle = d.color;
       ctx.fill();
       ctx.restore();
 
+      // Beveled metallic gradient layers
       ctx.save();
-      const shineGrad = ctx.createRadialGradient(
-        d.x - d.radius * 0.35, d.y - d.radius * 0.35, 1,
-        d.x, d.y, d.radius
-      );
-      shineGrad.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
-      shineGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0.1)');
-      shineGrad.addColorStop(0.75, 'rgba(0, 0, 0, 0.4)');
-      shineGrad.addColorStop(1, 'rgba(0, 0, 0, 0.85)');
-      
-      ctx.fillStyle = shineGrad;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, d.radius, 0, Math.PI * 2);
-      ctx.fill();
+      if (d.type === 'queen') {
+        // Star ruby gem facets
+        const rubyGrad = ctx.createRadialGradient(d.x - 3, d.y - 3, 1, d.x, d.y, d.radius);
+        rubyGrad.addColorStop(0, '#ff6b8b');
+        rubyGrad.addColorStop(0.4, '#ff003c');
+        rubyGrad.addColorStop(0.8, '#9e0022');
+        rubyGrad.addColorStop(1, '#47000e');
+        ctx.fillStyle = rubyGrad;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.radius, 0, Math.PI * 2);
+        ctx.fill();
 
-      ctx.lineWidth = 0.8;
-      ctx.strokeStyle = d.type === 'striker' ? '#5c3a21' : 'rgba(255,255,255,0.15)';
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, d.radius * 0.5, 0, Math.PI * 2);
-      ctx.stroke();
-
-      if (d.type === 'striker') {
-        ctx.strokeStyle = 'rgba(92, 58, 33, 0.5)';
-        for (let s = 0; s < 4; s++) {
-          const ang = (s * Math.PI) / 2;
+        // Facets overlay
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.lineWidth = 0.8;
+        for (let a = 0; a < 8; a++) {
+          const ang = (a * Math.PI) / 4;
           ctx.beginPath();
           ctx.moveTo(d.x, d.y);
-          ctx.lineTo(d.x + Math.cos(ang) * (d.radius - 4), d.y + Math.sin(ang) * (d.radius - 4));
+          ctx.lineTo(d.x + Math.cos(ang) * d.radius, d.y + Math.sin(ang) * d.radius);
           ctx.stroke();
         }
+
+        // Diamond center flare
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(d.x - 2.5, d.y - 2.5, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (d.type === 'striker') {
+        drawStrikerSkin(ctx, d.x, d.y, d.radius);
+      } else {
+        // Beveled 3D normal coin (white/black)
+        const coinGrad = ctx.createRadialGradient(d.x - 3, d.y - 3, 1, d.x, d.y, d.radius);
+        coinGrad.addColorStop(0, d.type === 'white' ? '#ffffff' : '#555555');
+        coinGrad.addColorStop(0.3, d.type === 'white' ? '#fcf8ee' : '#2d2d2d');
+        coinGrad.addColorStop(0.75, d.type === 'white' ? '#e2d4af' : '#141414');
+        coinGrad.addColorStop(1, d.type === 'white' ? '#a39468' : '#050505');
+        ctx.fillStyle = coinGrad;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Inner circular ridge line
+        ctx.strokeStyle = d.type === 'white' ? 'rgba(255, 255, 255, 0.45)' : 'rgba(255, 255, 255, 0.12)';
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.radius * 0.65, 0, Math.PI * 2);
+        ctx.stroke();
       }
       ctx.restore();
     });
@@ -931,35 +1231,33 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         const showBotPullback = turn !== currentUser.id && botPlayState === 'aiming';
         if (isAiming || showBotPullback) {
           ctx.save();
-          ctx.strokeStyle = '#b7094c';
-          ctx.lineWidth = 2.0;
-          ctx.setLineDash([3, 3]);
+          ctx.strokeStyle = '#00F5FF'; // Cyan laser drag guide line
+          ctx.lineWidth = 2.5;
+          ctx.setLineDash([2, 2]);
+          ctx.shadowColor = '#00F5FF';
+          ctx.shadowBlur = 8;
           ctx.beginPath();
           ctx.moveTo(x0, y0);
           
-          let dragX, dragY;
-          if (isAiming) {
-            dragX = aimCurrent.x;
-            dragY = aimCurrent.y;
-          } else {
-            const pullDist = shotPower / 0.75;
-            dragX = x0 - dx * pullDist;
-            dragY = y0 - dy * pullDist;
-          }
+          const pullDist = shotPower / 0.75;
+          const dragX = x0 - dx * pullDist;
+          const dragY = y0 - dy * pullDist;
           
           ctx.lineTo(dragX, dragY);
           ctx.stroke();
 
-          ctx.fillStyle = '#b7094c';
+          // Glowing energy anchor dot
+          ctx.fillStyle = '#FFD700'; // Royal Gold anchor dot
+          ctx.shadowColor = '#FFD700';
           ctx.beginPath();
-          ctx.arc(dragX, dragY, 4, 0, Math.PI * 2);
+          ctx.arc(dragX, dragY, 5, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         }
 
         // Draw forward dotted target line
         ctx.save();
-        ctx.strokeStyle = 'rgba(92, 58, 33, 0.6)';
+        ctx.strokeStyle = 'rgba(0, 245, 255, 0.45)'; // Cyan neon guide path
         ctx.lineWidth = 1.5;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
@@ -970,7 +1268,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
         // Draw ghost contact target circle
         ctx.save();
-        ctx.strokeStyle = 'rgba(92, 58, 33, 0.4)';
+        ctx.strokeStyle = 'rgba(0, 245, 255, 0.25)';
         ctx.lineWidth = 1.0;
         ctx.setLineDash([3, 3]);
         ctx.beginPath();
@@ -990,7 +1288,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
             const cny = cdy / cdist;
 
             ctx.save();
-            ctx.strokeStyle = 'rgba(183, 9, 76, 0.7)';
+            ctx.strokeStyle = 'rgba(255, 0, 127, 0.6)'; // Magenta collision direction path
             ctx.lineWidth = 1.5;
             ctx.setLineDash([2, 2]);
             ctx.beginPath();
@@ -1002,6 +1300,8 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         }
       }
     }
+
+    ctx.restore(); // Screen shake end restore
   };
 
   const handleStrikerSlider = (val: number) => {
@@ -1102,6 +1402,9 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       
       if (dist < striker.radius + 15) {
         setIsAiming(true);
+        dragStartXRef.current = x;
+        dragStartYRef.current = y;
+        
         setAimStart({ x: striker.x, y: striker.y });
         setAimCurrent({ x: striker.x, y: striker.y });
         audioSynth.playHover();
@@ -1122,19 +1425,23 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           const mx = (moveEvt.clientX - cRect.left - border) * sX;
           const my = (moveEvt.clientY - cRect.top - border) * sY;
 
-          setAimCurrent({ x: mx, y: my });
+          const mdx = mx - dragStartXRef.current;
+          const mdy = my - dragStartYRef.current;
+          const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
 
-          const mdx = mx - striker.x;
-          const mdy = my - striker.y;
-          
+          // Update current visual pull point relative to striker center
           const angleVal = Math.atan2(-mdy, -mdx);
           setShotAngle(angleVal);
           shotAngleRef.current = angleVal; // Update ref synchronously!
 
-          const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
           const powerVal = Math.min(100, Math.max(20, Math.round(mdist * 0.75)));
           setShotPower(powerVal);
           shotPowerRef.current = powerVal; // Update ref synchronously!
+
+          setAimCurrent({
+            x: striker.x - Math.cos(angleVal) * (mdist),
+            y: striker.y - Math.sin(angleVal) * (mdist)
+          });
         };
 
         const handlePointerUp = (upEvt: PointerEvent) => {
@@ -1158,8 +1465,8 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           const mx = (upEvt.clientX - cRect.left - border) * sX;
           const my = (upEvt.clientY - cRect.top - border) * sY;
 
-          const mdx = mx - striker.x;
-          const mdy = my - striker.y;
+          const mdx = mx - dragStartXRef.current;
+          const mdy = my - dragStartYRef.current;
           const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
 
           if (mdist < 10) {
@@ -1210,28 +1517,31 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   ];
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-6 gap-8 w-full h-full min-h-0 bg-gradient-to-br from-[#1c0f08] via-[#2d190e] to-[#0f0704] relative overflow-hidden select-none">
+    <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-6 gap-8 w-full h-full min-h-0 bg-gradient-to-br from-[#050505] via-[#0a1128] to-[#030209] relative overflow-hidden select-none">
       
-      {/* Decorative ambient glowing grids in background */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,183,3,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,183,3,0.02)_1px,transparent_1px)] bg-[size:30px_30px] pointer-events-none" />
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#ffb703]/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#c68b59]/5 rounded-full blur-[120px] pointer-events-none" />
+      {/* Dynamic esports spotlights sweeping across wrapper background */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00f5ff]/5 rounded-full blur-[130px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#8a2be2]/5 rounded-full blur-[130px] pointer-events-none" />
 
-      {/* 2D Canvas */}
+      {/* 2D Canvas with Turn-based Cinematic scale zoom */}
       <div className="flex flex-col items-center z-10">
         <canvas
           ref={canvasRef}
           width={BOARD_SIZE}
           height={BOARD_SIZE}
           onPointerDown={handleCanvasPointerDown}
-          className="border-8 border-[#3d2414] rounded-xl shadow-[0_20px_50px_rgba(255,183,3,0.18)] bg-[#ebd2a3] cursor-pointer hover:shadow-[0_20px_50px_rgba(255,183,3,0.25)] transition-shadow duration-300"
+          className={`rounded-2xl bg-[#ebd2a3] cursor-pointer transition-all duration-700 ${
+            turn === currentUser.id && !isStrikerFlicked
+              ? 'scale-[1.03] border-[10px] border-[#FFD700] shadow-[0_25px_60px_rgba(0,245,255,0.22)]'
+              : 'scale-100 border-[10px] border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)]'
+          }`}
         />
         
         {/* Striker Slider control */}
         {turn === currentUser.id && !isStrikerFlicked && (
           <div className="w-full max-w-[400px] mt-4 px-2 space-y-1">
-            <div className="flex justify-between text-[10px] text-amber-200/50 font-mono">
-              <span>striker_align_slider</span>
+            <div className="flex justify-between text-[10px] text-[#00f5ff]/70 font-mono">
+              <span className="uppercase tracking-widest font-orbitron font-bold">striker_align_slider</span>
               <span>x: {Math.round(strikerX)}</span>
             </div>
             <input
@@ -1241,47 +1551,79 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
               value={strikerX}
               disabled={isAiming}
               onChange={(e) => handleStrikerSlider(parseInt(e.target.value))}
-              className="w-full h-1.5 bg-[#3d2414] rounded-lg appearance-none cursor-pointer accent-[#ffb703] disabled:opacity-40"
+              className="w-full h-2 bg-[#050505] border border-[#00f5ff]/20 rounded-lg appearance-none cursor-pointer accent-[#00f5ff] disabled:opacity-40"
             />
           </div>
         )}
       </div>
 
-      {/* Wooden HUD control panel */}
-      <div className="w-full md:w-56 glass-panel rounded-lg p-4 flex flex-col h-[320px] md:h-[400px] font-mono text-xs border border-[#5c3a21]/40 justify-between bg-[#24140b]/90 text-amber-100 shadow-[0_0_20px_rgba(255,183,3,0.08)] z-10">
+      {/* Futuristic Cyber-Luxury Esports HUD */}
+      <div className="w-full md:w-60 glass-panel rounded-xl p-5 flex flex-col h-[380px] md:h-[450px] font-mono text-xs border border-[#00f0ff]/30 justify-between bg-[#050505]/90 text-gray-100 shadow-[0_0_25px_rgba(0,240,255,0.15)] z-10">
         <div>
-          <h4 className="text-[#ffb703] font-bold font-orbitron uppercase tracking-wider border-b border-[#5c3a21] pb-2 mb-3 shadow-[0_1px_0_rgba(255,183,3,0.15)]">
-            // CARROM MASTERS
+          <h4 className="text-[#00f5ff] font-bold font-orbitron uppercase tracking-widest border-b border-[#00f5ff]/20 pb-2 mb-3 shadow-[0_1px_0_rgba(0,245,255,0.1)]">
+            // CYBER_BOARD REGISTER
           </h4>
 
-          {/* Turn and Details */}
-          <div className="space-y-2 mb-3">
+          {/* Active Opponent Info */}
+          <div className="flex items-center gap-3 p-2 rounded bg-black/40 border border-[#ff007f]/20 mb-3">
+            <div className="relative">
+              <div className="w-8 h-8 rounded-full bg-[#ff007f]/10 border border-[#ff007f]/40 flex items-center justify-center text-[#ff007f] font-orbitron font-bold text-xs">
+                {turn !== currentUser.id ? '🤖' : '👤'}
+              </div>
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-neon-green border-2 border-black animate-pulse" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-bold text-white font-orbitron uppercase tracking-wide truncate">
+                {turn !== currentUser.id ? '🤖 A.I. CYBER_BOT' : currentUser.username.toUpperCase()}
+              </div>
+              <div className="text-[8px] text-[#00f5ff]/70 font-mono tracking-wider truncate">
+                {turn !== currentUser.id ? 'analyzing_grids...' : 'awaiting_flick...'}
+              </div>
+            </div>
+          </div>
+
+          {/* Faction and Status */}
+          <div className="space-y-1.5 mb-3 text-[10px]">
             <div className="flex justify-between">
-              <span className="text-amber-100/50">TURN_NODE:</span>
-              <span className={turn === currentUser.id ? 'text-[#ffb703] animate-pulse font-bold' : 'text-gray-500'}>
-                {turn === currentUser.id ? 'YOURS_ACTIVE' : 'OPPONENT'}
+              <span className="text-gray-400">YOUR_FACTION:</span>
+              <span className={myColorType === 'white' ? 'text-[#FFD700] font-bold' : 'text-[#8a2be2] font-bold'}>
+                {myColorType === 'white' ? 'GOLD_IVORY' : 'DEEP_PURPLE'}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-amber-100/50">PUCK_FACTION:</span>
-              <span className={myColorType === 'white' ? 'text-[#ffb703] font-bold' : 'text-amber-600 font-bold'}>
-                {myColorType === 'white' ? 'IVORY_WHITE' : 'DARK_WOOD'}
-              </span>
+            
+            {/* Custom Striker Skin Selector */}
+            <div className="flex flex-col gap-1 border-t border-[#00f5ff]/15 pt-2 mt-2">
+              <span className="text-[8px] text-[#00f5ff]/60 uppercase tracking-widest font-orbitron">STRIKER SKIN:</span>
+              <div className="grid grid-cols-4 gap-1">
+                {(['classic', 'tron', 'royal', 'ruby'] as const).map(skin => (
+                  <button
+                    key={skin}
+                    onClick={() => { audioSynth.playClick(); setStrikerSkin(skin); }}
+                    className={`px-0.5 py-1 rounded text-[8px] uppercase font-bold border transition-all cursor-pointer ${
+                      strikerSkin === skin
+                        ? 'bg-[#00f5ff] text-black border-[#00f5ff] shadow-[0_0_8px_rgba(0,245,255,0.4)]'
+                        : 'bg-black/50 text-[#00f5ff]/70 border-[#00f5ff]/20 hover:border-[#00f5ff]/50'
+                    }`}
+                  >
+                    {skin}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Interactive Bot Difficulty Select */}
-            <div className="flex flex-col gap-1 border-t border-[#5c3a21]/30 pt-2 mt-2">
-              <span className="text-[10px] text-amber-100/40 font-mono">BOT_DIFFICULTY:</span>
+            <div className="flex flex-col gap-1 border-t border-[#00f5ff]/15 pt-2 mt-2">
+              <span className="text-[8px] text-gray-400 uppercase tracking-widest font-orbitron">BOT DIFFICULTY:</span>
               <div className="grid grid-cols-3 gap-1">
                 {(['easy', 'medium', 'hard'] as const).map(diff => (
                   <button
                     key={diff}
                     disabled={isStrikerFlicked}
                     onClick={() => { audioSynth.playClick(); setDifficulty(diff); }}
-                    className={`px-1 py-1 rounded text-[9px] uppercase font-bold border transition-colors cursor-pointer ${
+                    className={`px-1 py-1 rounded text-[8px] uppercase font-bold border transition-colors cursor-pointer ${
                       difficulty === diff
-                        ? 'bg-[#ffb703] text-black border-[#ffb703]'
-                        : 'bg-black/40 text-amber-100/60 border-[#5c3a21]/40 hover:border-[#ffb703]/40'
+                        ? 'bg-[#FFD700] text-black border-[#FFD700] shadow-[0_0_6px_rgba(255,215,0,0.3)]'
+                        : 'bg-black/50 text-[#FFD700]/70 border-[#FFD700]/20 hover:border-[#FFD700]/50'
                     } disabled:opacity-50`}
                   >
                     {diff}
@@ -1292,35 +1634,39 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           </div>
 
           {/* Scores board */}
-          <span className="text-[9px] text-amber-100/40">// SCORE REGISTER</span>
+          <span className="text-[9px] text-[#00f5ff]/50 uppercase font-orbitron tracking-wider">// SCORE REGISTER</span>
           <div className="grid grid-cols-2 gap-2 mt-1 mb-3">
-            <div className="bg-black/40 border border-[#5c3a21]/40 p-2 rounded text-center">
-              <p className="text-[8px] text-amber-100/40">WHITE</p>
-              <p className="text-[#ffb703] font-bold text-sm">{scores.white}</p>
+            <div className="bg-black/50 border border-[#00f5ff]/15 p-2 rounded text-center">
+              <p className="text-[8px] text-gray-400 uppercase">WHITE</p>
+              <p className="text-[#FFD700] font-bold text-sm">{scores.white}</p>
             </div>
-            <div className="bg-black/40 border border-[#5c3a21]/40 p-2 rounded text-center">
-              <p className="text-[8px] text-amber-100/40">BLACK</p>
-              <p className="text-amber-600 font-bold text-sm">{scores.black}</p>
+            <div className="bg-black/50 border border-[#00f5ff]/15 p-2 rounded text-center">
+              <p className="text-[8px] text-gray-400 uppercase">BLACK</p>
+              <p className="text-[#8a2be2] font-bold text-sm">{scores.black}</p>
             </div>
           </div>
         </div>
 
         {/* Slingshot Instructions HUD */}
         {turn === currentUser.id && !isStrikerFlicked ? (
-          <div className="space-y-3 pt-2 border-t border-[#5c3a21]">
-            <div className="text-[10px] text-amber-100/60 leading-normal bg-black/40 p-2 rounded border border-[#5c3a21]/30 font-sans">
-              <span className="text-[#ffb703] font-bold font-orbitron block mb-1 uppercase">// SLINGSHOT CONTROL</span>
-              Drag the bottom slider to position the striker. Then **Click on the Striker and Drag Backwards** to aim and set power. Release to shoot!
+          <div className="space-y-2.5 pt-2 border-t border-[#00f5ff]/20">
+            <div className="text-[9px] text-[#00f5ff]/85 leading-normal bg-black/60 p-2 rounded border border-[#00f5ff]/20 font-sans">
+              <span className="text-[#FFD700] font-bold font-orbitron block mb-1 uppercase">// SLINGSHOT CONTROL</span>
+              Position the slider, then **Click & Drag Backwards** on the striker to aim. Release to fire!
             </div>
 
             <div className="flex justify-between text-[10px] font-mono">
-              <span className="text-amber-100/50">STRIKE_FORCE:</span>
-              <span className="text-[#ffb703] font-bold">{shotPower}%</span>
+              <span className="text-gray-400">STRIKE_FORCE:</span>
+              <span className="text-[#00f5ff] font-bold">{shotPower}%</span>
             </div>
           </div>
         ) : (
-          <div className="p-3 bg-black/40 rounded border border-[#5c3a21]/30 text-center text-gray-500 text-[10px] leading-relaxed">
-            {botPlayState === 'aligning' ? 'BOT_ALIGNING_STRIKER' : botPlayState === 'shooting' ? 'BOT_RELEASING_STRIKER' : 'WAITING_FOR_OPPONENT'}
+          <div className="p-2.5 bg-black/50 rounded border border-[#ff007f]/20 text-center text-[#ff007f] text-[9px] leading-relaxed animate-pulse font-orbitron uppercase tracking-wider">
+            {botPlayState === 'thinking' && '🤖 BOT_THINKING_STRATEGY...'}
+            {botPlayState === 'aligning' && '🤖 BOT_SLIDING_STRIKER...'}
+            {botPlayState === 'aiming' && '🤖 BOT_CHARGING_POWER...'}
+            {botPlayState === 'shooting' && '🤖 BOT_RELEASING_STRIKER...'}
+            {botPlayState === 'idle' && '⌛ WAITING_FOR_OPPONENT...'}
           </div>
         )}
       </div>
