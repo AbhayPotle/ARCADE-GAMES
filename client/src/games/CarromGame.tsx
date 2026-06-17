@@ -351,6 +351,19 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     list.forEach(d => {
       if (d.isPocketed) return;
 
+      // Defensive check to prevent NaN locks
+      if (isNaN(d.x) || isNaN(d.y) || isNaN(d.vx) || isNaN(d.vy)) {
+        d.vx = 0;
+        d.vy = 0;
+        if (d.type === 'striker') {
+          d.x = BOARD_SIZE / 2;
+          d.y = turn === currentUser.id ? BOARD_SIZE - 50 : 50;
+        } else {
+          d.x = BOARD_SIZE / 2 + (Math.random() - 0.5) * 10;
+          d.y = BOARD_SIZE / 2 + (Math.random() - 0.5) * 10;
+        }
+      }
+
       d.x += d.vx;
       d.y += d.vy;
       d.vx *= FRICTION;
@@ -423,8 +436,8 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
         if (dist < minDist) {
           const overlap = minDist - dist;
-          const nx = dx / dist;
-          const ny = dy / dist;
+          const nx = dist > 0 ? dx / dist : 1;
+          const ny = dist > 0 ? dy / dist : 0;
           d1.x -= nx * overlap * 0.5;
           d1.y -= ny * overlap * 0.5;
           d2.x += nx * overlap * 0.5;
