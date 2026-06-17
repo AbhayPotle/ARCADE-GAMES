@@ -57,6 +57,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   const [isStrikerFlicked, setIsStrikerFlicked] = useState(false);
   const [myColorType, setMyColorType] = useState<'white' | 'black'>('white');
   const [gameOver, setGameOver] = useState(false);
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
 
   // Slingshot aiming states
   const [isAiming, setIsAiming] = useState(false);
@@ -85,7 +86,15 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     const playerIndex = matchData.players.findIndex((p: any) => p.userId === currentUser.id);
     const color = playerIndex === 0 ? 'white' : 'black';
     setMyColorType(color);
-    setTurn(matchData.players[0].userId);
+    const firstTurn = matchData.players[0].userId;
+    setTurn(firstTurn);
+
+    // Reset shot angle based on whose turn it is
+    const initialAngle = firstTurn === currentUser.id ? -Math.PI / 2 : Math.PI / 2;
+    setShotAngle(initialAngle);
+    shotAngleRef.current = initialAngle;
+    setShotPower(50);
+    shotPowerRef.current = 50;
 
     // Reset queen refs
     queenStateRef.current = 'board';
@@ -127,15 +136,15 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     const center = BOARD_SIZE / 2;
     const r = 10;
 
-    // 1. Red Queen at the center
-    list.push({ x: center, y: center, vx: 0, vy: 0, radius: r, type: 'queen', color: '#b7094c', isPocketed: false });
+    // 1. Red Queen at the center (metallic cherry red)
+    list.push({ x: center, y: center, vx: 0, vy: 0, radius: r, type: 'queen', color: '#e63946', isPocketed: false });
 
     // 2. Inner ring: 6 alternating white & black pucks
     for (let i = 0; i < 6; i++) {
       const angle = (i * Math.PI) / 3;
       const dist = r * 2.1;
       const type = i % 2 === 0 ? 'white' : 'black';
-      const color = type === 'white' ? '#f5ebe0' : '#2b2b2b';
+      const color = type === 'white' ? '#faedcd' : '#1a0f0a';
       list.push({
         x: center + Math.cos(angle) * dist,
         y: center + Math.sin(angle) * dist,
@@ -153,7 +162,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       const angle = (i * Math.PI) / 6;
       const dist = r * 4.2;
       const type = i % 2 === 0 ? 'black' : 'white';
-      const color = type === 'white' ? '#f5ebe0' : '#2b2b2b';
+      const color = type === 'white' ? '#faedcd' : '#1a0f0a';
       list.push({
         x: center + Math.cos(angle) * dist,
         y: center + Math.sin(angle) * dist,
@@ -166,7 +175,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       });
     }
 
-    // 4. Large Striker at bottom baseline (bronze wood color)
+    // 4. Large Striker at bottom baseline (premium gold brass color)
     list.push({
       x: center,
       y: BOARD_SIZE - 50,
@@ -174,7 +183,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       vy: 0,
       radius: 14,
       type: 'striker',
-      color: '#c68b59',
+      color: '#ffd166',
       isPocketed: false
     });
 
@@ -275,47 +284,36 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         setStrikerX(striker.x);
         setDiscs(list);
 
-        // Transition to aiming
+        // Transition directly to shooting (instant aim)
         const target = botTargetPuckRef.current;
         if (target) {
           const dx = target.x - striker.x;
           const dy = target.y - striker.y;
-          botTargetAngleRef.current = Math.atan2(dy, dx);
-          botTargetPowerRef.current = 55 + Math.floor(Math.random() * 25);
-          setShotAngle(Math.PI / 2);
-          setShotPower(20);
-          setBotPlayState('aiming');
+          const baseAngle = Math.atan2(dy, dx);
+          
+          // Difficulty configurations (easy, medium, hard)
+          let noise = 0;
+          let calculatedPower = 50;
+          if (difficulty === 'easy') {
+            noise = (Math.random() - 0.5) * 0.12; // ±3.4 degrees
+            calculatedPower = 45 + Math.floor(Math.random() * 25); // 45 - 70
+          } else if (difficulty === 'medium') {
+            noise = (Math.random() - 0.5) * 0.04; // ±1.1 degrees
+            calculatedPower = 55 + Math.floor(Math.random() * 25); // 55 - 80
+          } else {
+            noise = 0; // perfect aim (zero noise)
+            calculatedPower = 60 + Math.floor(Math.random() * 30); // 60 - 90
+          }
+
+          const finalAngle = baseAngle + noise;
+          setShotAngle(finalAngle);
+          setShotPower(calculatedPower);
+          
+          // Move directly to shooting
+          setBotPlayState('shooting');
         } else {
           setBotPlayState('idle');
         }
-      }
-      return;
-    }
-
-    if (botPlayState === 'aiming') {
-      const angleStep = 0.025;
-      let diff = botTargetAngleRef.current - shotAngle;
-      
-      while (diff < -Math.PI) diff += Math.PI * 2;
-      while (diff > Math.PI) diff -= Math.PI * 2;
-
-      let angleChanged = false;
-      let powerChanged = false;
-
-      if (Math.abs(diff) > angleStep) {
-        setShotAngle(shotAngle + Math.sign(diff) * angleStep);
-        angleChanged = true;
-      } else {
-        setShotAngle(botTargetAngleRef.current);
-      }
-
-      if (shotPower < botTargetPowerRef.current) {
-        setShotPower(prev => Math.min(botTargetPowerRef.current, prev + 2));
-        powerChanged = true;
-      }
-
-      if (!angleChanged && !powerChanged) {
-        setBotPlayState('shooting');
       }
       return;
     }
@@ -656,6 +654,13 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         setDiscs(list);
         setTurn(nextTurn);
 
+        // Reset aiming parameters for the next turn
+        const nextAngle = nextTurn === currentUser.id ? -Math.PI / 2 : Math.PI / 2;
+        setShotAngle(nextAngle);
+        shotAngleRef.current = nextAngle;
+        setShotPower(50);
+        shotPowerRef.current = 50;
+
         socketService.emit('carrom_update_sync', {
           roomId: matchData.roomId,
           pucks: list.map(d => ({ x: d.x, y: d.y, type: d.type, isPocketed: d.isPocketed })),
@@ -708,8 +713,15 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   const drawBoard = (ctx: CanvasRenderingContext2D) => {
     ctx.clearRect(0, 0, BOARD_SIZE, BOARD_SIZE);
 
-    // 1. Classic Light Wood Tarmac Background
-    ctx.fillStyle = '#ebd2a3';
+    // 1. Classic Light Wood Tarmac Background with radial grain glow
+    const woodGrad = ctx.createRadialGradient(
+      BOARD_SIZE / 2, BOARD_SIZE / 2, 40,
+      BOARD_SIZE / 2, BOARD_SIZE / 2, BOARD_SIZE * 0.7
+    );
+    woodGrad.addColorStop(0, '#f2dfbc');
+    woodGrad.addColorStop(0.6, '#ebd2a3');
+    woodGrad.addColorStop(1, '#dbbb85');
+    ctx.fillStyle = woodGrad;
     ctx.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
 
     // Outer rich walnut borders
@@ -1161,16 +1173,21 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   ];
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-6 gap-6 w-full h-full min-h-0 bg-[#3d2516]">
+    <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-6 gap-8 w-full h-full min-h-0 bg-gradient-to-br from-[#1c0f08] via-[#2d190e] to-[#0f0704] relative overflow-hidden select-none">
       
+      {/* Decorative ambient glowing grids in background */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,183,3,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,183,3,0.02)_1px,transparent_1px)] bg-[size:30px_30px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#ffb703]/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#c68b59]/5 rounded-full blur-[120px] pointer-events-none" />
+
       {/* 2D Canvas */}
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center z-10">
         <canvas
           ref={canvasRef}
           width={BOARD_SIZE}
           height={BOARD_SIZE}
           onPointerDown={handleCanvasPointerDown}
-          className="border-4 border-[#5c3a21] rounded-lg shadow-[0_12px_36px_rgba(0,0,0,0.6)] bg-[#ebd2a3] cursor-pointer"
+          className="border-8 border-[#3d2414] rounded-xl shadow-[0_20px_50px_rgba(255,183,3,0.18)] bg-[#ebd2a3] cursor-pointer hover:shadow-[0_20px_50px_rgba(255,183,3,0.25)] transition-shadow duration-300"
         />
         
         {/* Striker Slider control */}
@@ -1187,21 +1204,21 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
               value={strikerX}
               disabled={isAiming}
               onChange={(e) => handleStrikerSlider(parseInt(e.target.value))}
-              className="w-full h-1.5 bg-[#5c3a21] rounded-lg appearance-none cursor-pointer accent-[#ffb703] disabled:opacity-40"
+              className="w-full h-1.5 bg-[#3d2414] rounded-lg appearance-none cursor-pointer accent-[#ffb703] disabled:opacity-40"
             />
           </div>
         )}
       </div>
 
       {/* Wooden HUD control panel */}
-      <div className="w-full md:w-56 glass-panel rounded-lg p-4 flex flex-col h-[280px] md:h-[400px] font-mono text-xs border border-[#5c3a21]/40 justify-between bg-[#24140b]/90 text-amber-100">
+      <div className="w-full md:w-56 glass-panel rounded-lg p-4 flex flex-col h-[320px] md:h-[400px] font-mono text-xs border border-[#5c3a21]/40 justify-between bg-[#24140b]/90 text-amber-100 shadow-[0_0_20px_rgba(255,183,3,0.08)] z-10">
         <div>
-          <h4 className="text-[#ffb703] font-bold font-orbitron uppercase tracking-wider border-b border-[#5c3a21] pb-2 mb-3">
+          <h4 className="text-[#ffb703] font-bold font-orbitron uppercase tracking-wider border-b border-[#5c3a21] pb-2 mb-3 shadow-[0_1px_0_rgba(255,183,3,0.15)]">
             // CARROM MASTERS
           </h4>
 
           {/* Turn and Details */}
-          <div className="space-y-2 mb-4">
+          <div className="space-y-2 mb-3">
             <div className="flex justify-between">
               <span className="text-amber-100/50">TURN_NODE:</span>
               <span className={turn === currentUser.id ? 'text-[#ffb703] animate-pulse font-bold' : 'text-gray-500'}>
@@ -1214,11 +1231,32 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
                 {myColorType === 'white' ? 'IVORY_WHITE' : 'DARK_WOOD'}
               </span>
             </div>
+
+            {/* Interactive Bot Difficulty Select */}
+            <div className="flex flex-col gap-1 border-t border-[#5c3a21]/30 pt-2 mt-2">
+              <span className="text-[10px] text-amber-100/40 font-mono">BOT_DIFFICULTY:</span>
+              <div className="grid grid-cols-3 gap-1">
+                {(['easy', 'medium', 'hard'] as const).map(diff => (
+                  <button
+                    key={diff}
+                    disabled={isStrikerFlicked}
+                    onClick={() => { audioSynth.playClick(); setDifficulty(diff); }}
+                    className={`px-1 py-1 rounded text-[9px] uppercase font-bold border transition-colors cursor-pointer ${
+                      difficulty === diff
+                        ? 'bg-[#ffb703] text-black border-[#ffb703]'
+                        : 'bg-black/40 text-amber-100/60 border-[#5c3a21]/40 hover:border-[#ffb703]/40'
+                    } disabled:opacity-50`}
+                  >
+                    {diff}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Scores board */}
           <span className="text-[9px] text-amber-100/40">// SCORE REGISTER</span>
-          <div className="grid grid-cols-2 gap-2 mt-1 mb-4">
+          <div className="grid grid-cols-2 gap-2 mt-1 mb-3">
             <div className="bg-black/40 border border-[#5c3a21]/40 p-2 rounded text-center">
               <p className="text-[8px] text-amber-100/40">WHITE</p>
               <p className="text-[#ffb703] font-bold text-sm">{scores.white}</p>
@@ -1244,8 +1282,8 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
             </div>
           </div>
         ) : (
-          <div className="p-3 bg-black/40 rounded border border-[#5c3a21]/30 text-center text-gray-500 text-[10px]">
-            {botPlayState === 'aligning' ? 'BOT_ALIGNING_STRIKER' : botPlayState === 'aiming' ? 'BOT_AIMING_LINE' : botPlayState === 'shooting' ? 'BOT_RELEASING_STRIKER' : 'WAITING_FOR_OPPONENT'}
+          <div className="p-3 bg-black/40 rounded border border-[#5c3a21]/30 text-center text-gray-500 text-[10px] leading-relaxed">
+            {botPlayState === 'aligning' ? 'BOT_ALIGNING_STRIKER' : botPlayState === 'shooting' ? 'BOT_RELEASING_STRIKER' : 'WAITING_FOR_OPPONENT'}
           </div>
         )}
       </div>
