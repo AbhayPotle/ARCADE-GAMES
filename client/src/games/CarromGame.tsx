@@ -234,7 +234,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     return () => {
       cancelAnimationFrame(animId);
     };
-  }, [discs, isStrikerFlicked, isAiming, aimCurrent, shotAngle, shotPower, botPlayState]);
+  }, [discs, isStrikerFlicked, isAiming, aimCurrent, shotAngle, shotPower, botPlayState, strikerSkin, difficulty, turn, scores, myColorType, gameOver]);
 
   const updateBubbles = () => {
     const bubbles = bubblesRef.current;
@@ -294,7 +294,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           return;
         }
 
-        const botColor = myColorTypeRef.current === 'white' ? 'black' : 'white';
+        const botColor = myColorType === 'white' ? 'black' : 'white';
         const myTargets = targets.filter(t => t.type === botColor || t.type === 'queen');
         const chosenPucks = myTargets.length > 0 ? myTargets : targets;
         
@@ -308,7 +308,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         let bestShot: any = null;
         let maxScore = -Infinity;
 
-        if (difficultyRef.current !== 'easy') {
+        if (difficulty !== 'easy') {
           chosenPucks.forEach(puck => {
             pocketsList.forEach(pocket => {
               const pdx = puck.x - pocket.x;
@@ -354,7 +354,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         let chosenAngle = Math.PI / 2;
         let chosenPower = 60;
 
-        if (bestShot && (difficultyRef.current === 'hard' || (difficultyRef.current === 'medium' && Math.random() > 0.35))) {
+        if (bestShot && (difficulty === 'hard' || (difficulty === 'medium' && Math.random() > 0.35))) {
           chosenX = bestShot.x;
           chosenAngle = bestShot.angle;
           chosenPower = bestShot.power;
@@ -371,10 +371,10 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         }
 
         // Apply noise relative to bot difficulty
-        if (difficultyRef.current === 'easy') {
+        if (difficulty === 'easy') {
           chosenAngle += (Math.random() - 0.5) * 0.12; // ±3.4 degrees
           chosenPower = 40 + Math.floor(Math.random() * 25); // 40-65
-        } else if (difficultyRef.current === 'medium') {
+        } else if (difficulty === 'medium') {
           chosenAngle += (Math.random() - 0.5) * 0.04; // ±1.1 degrees
           chosenPower = Math.min(100, chosenPower + (Math.floor(Math.random() * 14) - 7));
         }
@@ -625,14 +625,14 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           createPocketBlastSparks(p.x, p.y, d.color);
 
           // Add score popup visually above pocket
-          const isPlayerTurn = turnRef.current === currentUser.id;
+          const isPlayerTurn = turn === currentUser.id;
           let popupText = '';
           if (d.type === 'queen') {
             popupText = '👑 +50 QUEEN!';
           } else if (d.type === 'striker') {
             popupText = '⚠️ FOUL!';
           } else {
-            const currentStrikerColor = turnRef.current === currentUser.id ? myColorTypeRef.current : (myColorTypeRef.current === 'white' ? 'black' : 'white');
+            const currentStrikerColor = turn === currentUser.id ? myColorType : (myColorType === 'white' ? 'black' : 'white');
             if (d.type === currentStrikerColor) {
               popupText = isPlayerTurn ? '⭐ +10 PUCK' : 'OPPONENT +10';
             } else {
@@ -870,7 +870,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   };
 
   const drawStrikerSkin = (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) => {
-    if (strikerSkinRef.current === 'tron') {
+    if (strikerSkin === 'tron') {
       // Neon Cyan Tron Skin
       const tronGrad = ctx.createRadialGradient(x, y, 1, x, y, radius);
       tronGrad.addColorStop(0, '#020d18');
@@ -900,7 +900,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       ctx.beginPath();
       ctx.arc(x, y, 2.5, 0, Math.PI * 2);
       ctx.fill();
-    } else if (strikerSkinRef.current === 'royal') {
+    } else if (strikerSkin === 'royal') {
       // Royal Gold Purple
       const royalGrad = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, radius);
       royalGrad.addColorStop(0, '#be95c4');
@@ -927,7 +927,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         ctx.lineTo(x + Math.cos(ang) * (radius - 5), y + Math.sin(ang) * (radius - 5));
         ctx.stroke();
       }
-    } else if (strikerSkinRef.current === 'ruby') {
+    } else if (strikerSkin === 'ruby') {
       // Crimson Gem Ruby Facets
       const rubyGrad = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, radius);
       rubyGrad.addColorStop(0, '#ff007f');
@@ -1372,14 +1372,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   const shotPowerRef = useRef(shotPower);
   shotPowerRef.current = shotPower;
 
-  const strikerSkinRef = useRef(strikerSkin);
-  strikerSkinRef.current = strikerSkin;
 
-  const difficultyRef = useRef(difficulty);
-  difficultyRef.current = difficulty;
-
-  const myColorTypeRef = useRef(myColorType);
-  myColorTypeRef.current = myColorType;
 
   const triggerShotWithValues = (angle: number, power: number) => {
     if (isStrikerFlickedRef.current || turnRef.current !== currentUser.id) return;
