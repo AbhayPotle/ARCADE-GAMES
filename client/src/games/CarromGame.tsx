@@ -1576,10 +1576,8 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
             return;
           }
 
-          const finalAngle = Math.atan2(-mdy, -mdx);
-          const finalPower = Math.min(100, Math.max(20, Math.round(mdist * 0.75)));
-
-          triggerShotWithValues(finalAngle, finalPower);
+          // Use pre-recorded drag values to completely avoid mouseup release coordinate jitter
+          triggerShotWithValues(shotAngleRef.current, shotPowerRef.current);
         };
 
         window.addEventListener('pointermove', handlePointerMove);
