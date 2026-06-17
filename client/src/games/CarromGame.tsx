@@ -497,22 +497,23 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
     if (botPlayState === 'shooting') {
       setBotPlayState('idle');
-      audioSynth.playCarromStrike(shotPower);
+      const targetPower = botTargetPowerRef.current;
+      const targetAngle = botTargetAngleRef.current;
+
+      audioSynth.playCarromStrike(targetPower);
       setIsStrikerFlicked(true);
 
       const speedMultiplier = 0.22;
-      const velocityScalar = shotPower * speedMultiplier;
-      striker.x = strikerX;
-      striker.y = 50;
-      striker.vx = Math.cos(shotAngle) * velocityScalar;
-      striker.vy = Math.sin(shotAngle) * velocityScalar;
+      const velocityScalar = targetPower * speedMultiplier;
+      striker.vx = Math.cos(targetAngle) * velocityScalar;
+      striker.vy = Math.sin(targetAngle) * velocityScalar;
       
       setDiscs(list);
 
       socketService.emit('carrom_strike', {
         roomId: matchData.roomId,
-        angle: shotAngle,
-        power: shotPower,
+        angle: targetAngle,
+        power: targetPower,
         strikerX: striker.x
       });
     }
@@ -1322,7 +1323,8 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           }
         });
 
-        const tHit = Math.min(tWall, tCoin);
+        const maxDist = shotPower * 12.2; // Distance striker travels based on friction (v0 / (1 - friction))
+        const tHit = Math.min(tWall, tCoin, maxDist);
         const hitX = x0 + dx * tHit;
         const hitY = y0 + dy * tHit;
 
@@ -1378,7 +1380,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         ctx.restore();
 
         // Target coin path ray
-        if (hitCoin && tCoin < tWall) {
+        if (hitCoin && tCoin === tHit) {
           const coin: Disc = hitCoin;
           const cdx = coin.x - hitX;
           const cdy = coin.y - hitY;
@@ -1482,7 +1484,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     e.preventDefault();
 
     const rect = canvas.getBoundingClientRect();
-    const border = 8;
+    const border = 12;
     const contentWidth = rect.width - border * 2;
     const contentHeight = rect.height - border * 2;
     const scaleX = contentWidth > 0 ? BOARD_SIZE / contentWidth : 1;
@@ -1522,14 +1524,16 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           const mx = (moveEvt.clientX - cRect.left - border) * sX;
           const my = (moveEvt.clientY - cRect.top - border) * sY;
 
+          // Calculate angle relative to the striker center for unbiased aiming direction
+          const dxCenter = mx - striker.x;
+          const dyCenter = my - striker.y;
+          const angleVal = Math.atan2(-dyCenter, -dxCenter);
+          setShotAngle(angleVal);
+          shotAngleRef.current = angleVal; // Update ref synchronously!
+
           const mdx = mx - dragStartXRef.current;
           const mdy = my - dragStartYRef.current;
           const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
-
-          // Update current visual pull point relative to striker center
-          const angleVal = Math.atan2(-mdy, -mdx);
-          setShotAngle(angleVal);
-          shotAngleRef.current = angleVal; // Update ref synchronously!
 
           const powerVal = Math.min(100, Math.max(20, Math.round(mdist * 0.75)));
           setShotPower(powerVal);
@@ -1819,6 +1823,28 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           {/* Bottom Game Controls */}
           <div className="w-full max-w-[420px] mt-4 flex flex-col gap-3">
             
+            {/* Strike Power/Force Indicator during active aiming */}
+            {isAiming && (
+              <div className="px-1 space-y-1.5 animate-pulse">
+                <div className="flex justify-between text-[10px] text-gray-300 font-mono font-bold tracking-widest uppercase">
+                  <span>Strike Force</span>
+                  <span className={shotPower > 80 ? 'text-[#FF6B6B]' : (shotPower > 50 ? 'text-[#FFD93D]' : 'text-[#4ECDC4]')}>
+                    {shotPower}% {shotPower > 80 ? '🔥 MAX FORCE' : ''}
+                  </span>
+                </div>
+                <div className="w-full h-3 bg-black/40 border border-white/10 rounded-full overflow-hidden p-0.5">
+                  <div
+                    style={{ width: `${shotPower}%` }}
+                    className={`h-full rounded-full transition-all duration-75 ${
+                      shotPower > 80 
+                        ? 'bg-gradient-to-r from-[#FF6B6B] to-[#ff007f] shadow-[0_0_10px_#ff007f]' 
+                        : (shotPower > 50 ? 'bg-gradient-to-r from-[#FFD93D] to-[#FF6B6B]' : 'bg-gradient-to-r from-[#4ECDC4] to-[#00D4FF]')
+                    }`}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Striker Slider control */}
             {turn === currentUser.id && !isStrikerFlicked && (
               <div className="px-1 space-y-1">
