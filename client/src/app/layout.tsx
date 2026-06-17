@@ -33,6 +33,23 @@ export default function RootLayout({
         <div className="fixed inset-0 cyber-grid -z-20 pointer-events-none" />
         <div className="fixed inset-0 cyber-grid-radial -z-10 pointer-events-none" />
         
+        {/* 3D Esports Arena perspective floor */}
+        <div className="cyber-arena-floor" />
+        
+        {/* Sweeping diagonal laser spotlights */}
+        <div className="cyber-spotlight spotlight-1" />
+        <div className="cyber-spotlight spotlight-2" />
+
+        {/* Floating cyber ambient sparks */}
+        <div className="cyber-sparks-container">
+          <div className="cyber-spark left-[8%] [animation-delay:0s] [animation-duration:11s]" />
+          <div className="cyber-spark left-[22%] [animation-delay:2s] [animation-duration:8s] bg-[#ff007f] shadow-[#ff007f]" />
+          <div className="cyber-spark left-[38%] [animation-delay:4s] [animation-duration:14s] bg-[#fffb00] shadow-[#fffb00]" />
+          <div className="cyber-spark left-[55%] [animation-delay:1s] [animation-duration:9s]" />
+          <div className="cyber-spark left-[72%] [animation-delay:5s] [animation-duration:13s] bg-[#8a2be2] shadow-[#8a2be2]" />
+          <div className="cyber-spark left-[88%] [animation-delay:3s] [animation-duration:10s]" />
+        </div>
+
         {/* Animated glowing mesh blobs */}
         <div className="fixed inset-0 overflow-hidden -z-15 pointer-events-none">
           <div className="neon-blob blob-cyan -top-[10%] -left-[10%]" />
