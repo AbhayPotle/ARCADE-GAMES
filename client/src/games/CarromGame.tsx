@@ -1085,8 +1085,14 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     e.preventDefault();
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const border = 8;
+    const contentWidth = rect.width - border * 2;
+    const contentHeight = rect.height - border * 2;
+    const scaleX = contentWidth > 0 ? BOARD_SIZE / contentWidth : 1;
+    const scaleY = contentHeight > 0 ? BOARD_SIZE / contentHeight : 1;
+    
+    const x = (e.clientX - rect.left - border) * scaleX;
+    const y = (e.clientY - rect.top - border) * scaleY;
 
     const striker = discsRef.current.find(d => d.type === 'striker');
     if (striker) {
@@ -1108,8 +1114,13 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
         const handlePointerMove = (moveEvt: PointerEvent) => {
           const cRect = canvas.getBoundingClientRect();
-          const mx = moveEvt.clientX - cRect.left;
-          const my = moveEvt.clientY - cRect.top;
+          const contentW = cRect.width - border * 2;
+          const contentH = cRect.height - border * 2;
+          const sX = contentW > 0 ? BOARD_SIZE / contentW : 1;
+          const sY = contentH > 0 ? BOARD_SIZE / contentH : 1;
+
+          const mx = (moveEvt.clientX - cRect.left - border) * sX;
+          const my = (moveEvt.clientY - cRect.top - border) * sY;
 
           setAimCurrent({ x: mx, y: my });
 
@@ -1137,8 +1148,34 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           }
 
           setIsAiming(false);
-          // Directly use refs to ensure we get the absolute latest values from the drag session
-          triggerShotWithValues(shotAngleRef.current, shotPowerRef.current);
+
+          const cRect = canvas.getBoundingClientRect();
+          const contentW = cRect.width - border * 2;
+          const contentH = cRect.height - border * 2;
+          const sX = contentW > 0 ? BOARD_SIZE / contentW : 1;
+          const sY = contentH > 0 ? BOARD_SIZE / contentH : 1;
+
+          const mx = (upEvt.clientX - cRect.left - border) * sX;
+          const my = (upEvt.clientY - cRect.top - border) * sY;
+
+          const mdx = mx - striker.x;
+          const mdy = my - striker.y;
+          const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+
+          if (mdist < 10) {
+            // Cancel shot: reset shot angle and power
+            const resetAngle = turnRef.current === currentUser.id ? -Math.PI / 2 : Math.PI / 2;
+            setShotAngle(resetAngle);
+            shotAngleRef.current = resetAngle;
+            setShotPower(50);
+            shotPowerRef.current = 50;
+            return;
+          }
+
+          const finalAngle = Math.atan2(-mdy, -mdx);
+          const finalPower = Math.min(100, Math.max(20, Math.round(mdist * 0.75)));
+
+          triggerShotWithValues(finalAngle, finalPower);
         };
 
         window.addEventListener('pointermove', handlePointerMove);
