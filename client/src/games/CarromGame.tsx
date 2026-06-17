@@ -104,6 +104,75 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   const bubblesRef = useRef<Bubble[]>([]);
   const sparksRef = useRef<Spark[]>([]);
 
+  const findSafeStrikerPosition = (list: Disc[], startX: number, y: number): number => {
+    const r = 14; // striker radius
+    let posX = startX;
+    
+    // Check if posX is safe
+    const isSafe = (x: number) => {
+      return !list.some(d => {
+        if (d.type === 'striker' || d.isPocketed) return false;
+        const dx = x - d.x;
+        const dy = y - d.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return dist < r + d.radius;
+      });
+    };
+
+    if (isSafe(posX)) return posX;
+
+    // Search outwards from startX
+    const step = 2;
+    const maxOffset = BOARD_SIZE;
+    for (let offset = step; offset < maxOffset; offset += step) {
+      // Try right
+      const rightX = posX + offset;
+      if (rightX <= BOARD_SIZE - 50 && isSafe(rightX)) {
+        return rightX;
+      }
+      // Try left
+      const leftX = posX - offset;
+      if (leftX >= 50 && isSafe(leftX)) {
+        return leftX;
+      }
+    }
+    
+    return posX; // fallback
+  };
+
+  const getConstrainedStrikerX = (val: number, strikerY: number, list: Disc[], currentX: number): number => {
+    let constrainedX = val;
+    const r = 14; // striker radius
+    
+    const activeDiscs = list.filter(d => d.type !== 'striker' && !d.isPocketed);
+    
+    for (const d of activeDiscs) {
+      const dy = strikerY - d.y;
+      const rSum = r + d.radius;
+      if (Math.abs(dy) < rSum) {
+        // There is a potential overlap range on X: [d.x - minDx, d.x + minDx]
+        const minDx = Math.sqrt(rSum * rSum - dy * dy);
+        const leftBound = d.x - minDx;
+        const rightBound = d.x + minDx;
+        
+        // If constrainedX is inside this range, constrain it to the edge
+        if (constrainedX > leftBound && constrainedX < rightBound) {
+          if (currentX <= leftBound) {
+            constrainedX = leftBound;
+          } else if (currentX >= rightBound) {
+            constrainedX = rightBound;
+          } else {
+            // Push to the closer side
+            constrainedX = (constrainedX - leftBound < rightBound - constrainedX) ? leftBound : rightBound;
+          }
+        }
+      }
+    }
+    
+    // Keep within baseline bounds
+    return Math.min(BOARD_SIZE - 50, Math.max(50, constrainedX));
+  };
+
   useEffect(() => {
     const playerIndex = matchData.players.findIndex((p: any) => p.userId === currentUser.id);
     const color = playerIndex === 0 ? 'white' : 'black';
@@ -269,12 +338,13 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
     if (botPlayState === 'idle') {
       // Position bot striker at top baseline
-      striker.x = BOARD_SIZE / 2;
+      const safeX = findSafeStrikerPosition(list, BOARD_SIZE / 2, 50);
+      striker.x = safeX;
       striker.y = 50;
       striker.vx = 0;
       striker.vy = 0;
       striker.isPocketed = false;
-      setStrikerX(striker.x);
+      setStrikerX(safeX);
       setDiscs(list);
 
       // Start bot thinking timer (60 frames = 1.0 second delay)
@@ -497,8 +567,9 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         d.vx = 0;
         d.vy = 0;
         if (d.type === 'striker') {
-          d.x = BOARD_SIZE / 2;
-          d.y = turn === currentUser.id ? BOARD_SIZE - 50 : 50;
+          const strikerY = turn === currentUser.id ? BOARD_SIZE - 50 : 50;
+          d.x = findSafeStrikerPosition(list, BOARD_SIZE / 2, strikerY);
+          d.y = strikerY;
         } else {
           d.x = BOARD_SIZE / 2 + (Math.random() - 0.5) * 10;
           d.y = BOARD_SIZE / 2 + (Math.random() - 0.5) * 10;
@@ -802,12 +873,14 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         
         const striker = list.find(d => d.type === 'striker');
         if (striker) {
-          striker.x = BOARD_SIZE / 2;
-          striker.y = nextTurn === currentUser.id ? BOARD_SIZE - 50 : 50;
+          const strikerY = nextTurn === currentUser.id ? BOARD_SIZE - 50 : 50;
+          const safeX = findSafeStrikerPosition(list, BOARD_SIZE / 2, strikerY);
+          striker.x = safeX;
+          striker.y = strikerY;
           striker.vx = 0;
           striker.vy = 0;
           striker.isPocketed = false;
-          setStrikerX(BOARD_SIZE / 2);
+          setStrikerX(safeX);
         }
 
         setDiscs(list);
@@ -1283,9 +1356,11 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
         // Draw forward dotted target line
         ctx.save();
-        ctx.strokeStyle = 'rgba(0, 245, 255, 0.45)'; // Cyan neon guide path
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = 'rgba(0, 245, 255, 0.95)'; // Electric cyan target line
+        ctx.lineWidth = 2.5; // Thicker line
+        ctx.setLineDash([5, 4]);
+        ctx.shadowColor = '#00F5FF';
+        ctx.shadowBlur = 4;
         ctx.beginPath();
         ctx.moveTo(x0, y0);
         ctx.lineTo(hitX, hitY);
@@ -1294,8 +1369,8 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
         // Draw ghost contact target circle
         ctx.save();
-        ctx.strokeStyle = 'rgba(0, 245, 255, 0.25)';
-        ctx.lineWidth = 1.0;
+        ctx.strokeStyle = 'rgba(0, 245, 255, 0.6)'; // Higher contrast target ghost
+        ctx.lineWidth = 1.8;
         ctx.setLineDash([3, 3]);
         ctx.beginPath();
         ctx.arc(hitX, hitY, rStriker, 0, Math.PI * 2);
@@ -1314,9 +1389,11 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
             const cny = cdy / cdist;
 
             ctx.save();
-            ctx.strokeStyle = 'rgba(255, 0, 127, 0.6)'; // Magenta collision direction path
-            ctx.lineWidth = 1.5;
-            ctx.setLineDash([2, 2]);
+            ctx.strokeStyle = 'rgba(255, 0, 127, 0.95)'; // Glowing magenta collision direction path
+            ctx.lineWidth = 2.2;
+            ctx.setLineDash([3, 2]);
+            ctx.shadowColor = '#FF007F';
+            ctx.shadowBlur = 3;
             ctx.beginPath();
             ctx.moveTo(coin.x, coin.y);
             ctx.lineTo(coin.x + cnx * 40, coin.y + cny * 40);
@@ -1333,27 +1410,19 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   const handleStrikerSlider = (val: number) => {
     if (isStrikerFlicked || turn !== currentUser.id || isAiming) return;
 
-    // Prevent overlap with other active pucks during slider adjustment
-    const striker = discs.find(d => d.type === 'striker');
+    const list = [...discs];
+    const striker = list.find(d => d.type === 'striker');
     if (striker) {
-      const overlaps = discs.some(d => {
-        if (d.type === 'striker' || d.isPocketed) return false;
-        const dx = val - d.x;
-        const dy = striker.y - d.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        return dist < striker.radius + d.radius;
+      const safeX = getConstrainedStrikerX(val, striker.y, list, striker.x);
+      setStrikerX(safeX);
+      const updatedList = list.map(d => {
+        if (d.type === 'striker') {
+          return { ...d, x: safeX };
+        }
+        return d;
       });
-      if (overlaps) return;
+      setDiscs(updatedList);
     }
-
-    setStrikerX(val);
-    const list = discs.map(d => {
-      if (d.type === 'striker') {
-        return { ...d, x: val };
-      }
-      return d;
-    });
-    setDiscs(list);
   };
 
   // Create refs to prevent stale closures in window event listeners
