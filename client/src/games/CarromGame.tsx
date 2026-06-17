@@ -410,6 +410,12 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
         if (d1.isPocketed || d2.isPocketed) continue;
 
+        // Skip collision/overlap resolution for the striker if it has not been flicked/shot
+        const isStrikerOverlap = d1.type === 'striker' || d2.type === 'striker';
+        if (isStrikerOverlap && !isStrikerFlicked) {
+          continue;
+        }
+
         const dx = d2.x - d1.x;
         const dy = d2.y - d1.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -975,6 +981,20 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
   const handleStrikerSlider = (val: number) => {
     if (isStrikerFlicked || turn !== currentUser.id || isAiming) return;
+
+    // Prevent overlap with other active pucks during slider adjustment
+    const striker = discs.find(d => d.type === 'striker');
+    if (striker) {
+      const overlaps = discs.some(d => {
+        if (d.type === 'striker' || d.isPocketed) return false;
+        const dx = val - d.x;
+        const dy = striker.y - d.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return dist < striker.radius + d.radius;
+      });
+      if (overlaps) return;
+    }
+
     setStrikerX(val);
     const list = discs.map(d => {
       if (d.type === 'striker') {

@@ -375,7 +375,7 @@ class Database {
     }
 
     this.save();
-    return this.db.leaderboards.find(l => l.gameId === gameId && l.username === username)!;
+    return this.db.leaderboards.find(l => l.gameId === gameId && l.username.toLowerCase() === username.toLowerCase())!;
   }
 
   public purchaseItem(userId: string, itemId: string, cost: number): boolean {
