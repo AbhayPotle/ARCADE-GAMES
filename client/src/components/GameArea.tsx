@@ -65,13 +65,14 @@ export default function GameArea({ gameId, currentUser, onBackToDashboard }: Gam
     audioSynth.playStart();
   }, [gameId, currentUser]);
 
-  const handleGameCompletionSinglePlayer = async (score: number) => {
-    audioSynth.playGameOver(true);
+  const handleGameCompletionSinglePlayer = async (score: number, winnerId?: string) => {
+    const isWin = winnerId ? winnerId === currentUser.id : true;
+    audioSynth.playGameOver(isWin);
     setGameState('ended');
     try {
       const rewardDetails = await api.submitScore(gameId, score);
       setGameResult({
-        winnerId: currentUser.id,
+        winnerId: winnerId || currentUser.id,
         score
       });
       setRewards({
@@ -86,7 +87,7 @@ export default function GameArea({ gameId, currentUser, onBackToDashboard }: Gam
       console.error(err);
       // Fallback display if offline
       setGameResult({
-        winnerId: currentUser.id,
+        winnerId: winnerId || currentUser.id,
         score
       });
       setRewards({

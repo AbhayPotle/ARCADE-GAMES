@@ -7,7 +7,7 @@ import { audioSynth } from '../services/audio';
 interface RacingGameProps {
   matchData: any;
   currentUser: any;
-  onComplete: (score: number) => void;
+  onComplete: (score: number, winnerId?: string) => void;
 }
 
 interface Car {
@@ -444,7 +444,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           }))
         });
         setTimeout(() => {
-          onComplete(1000 + coinsCollected * 10);
+          onComplete(1000 + coinsCollected * 10, currentUser.id);
         }, 2000);
       }
     }
@@ -529,7 +529,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
             }))
           });
           setTimeout(() => {
-            onComplete(300);
+            onComplete(300, 'bot-id');
           }, 2000);
         }
       }

@@ -7,7 +7,7 @@ import { audioSynth } from '../services/audio';
 interface TypingGameProps {
   matchData: any;
   currentUser: any;
-  onComplete: (score: number) => void;
+  onComplete: (score: number, winnerId?: string) => void;
 }
 
 interface OpponentStats {
@@ -100,7 +100,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
                 });
                 
                 setTimeout(() => {
-                  onComplete(20); // Defeat score
+                  onComplete(20, 'bot-id'); // Defeat score
                 }, 2000);
               }
               return { ...opp, progress: nextProgress, wpm: botWpm };
@@ -167,7 +167,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
         });
 
         setTimeout(() => {
-          onComplete(currentWpm);
+          onComplete(currentWpm, currentUser.id);
         }, 2000);
       }
     } else {

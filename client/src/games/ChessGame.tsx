@@ -7,7 +7,7 @@ import { audioSynth } from '../services/audio';
 interface ChessGameProps {
   matchData: any;
   currentUser: any;
-  onComplete: (score: number) => void;
+  onComplete: (score: number, winnerId?: string) => void;
 }
 
 type Piece = 'p' | 'r' | 'n' | 'b' | 'q' | 'k' | 'P' | 'R' | 'N' | 'B' | 'Q' | 'K' | null;
@@ -302,7 +302,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
           }))
         });
         setTimeout(() => {
-          onComplete(20);
+          onComplete(20, 'bot-id');
         }, 2000);
       }
     }
@@ -384,7 +384,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
         }))
       });
       setTimeout(() => {
-        onComplete(100);
+        onComplete(100, currentUser.id);
       }, 2000);
     }
   };
