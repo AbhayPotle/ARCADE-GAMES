@@ -387,8 +387,8 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       setStrikerX(safeX);
       setDiscs(list);
 
-      // Start bot thinking timer (60 frames = 1.0 second delay)
-      botThinkingFramesRef.current = 60;
+      // Start bot thinking timer (25 frames = ~0.4 second delay)
+      botThinkingFramesRef.current = 25;
       setBotPlayState('thinking');
       return;
     }
@@ -499,7 +499,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     }
 
     if (botPlayStateRef.current === 'aligning') {
-      const step = 2.5; // Slower, more natural sliding speed
+      const step = 6.0; // Faster, snappier sliding speed
       if (Math.abs(striker.x - botTargetXRef.current) > step) {
         striker.x += Math.sign(botTargetXRef.current - striker.x) * step;
         striker.y = 50;
@@ -511,8 +511,8 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         setStrikerX(striker.x);
         setDiscs(list);
 
-        // Initiate visual aiming/pullback sequence (70 frames = ~1.2s aiming time)
-        botAimFramesRef.current = 70;
+        // Initiate visual aiming/pullback sequence (30 frames = ~0.5s aiming time)
+        botAimFramesRef.current = 30;
         setIsAiming(true);
         setBotPlayState('aiming');
       }
@@ -522,7 +522,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     if (botPlayStateRef.current === 'aiming') {
       if (botAimFramesRef.current > 0) {
         botAimFramesRef.current--;
-        const progress = 1 - (botAimFramesRef.current / 70);
+        const progress = 1 - (botAimFramesRef.current / 30);
         
         // Linear increase of power and visual pullback representation
         const currentPower = Math.round(botTargetPowerRef.current * progress);
