@@ -104,6 +104,46 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   const bubblesRef = useRef<Bubble[]>([]);
   const sparksRef = useRef<Spark[]>([]);
 
+  // Create refs to prevent stale closures in window event listeners and the animation loop
+  const isAimingRef = useRef(isAiming);
+  isAimingRef.current = isAiming;
+
+  const aimCurrentRef = useRef(aimCurrent);
+  aimCurrentRef.current = aimCurrent;
+
+  const botPlayStateRef = useRef(botPlayState);
+  botPlayStateRef.current = botPlayState;
+
+  const strikerSkinRef = useRef(strikerSkin);
+  strikerSkinRef.current = strikerSkin;
+
+  const difficultyRef = useRef(difficulty);
+  difficultyRef.current = difficulty;
+
+  const scoresRef = useRef(scores);
+  scoresRef.current = scores;
+
+  const myColorTypeRef = useRef(myColorType);
+  myColorTypeRef.current = myColorType;
+
+  const gameOverRef = useRef(gameOver);
+  gameOverRef.current = gameOver;
+
+  const isStrikerFlickedRef = useRef(isStrikerFlicked);
+  isStrikerFlickedRef.current = isStrikerFlicked;
+
+  const turnRef = useRef(turn);
+  turnRef.current = turn;
+
+  const discsRef = useRef(discs);
+  discsRef.current = discs;
+
+  const shotAngleRef = useRef(shotAngle);
+  shotAngleRef.current = shotAngle;
+
+  const shotPowerRef = useRef(shotPower);
+  shotPowerRef.current = shotPower;
+
   const findSafeStrikerPosition = (list: Disc[], startX: number, y: number): number => {
     const r = 14; // striker radius
     let posX = startX;
@@ -303,7 +343,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     return () => {
       cancelAnimationFrame(animId);
     };
-  }, [discs, isStrikerFlicked, isAiming, aimCurrent, shotAngle, shotPower, botPlayState, strikerSkin, difficulty, turn, scores, myColorType, gameOver]);
+  }, []);
 
   const updateBubbles = () => {
     const bubbles = bubblesRef.current;
@@ -328,15 +368,15 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
   };
 
   const updateBotLogic = () => {
-    if (gameOver || isStrikerFlicked) return;
-    const isBotTurn = turn !== currentUser.id && matchData.players.some((p: any) => p.userId === 'bot-id' || p.isBot);
+    if (gameOverRef.current || isStrikerFlickedRef.current) return;
+    const isBotTurn = turnRef.current !== currentUser.id && matchData.players.some((p: any) => p.userId === 'bot-id' || p.isBot);
     if (!isBotTurn) return;
 
-    const list = [...discs];
+    const list = [...discsRef.current];
     const striker = list.find(d => d.type === 'striker');
     if (!striker) return;
 
-    if (botPlayState === 'idle') {
+    if (botPlayStateRef.current === 'idle') {
       // Position bot striker at top baseline
       const safeX = findSafeStrikerPosition(list, BOARD_SIZE / 2, 50);
       striker.x = safeX;
@@ -353,7 +393,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       return;
     }
 
-    if (botPlayState === 'thinking') {
+    if (botPlayStateRef.current === 'thinking') {
       if (botThinkingFramesRef.current > 0) {
         botThinkingFramesRef.current--;
       } else {
@@ -364,7 +404,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           return;
         }
 
-        const botColor = myColorType === 'white' ? 'black' : 'white';
+        const botColor = myColorTypeRef.current === 'white' ? 'black' : 'white';
         const myTargets = targets.filter(t => t.type === botColor || t.type === 'queen');
         const chosenPucks = myTargets.length > 0 ? myTargets : targets;
         
@@ -378,7 +418,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         let bestShot: any = null;
         let maxScore = -Infinity;
 
-        if (difficulty !== 'easy') {
+        if (difficultyRef.current !== 'easy') {
           chosenPucks.forEach(puck => {
             pocketsList.forEach(pocket => {
               const pdx = puck.x - pocket.x;
@@ -424,7 +464,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         let chosenAngle = Math.PI / 2;
         let chosenPower = 60;
 
-        if (bestShot && (difficulty === 'hard' || (difficulty === 'medium' && Math.random() > 0.35))) {
+        if (bestShot && (difficultyRef.current === 'hard' || (difficultyRef.current === 'medium' && Math.random() > 0.35))) {
           chosenX = bestShot.x;
           chosenAngle = bestShot.angle;
           chosenPower = bestShot.power;
@@ -441,10 +481,10 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         }
 
         // Apply noise relative to bot difficulty
-        if (difficulty === 'easy') {
+        if (difficultyRef.current === 'easy') {
           chosenAngle += (Math.random() - 0.5) * 0.12; // ±3.4 degrees
           chosenPower = 40 + Math.floor(Math.random() * 25); // 40-65
-        } else if (difficulty === 'medium') {
+        } else if (difficultyRef.current === 'medium') {
           chosenAngle += (Math.random() - 0.5) * 0.04; // ±1.1 degrees
           chosenPower = Math.min(100, chosenPower + (Math.floor(Math.random() * 14) - 7));
         }
@@ -458,7 +498,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       return;
     }
 
-    if (botPlayState === 'aligning') {
+    if (botPlayStateRef.current === 'aligning') {
       const step = 2.5; // Slower, more natural sliding speed
       if (Math.abs(striker.x - botTargetXRef.current) > step) {
         striker.x += Math.sign(botTargetXRef.current - striker.x) * step;
@@ -479,7 +519,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       return;
     }
 
-    if (botPlayState === 'aiming') {
+    if (botPlayStateRef.current === 'aiming') {
       if (botAimFramesRef.current > 0) {
         botAimFramesRef.current--;
         const progress = 1 - (botAimFramesRef.current / 70);
@@ -495,7 +535,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       return;
     }
 
-    if (botPlayState === 'shooting') {
+    if (botPlayStateRef.current === 'shooting') {
       setBotPlayState('idle');
       const targetPower = botTargetPowerRef.current;
       const targetAngle = botTargetAngleRef.current;
@@ -521,7 +561,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
   const updatePhysics = () => {
     let moving = false;
-    const list = [...discs];
+    const list = [...discsRef.current];
 
     // Decay screen shake
     if (shakeIntensityRef.current > 0) {
@@ -568,7 +608,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         d.vx = 0;
         d.vy = 0;
         if (d.type === 'striker') {
-          const strikerY = turn === currentUser.id ? BOARD_SIZE - 50 : 50;
+          const strikerY = turnRef.current === currentUser.id ? BOARD_SIZE - 50 : 50;
           d.x = findSafeStrikerPosition(list, BOARD_SIZE / 2, strikerY);
           d.y = strikerY;
         } else {
@@ -638,7 +678,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
         // Skip collision/overlap resolution for the striker if it has not been flicked/shot
         const isStrikerOverlap = d1.type === 'striker' || d2.type === 'striker';
-        if (isStrikerOverlap && !isStrikerFlicked) {
+        if (isStrikerOverlap && !isStrikerFlickedRef.current) {
           continue;
         }
 
@@ -697,14 +737,14 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           createPocketBlastSparks(p.x, p.y, d.color);
 
           // Add score popup visually above pocket
-          const isPlayerTurn = turn === currentUser.id;
+          const isPlayerTurn = turnRef.current === currentUser.id;
           let popupText = '';
           if (d.type === 'queen') {
             popupText = '👑 +50 QUEEN!';
           } else if (d.type === 'striker') {
             popupText = '⚠️ FOUL!';
           } else {
-            const currentStrikerColor = turn === currentUser.id ? myColorType : (myColorType === 'white' ? 'black' : 'white');
+            const currentStrikerColor = turnRef.current === currentUser.id ? myColorTypeRef.current : (myColorTypeRef.current === 'white' ? 'black' : 'white');
             if (d.type === currentStrikerColor) {
               popupText = isPlayerTurn ? '⭐ +10 PUCK' : 'OPPONENT +10';
             } else {
@@ -719,11 +759,11 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       });
     });
 
-    if (isStrikerFlicked && !moving) {
+    if (isStrikerFlickedRef.current && !moving) {
       setIsStrikerFlicked(false);
       isStrikerFlickedRef.current = false;
       
-      const newScores = { ...scores };
+      const newScores = { ...scoresRef.current };
       let whiteCount = 0;
       let blackCount = 0;
       let queenPocketedThisShot = false;
@@ -737,7 +777,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         if (type === 'striker') strikerPocketedThisShot = true;
       });
 
-      const currentStrikerColor = turn === currentUser.id ? myColorType : (myColorType === 'white' ? 'black' : 'white');
+      const currentStrikerColor = turnRef.current === currentUser.id ? myColorTypeRef.current : (myColorTypeRef.current === 'white' ? 'black' : 'white');
       const opponentColor = currentStrikerColor === 'white' ? 'black' : 'white';
 
       const scoredOwnColorCount = currentStrikerColor === 'white' ? whiteCount : blackCount;
@@ -783,7 +823,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         }
 
         // Queen cover logic
-        if (queenStateRef.current === 'awaiting_cover' && queenOwnerRef.current === turn) {
+        if (queenStateRef.current === 'awaiting_cover' && queenOwnerRef.current === turnRef.current) {
           if (scoredOwnColorCount > 0) {
             // Covered successfully!
             newScores[currentStrikerColor] += 50;
@@ -805,7 +845,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           } else {
             // Pocketed queen but no own coin -> needs cover on next shot
             queenStateRef.current = 'awaiting_cover';
-            queenOwnerRef.current = turn;
+            queenOwnerRef.current = turnRef.current;
             keepTurn = true;
           }
         }
@@ -863,14 +903,14 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           }))
         });
 
-        const finalScore = myColorType === 'white' ? newScores.white : newScores.black;
+        const finalScore = myColorTypeRef.current === 'white' ? newScores.white : newScores.black;
         setTimeout(() => {
           onComplete(finalScore, winnerId);
         }, 2000);
       } else {
         const nextTurn = keepTurn 
-          ? turn 
-          : (turn === matchData.players[0].userId ? matchData.players[1].userId : matchData.players[0].userId);
+          ? turnRef.current 
+          : (turnRef.current === matchData.players[0].userId ? matchData.players[1].userId : matchData.players[0].userId);
         
         const striker = list.find(d => d.type === 'striker');
         if (striker) {
@@ -943,8 +983,8 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     }
   };
 
-  const drawStrikerSkin = (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) => {
-    if (strikerSkin === 'tron') {
+  const drawStrikerSkin = (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, skin: string) => {
+    if (skin === 'tron') {
       // Neon Cyan Tron Skin
       const tronGrad = ctx.createRadialGradient(x, y, 1, x, y, radius);
       tronGrad.addColorStop(0, '#020d18');
@@ -974,7 +1014,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       ctx.beginPath();
       ctx.arc(x, y, 2.5, 0, Math.PI * 2);
       ctx.fill();
-    } else if (strikerSkin === 'royal') {
+    } else if (skin === 'royal') {
       // Royal Gold Purple
       const royalGrad = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, radius);
       royalGrad.addColorStop(0, '#be95c4');
@@ -1001,7 +1041,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         ctx.lineTo(x + Math.cos(ang) * (radius - 5), y + Math.sin(ang) * (radius - 5));
         ctx.stroke();
       }
-    } else if (strikerSkin === 'ruby') {
+    } else if (skin === 'ruby') {
       // Crimson Gem Ruby Facets
       const rubyGrad = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, radius);
       rubyGrad.addColorStop(0, '#ff007f');
@@ -1139,9 +1179,9 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     ctx.beginPath(); ctx.moveTo(50, 48); ctx.lineTo(BOARD_SIZE - 50, 48); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(50, 52); ctx.lineTo(BOARD_SIZE - 50, 52); ctx.stroke();
 
-    // Baseline endpoints circles
+    // Baseline circles at the ends
     ctx.lineWidth = 1.0;
-    ctx.strokeStyle = 'rgba(183, 9, 76, 0.35)';
+    ctx.strokeStyle = 'rgba(92, 58, 33, 0.3)';
     [
       { x: 50, y: BOARD_SIZE - 50 },
       { x: BOARD_SIZE - 50, y: BOARD_SIZE - 50 },
@@ -1190,7 +1230,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     });
 
     // Draw Discs
-    discs.forEach(d => {
+    discsRef.current.forEach(d => {
       if (d.isPocketed) return;
 
       // Beveled coin drop shadow
@@ -1235,7 +1275,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         ctx.arc(d.x - 2.5, d.y - 2.5, 2.2, 0, Math.PI * 2);
         ctx.fill();
       } else if (d.type === 'striker') {
-        drawStrikerSkin(ctx, d.x, d.y, d.radius);
+        drawStrikerSkin(ctx, d.x, d.y, d.radius, strikerSkinRef.current);
       } else {
         // Beveled 3D normal coin (white/black)
         const coinGrad = ctx.createRadialGradient(d.x - 3, d.y - 3, 1, d.x, d.y, d.radius);
@@ -1270,13 +1310,13 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     });
 
     // Draw Slingshot pull-back aiming guide
-    const isMyTurn = turn === currentUser.id;
-    const isBotAiming = turn !== currentUser.id && (botPlayState === 'aiming' || botPlayState === 'aligning');
-    if ((isMyTurn || isBotAiming) && !isStrikerFlicked) {
-      const striker = discs.find(d => d.type === 'striker');
+    const isMyTurn = turnRef.current === currentUser.id;
+    const isBotAiming = turnRef.current !== currentUser.id && (botPlayStateRef.current === 'aiming' || botPlayStateRef.current === 'aligning');
+    if ((isMyTurn || isBotAiming) && !isStrikerFlickedRef.current) {
+      const striker = discsRef.current.find(d => d.type === 'striker');
       if (striker) {
-        const dx = Math.cos(shotAngle);
-        const dy = Math.sin(shotAngle);
+        const dx = Math.cos(shotAngleRef.current);
+        const dy = Math.sin(shotAngleRef.current);
 
         const rStriker = striker.radius;
         const x0 = striker.x;
@@ -1297,7 +1337,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         let tCoin = Infinity;
         let hitCoin: Disc | null = null;
 
-        discs.forEach(d => {
+        discsRef.current.forEach(d => {
           if (d.type === 'striker' || d.isPocketed) return;
 
           const Rc = rStriker + d.radius;
@@ -1323,14 +1363,14 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           }
         });
 
-        const maxDist = shotPower * 12.2; // Distance striker travels based on friction (v0 / (1 - friction))
+        const maxDist = shotPowerRef.current * 12.2; // Distance striker travels based on friction (v0 / (1 - friction))
         const tHit = Math.min(tWall, tCoin, maxDist);
         const hitX = x0 + dx * tHit;
         const hitY = y0 + dy * tHit;
 
         // Draw backward drag vector line if actively aiming (player or bot aiming)
-        const showBotPullback = turn !== currentUser.id && botPlayState === 'aiming';
-        if (isAiming || showBotPullback) {
+        const showBotPullback = turnRef.current !== currentUser.id && botPlayStateRef.current === 'aiming';
+        if (isAimingRef.current || showBotPullback) {
           ctx.save();
           ctx.strokeStyle = '#00F5FF'; // Cyan laser drag guide line
           ctx.lineWidth = 2.5;
@@ -1340,7 +1380,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           ctx.beginPath();
           ctx.moveTo(x0, y0);
           
-          const pullDist = shotPower / 0.75;
+          const pullDist = shotPowerRef.current / 0.75;
           const dragX = x0 - dx * pullDist;
           const dragY = y0 - dy * pullDist;
           
@@ -1350,6 +1390,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           // Glowing energy anchor dot
           ctx.fillStyle = '#FFD700'; // Royal Gold anchor dot
           ctx.shadowColor = '#FFD700';
+          ctx.shadowBlur = 5;
           ctx.beginPath();
           ctx.arc(dragX, dragY, 5, 0, Math.PI * 2);
           ctx.fill();
@@ -1427,21 +1468,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     }
   };
 
-  // Create refs to prevent stale closures in window event listeners
-  const isStrikerFlickedRef = useRef(isStrikerFlicked);
-  isStrikerFlickedRef.current = isStrikerFlicked;
 
-  const turnRef = useRef(turn);
-  turnRef.current = turn;
-
-  const discsRef = useRef(discs);
-  discsRef.current = discs;
-
-  const shotAngleRef = useRef(shotAngle);
-  shotAngleRef.current = shotAngle;
-
-  const shotPowerRef = useRef(shotPower);
-  shotPowerRef.current = shotPower;
 
 
 
