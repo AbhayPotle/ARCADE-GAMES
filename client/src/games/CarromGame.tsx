@@ -1959,7 +1959,13 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           </div>
 
           {/* Board Canvas Wrapper with Floating Score Popups Container */}
-          <div className="relative w-full max-w-[560px] aspect-square max-h-[52vh] max-w-[52vh] flex justify-center">
+          <div
+            className="relative aspect-square flex justify-center items-center"
+            style={{
+              width: 'min(90vw, 50vh, 500px)',
+              height: 'min(90vw, 50vh, 500px)',
+            }}
+          >
             <canvas
               ref={canvasRef}
               width={BOARD_SIZE}

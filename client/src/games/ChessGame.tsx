@@ -512,11 +512,17 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
 
           {/* Interactive Chessboard */}
           <div className="flex flex-col space-y-4 w-full max-w-[560px] flex-1 justify-center min-h-0">
-            <div className={`aspect-square w-full border-2 rounded-3xl p-2 flex flex-col justify-between shadow-2xl transition-all duration-700 relative max-h-[52vh] max-w-[52vh] self-center ${
-              isMyTurn && !gameOver
-                ? 'scale-[1.01] border-[#FFD93D] shadow-[0_25px_65px_rgba(0,212,255,0.18)] bg-white/5'
-                : 'scale-100 border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)] bg-black/35'
-            }`}>
+            <div
+              className={`aspect-square border-2 rounded-3xl p-2 flex flex-col justify-between shadow-2xl transition-all duration-700 relative self-center ${
+                isMyTurn && !gameOver
+                  ? 'scale-[1.01] border-[#FFD93D] shadow-[0_25px_65px_rgba(0,212,255,0.18)] bg-white/5'
+                  : 'scale-100 border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)] bg-black/35'
+              }`}
+              style={{
+                width: 'min(90vw, 48vh, 480px)',
+                height: 'min(90vw, 48vh, 480px)',
+              }}
+            >
               {board.map((row, r) => (
                 <div key={r} className="flex flex-1 justify-between">
                   {row.map((piece, c) => {
