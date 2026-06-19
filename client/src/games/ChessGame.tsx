@@ -539,7 +539,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
         <main className="flex-1 h-full p-4 flex flex-col items-center justify-center relative overflow-y-auto min-w-0">
           
           {/* Opponent Profile HUD Banner (Centered above the canvas) */}
-          <div className="w-full max-w-[min(320px,42vh)] mb-2.5 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg shrink-0">
+          <div className="w-full max-w-[min(400px,92vw,50vh)] mb-2.5 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF6B6B] to-[#8a2be2] border-2 border-white/30 flex items-center justify-center text-lg">
                 🤖
@@ -562,19 +562,19 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
 
           {/* Blinking Check Warnings */}
           {isPlayerInCheck && (
-            <div className="w-full max-w-[min(320px,42vh)] bg-red-600/25 border border-red-500 text-red-200 px-4 py-1.5 rounded-xl text-[10px] font-mono text-center animate-pulse tracking-widest uppercase font-extrabold mb-2.5 shadow-[0_0_15px_rgba(239,68,68,0.3)] z-30 shrink-0">
+            <div className="w-full max-w-[min(400px,92vw,50vh)] bg-red-600/25 border border-red-500 text-red-200 px-4 py-1.5 rounded-xl text-[10px] font-mono text-center animate-pulse tracking-widest uppercase font-extrabold mb-2.5 shadow-[0_0_15px_rgba(239,68,68,0.3)] z-30 shrink-0">
               ⚠️ WARNING: YOUR KING IS UNDER ATTACK (CHECK!)
             </div>
           )}
           {isBotInCheck && (
-            <div className="w-full max-w-[min(320px,42vh)] bg-[#FFD93D]/20 border border-[#FFD93D] text-[#FFD93D] px-4 py-1.5 rounded-xl text-[10px] font-mono text-center animate-pulse tracking-widest uppercase font-extrabold mb-2.5 shadow-[0_0_15px_rgba(255,217,61,0.2)] z-30 shrink-0">
+            <div className="w-full max-w-[min(400px,92vw,50vh)] bg-[#FFD93D]/20 border border-[#FFD93D] text-[#FFD93D] px-4 py-1.5 rounded-xl text-[10px] font-mono text-center animate-pulse tracking-widest uppercase font-extrabold mb-2.5 shadow-[0_0_15px_rgba(255,217,61,0.2)] z-30 shrink-0">
               👑 ENEMY KING DETECTED IN CHECK!
             </div>
           )}
 
           {/* Interactive Chessboard */}
-          <div className="flex flex-col items-center w-full max-w-[min(320px,42vh)] shrink-0">
-            <div className={`aspect-square w-[min(320px,42vh)] h-[min(320px,42vh)] border-2 rounded-3xl p-2 flex flex-col justify-between shadow-2xl transition-all duration-700 relative ${
+          <div className="flex flex-col items-center w-full max-w-[min(400px,92vw,50vh)] shrink-0">
+            <div className={`aspect-square w-[min(400px,92vw,50vh)] h-[min(400px,92vw,50vh)] border-2 rounded-3xl p-2 flex flex-col justify-between shadow-2xl transition-all duration-700 relative ${
               isMyTurn && !gameOver
                 ? 'scale-[1.01] border-[#FFD93D] shadow-[0_25px_65px_rgba(0,212,255,0.18)] bg-white/5'
                 : 'scale-100 border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)] bg-black/35'
@@ -650,7 +650,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
           </div>
 
           {/* Game Status, Battle Logs & History HUD */}
-          <div className="w-full max-w-[min(320px,42vh)] mt-2.5 grid grid-cols-2 gap-2 text-[10px] font-mono shrink-0">
+          <div className="w-full max-w-[min(400px,92vw,50vh)] mt-2.5 grid grid-cols-2 gap-2 text-[10px] font-mono shrink-0">
             
             {/* Battle Chronicle logs */}
             <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-between h-[90px]">

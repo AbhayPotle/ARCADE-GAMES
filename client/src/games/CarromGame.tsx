@@ -238,12 +238,12 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     for (let offset = step; offset < maxOffset; offset += step) {
       // Try right
       const rightX = posX + offset;
-      if (rightX <= BOARD_SIZE - 50 && isSafe(rightX)) {
+      if (rightX <= BOARD_SIZE - 80 && isSafe(rightX)) {
         return rightX;
       }
       // Try left
       const leftX = posX - offset;
-      if (leftX >= 50 && isSafe(leftX)) {
+      if (leftX >= 80 && isSafe(leftX)) {
         return leftX;
       }
     }
@@ -281,7 +281,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     }
     
     // Keep within baseline bounds
-    return Math.min(BOARD_SIZE - 50, Math.max(50, constrainedX));
+    return Math.min(BOARD_SIZE - 80, Math.max(80, constrainedX));
   };
 
   useEffect(() => {
@@ -1988,7 +1988,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         <main className="flex-1 h-full p-4 flex flex-col items-center justify-center relative overflow-y-auto min-w-0">
           
           {/* Opponent Profile HUD Banner (Centered above the canvas) */}
-          <div className="w-full max-w-[min(320px,42vh)] mb-2.5 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg shrink-0">
+          <div className="w-full max-w-[min(400px,92vw,50vh)] mb-2.5 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF6B6B] to-[#8a2be2] border-2 border-white/30 flex items-center justify-center text-lg animate-pulse">
                 🤖
@@ -2019,7 +2019,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           </div>
 
           {/* Board Canvas Wrapper with Floating Score Popups Container */}
-          <div className="relative w-[min(320px,42vh)] h-[min(320px,42vh)] flex justify-center shrink-0">
+          <div className="relative w-[min(400px,92vw,50vh)] h-[min(400px,92vw,50vh)] flex justify-center shrink-0">
             <canvas
               ref={canvasRef}
               width={BOARD_SIZE}
@@ -2047,7 +2047,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           </div>
 
           {/* Bottom Game Controls */}
-          <div className="w-full max-w-[min(320px,42vh)] mt-2.5 flex flex-col gap-2.5 shrink-0">
+          <div className="w-full max-w-[min(400px,92vw,50vh)] mt-2.5 flex flex-col gap-2.5 shrink-0">
             
             {/* Strike Power/Force Indicator during active aiming */}
             {isAiming && (
@@ -2080,8 +2080,8 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
                 </div>
                 <input
                   type="range"
-                  min={50}
-                  max={BOARD_SIZE - 50}
+                  min={80}
+                  max={BOARD_SIZE - 80}
                   value={strikerX}
                   disabled={isAiming}
                   onChange={(e) => handleStrikerSlider(parseInt(e.target.value))}
