@@ -154,6 +154,11 @@ class AudioSynth {
     this.playTone([987.8, 1319], [0.08, 0.12], 'sine', 0.08);
   }
 
+  // Chess check alarm
+  public playCheck() {
+    this.playTone([400, 300, 400], [0.1, 0.1], 'sawtooth', 0.12);
+  }
+
   // GameOver failure/success
   public playGameOver(success: boolean) {
     if (success) {

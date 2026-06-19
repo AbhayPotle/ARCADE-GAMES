@@ -37,8 +37,8 @@ const INITIAL_BOARD: Board = [
   ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
 ];
 
-// Complete legal moves validator
-const getLegalMoves = (r: number, c: number, boardState: Board): { r: number; c: number }[] => {
+// Complete pseudo-legal moves validator (ignoring checks)
+const getPseudoLegalMoves = (r: number, c: number, boardState: Board): { r: number; c: number }[] => {
   const moves: { r: number; c: number }[] = [];
   const piece = boardState[r][c];
   if (!piece) return [];
@@ -167,6 +167,196 @@ const getLegalMoves = (r: number, c: number, boardState: Board): { r: number; c:
   return moves;
 };
 
+// Check if the King of a given color is in check
+const isKingInCheck = (color: 'w' | 'b', boardState: Board): boolean => {
+  let kingR = -1;
+  let kingC = -1;
+  const kingPiece = color === 'w' ? 'K' : 'k';
+
+  // Find the king
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if (boardState[r][c] === kingPiece) {
+        kingR = r;
+        kingC = c;
+        break;
+      }
+    }
+    if (kingR !== -1) break;
+  }
+  if (kingR === -1) return false;
+
+  // Check if any opponent piece can capture the king
+  const opponentColor = color === 'w' ? 'b' : 'w';
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = boardState[r][c];
+      if (piece && isWhitePiece(piece) === (opponentColor === 'w')) {
+        const moves = getPseudoLegalMoves(r, c, boardState);
+        if (moves.some(m => m.r === kingR && m.c === kingC)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+};
+
+// Returns only true legal moves (moves that do not put/leave own King in check)
+const getLegalMoves = (r: number, c: number, boardState: Board): { r: number; c: number }[] => {
+  const piece = boardState[r][c];
+  if (!piece) return [];
+  const color = isWhitePiece(piece) ? 'w' : 'b';
+  const pseudoMoves = getPseudoLegalMoves(r, c, boardState);
+
+  return pseudoMoves.filter(mv => {
+    // Simulate move
+    const tempBoard = boardState.map(row => [...row]);
+    tempBoard[mv.r][mv.c] = piece;
+    tempBoard[r][c] = null;
+    // Check if king is in check after the simulated move
+    return !isKingInCheck(color, tempBoard);
+  });
+};
+
+// Check if a player has any legal moves remaining
+const hasAnyLegalMoves = (color: 'w' | 'b', boardState: Board): boolean => {
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = boardState[r][c];
+      if (piece && isWhitePiece(piece) === (color === 'w')) {
+        const moves = getLegalMoves(r, c, boardState);
+        if (moves.length > 0) return true;
+      }
+    }
+  }
+  return false;
+};
+
+const PIECE_VALUES: Record<string, number> = {
+  'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 9000,
+  'P': 10, 'N': 30, 'B': 30, 'R': 50, 'Q': 90, 'K': 9000
+};
+
+const CENTER_BONUS = [
+  [0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 1, 1, 1, 1, 1, 1, 0],
+  [0, 1, 2, 2, 2, 2, 1, 0],
+  [0, 1, 2, 3, 3, 2, 1, 0],
+  [0, 1, 2, 3, 3, 2, 1, 0],
+  [0, 1, 2, 2, 2, 2, 1, 0],
+  [0, 1, 1, 1, 1, 1, 1, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0]
+];
+
+const evaluateBoard = (boardState: Board, botColor: 'w' | 'b'): number => {
+  let score = 0;
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = boardState[r][c];
+      if (piece) {
+        const isWhite = isWhitePiece(piece);
+        const val = PIECE_VALUES[piece] || 0;
+        const centerBonus = CENTER_BONUS[r][c];
+        
+        const isBotPiece = (botColor === 'w' && isWhite) || (botColor === 'b' && !isWhite);
+        if (isBotPiece) {
+          score += val + centerBonus * 0.5;
+        } else {
+          score -= val + centerBonus * 0.5;
+        }
+      }
+    }
+  }
+  return score;
+};
+
+const getBestBotMove = (botColor: 'w' | 'b', boardState: Board): any => {
+  const opponentColor = botColor === 'w' ? 'b' : 'w';
+  
+  // Find all legal moves for the bot
+  const botMoves: any[] = [];
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = boardState[r][c];
+      if (piece && isWhitePiece(piece) === (botColor === 'w')) {
+        const pieceMoves = getLegalMoves(r, c, boardState);
+        pieceMoves.forEach(mv => {
+          botMoves.push({
+            fromR: r,
+            fromC: c,
+            toR: mv.r,
+            toC: mv.c,
+            piece,
+            target: boardState[mv.r][mv.c]
+          });
+        });
+      }
+    }
+  }
+
+  if (botMoves.length === 0) return null;
+
+  // Minimax depth 2 search
+  let bestMove = botMoves[0];
+  let bestScore = -Infinity;
+
+  botMoves.forEach(move => {
+    // 1. Simulate bot move
+    const tempBoard1 = boardState.map(row => [...row]);
+    tempBoard1[move.toR][move.toC] = move.piece;
+    tempBoard1[move.fromR][move.fromC] = null;
+
+    // 2. Find opponent's best response (minimizes score for bot)
+    let minOpponentScore = Infinity;
+    
+    const opponentMoves: any[] = [];
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const piece = tempBoard1[r][c];
+        if (piece && isWhitePiece(piece) === (opponentColor === 'w')) {
+          const pieceMoves = getLegalMoves(r, c, tempBoard1);
+          pieceMoves.forEach(mv => {
+            opponentMoves.push({
+              fromR: r,
+              fromC: c,
+              toR: mv.r,
+              toC: mv.c,
+              piece
+            });
+          });
+        }
+      }
+    }
+
+    if (opponentMoves.length === 0) {
+      if (isKingInCheck(opponentColor, tempBoard1)) {
+        minOpponentScore = 90000; // Checkmate opponent
+      } else {
+        minOpponentScore = 0; // Stalemate
+      }
+    } else {
+      opponentMoves.forEach(oppMove => {
+        const tempBoard2 = tempBoard1.map(row => [...row]);
+        tempBoard2[oppMove.toR][oppMove.toC] = oppMove.piece;
+        tempBoard2[oppMove.fromR][oppMove.fromC] = null;
+
+        const score = evaluateBoard(tempBoard2, botColor);
+        if (score < minOpponentScore) {
+          minOpponentScore = score;
+        }
+      });
+    }
+
+    if (minOpponentScore > bestScore) {
+      bestScore = minOpponentScore;
+      bestMove = move;
+    }
+  });
+
+  return bestMove;
+};
+
 export default function ChessLegends({ matchData, currentUser, onComplete }: ChessGameProps) {
   const [board, setBoard] = useState<Board>(INITIAL_BOARD);
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
@@ -178,19 +368,36 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
   const [activeTheme, setActiveTheme] = useState<'neon' | 'stone' | 'lava'>('neon');
   const [battleLogs, setBattleLogs] = useState<string[]>([]);
   const [gameOver, setGameOver] = useState(false);
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
 
   // SVG movement trace line
   const [lastMoveCoords, setLastMoveCoords] = useState<{ fromR: number; fromC: number; toR: number; toC: number } | null>(null);
+
+  // Sync state refs to prevent stale closure in bot calculations
+  const boardRef = React.useRef(board);
+  boardRef.current = board;
+
+  const myColorRef = React.useRef(myColor);
+  myColorRef.current = myColor;
+
+  const gameOverRef = React.useRef(gameOver);
+  gameOverRef.current = gameOver;
+
+  const difficultyRef = React.useRef(difficulty);
+  difficultyRef.current = difficulty;
 
   useEffect(() => {
     const playerIndex = matchData.players.findIndex((p: any) => p.userId === currentUser.id);
     const color = playerIndex === 0 ? 'w' : 'b';
     setMyColor(color);
+    myColorRef.current = color;
     setIsMyTurn(color === 'w');
 
     socketService.on('chess_move_made', (data: { move: any; boardState: string }) => {
       audioSynth.playChessMove();
-      setBoard(JSON.parse(data.boardState));
+      const updatedBoard = JSON.parse(data.boardState);
+      setBoard(updatedBoard);
+      boardRef.current = updatedBoard;
       setIsMyTurn(true);
       setMoveHistory(prev => [...prev, data.move.notation]);
       setLastMoveCoords({
@@ -204,6 +411,11 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
         setBattleLogs(prev => [...prev.slice(-5), `⚔️ Opponent captured a node at ${data.move.notation}`]);
       } else {
         setBattleLogs(prev => [...prev.slice(-5), `📡 Vector shift: ${data.move.notation}`]);
+      }
+
+      // Check if player is in check
+      if (isKingInCheck(myColorRef.current, updatedBoard)) {
+        audioSynth.playCheck();
       }
     });
 
@@ -223,17 +435,18 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
   }, [isMyTurn, gameOver]);
 
   const makeBotMove = () => {
-    const botColor = myColor === 'w' ? 'b' : 'w';
-    const allLegalMoves: { fromR: number; fromC: number; toR: number; toC: number; piece: Piece; target: Piece }[] = [];
+    if (gameOverRef.current) return;
+    const botColor = myColorRef.current === 'w' ? 'b' : 'w';
     
     // Find all legal moves for the bot
+    const allLegalMoves: { fromR: number; fromC: number; toR: number; toC: number; piece: Piece; target: Piece }[] = [];
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
-        const piece = board[r][c];
+        const piece = boardRef.current[r][c];
         if (piece) {
           const isWhite = isWhitePiece(piece);
           if ((botColor === 'w' && isWhite) || (botColor === 'b' && !isWhite)) {
-            const pieceMoves = getLegalMoves(r, c, board);
+            const pieceMoves = getLegalMoves(r, c, boardRef.current);
             pieceMoves.forEach(mv => {
               allLegalMoves.push({
                 fromR: r,
@@ -241,7 +454,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
                 toR: mv.r,
                 toC: mv.c,
                 piece,
-                target: board[mv.r][mv.c]
+                target: boardRef.current[mv.r][mv.c]
               });
             });
           }
@@ -250,18 +463,27 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
     }
 
     if (allLegalMoves.length > 0) {
-      const kingCapture = allLegalMoves.find(m => m.target?.toLowerCase() === 'k');
-      const standardCaptures = allLegalMoves.filter(m => m.target !== null);
+      let chosenMove = allLegalMoves[0];
       
-      let chosenMove = allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
-      if (kingCapture) {
-        chosenMove = kingCapture;
-      } else if (standardCaptures.length > 0 && Math.random() > 0.4) {
-        chosenMove = standardCaptures[Math.floor(Math.random() * standardCaptures.length)];
+      // Select best move based on difficulty
+      if (difficultyRef.current === 'easy') {
+        if (Math.random() < 0.7) {
+          chosenMove = allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
+        } else {
+          chosenMove = getBestBotMove(botColor, boardRef.current) || allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
+        }
+      } else if (difficultyRef.current === 'medium') {
+        if (Math.random() < 0.3) {
+          chosenMove = allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
+        } else {
+          chosenMove = getBestBotMove(botColor, boardRef.current) || allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
+        }
+      } else {
+        chosenMove = getBestBotMove(botColor, boardRef.current) || allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
       }
 
       audioSynth.playChessMove();
-      const newBoard = board.map(row => [...row]);
+      const newBoard = boardRef.current.map(row => [...row]);
       
       let finalPiece = chosenMove.piece;
       if (chosenMove.piece?.toLowerCase() === 'p' && (chosenMove.toR === 0 || chosenMove.toR === 7)) {
@@ -272,6 +494,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
       newBoard[chosenMove.fromR][chosenMove.fromC] = null;
       
       setBoard(newBoard);
+      boardRef.current = newBoard;
       setLastMoveCoords({
         fromR: chosenMove.fromR,
         fromC: chosenMove.fromC,
@@ -290,19 +513,39 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
       } else {
         setBattleLogs(prev => [...prev.slice(-5), `📡 Bot vector shift: ${notation}`]);
       }
+
+      // Check check/checkmate/stalemate for player (next player)
+      const nextColor = myColorRef.current;
+      let isGameOver = false;
+      let winnerId: string | null = null;
+
+      if (!hasAnyLegalMoves(nextColor, newBoard)) {
+        isGameOver = true;
+        if (isKingInCheck(nextColor, newBoard)) {
+          winnerId = 'bot-id';
+          setBattleLogs(prev => [...prev.slice(-5), `💀 CHECKMATE! You lost the battle.`]);
+        } else {
+          winnerId = 'draw';
+          setBattleLogs(prev => [...prev.slice(-5), `🤝 STALEMATE! The grid is locked in a draw.`]);
+        }
+      } else if (isKingInCheck(nextColor, newBoard)) {
+        audioSynth.playCheck();
+        setBattleLogs(prev => [...prev.slice(-5), `🚨 WARNING: YOUR KING IS IN CHECK!`]);
+      }
       
-      if (chosenMove.target?.toLowerCase() === 'k') {
+      if (isGameOver) {
         setGameOver(true);
+        gameOverRef.current = true;
         socketService.emit('game_completed', {
           roomId: matchData.roomId,
-          winnerId: 'bot-id',
+          winnerId: winnerId === 'draw' ? undefined : 'bot-id',
           scores: matchData.players.map((p: any) => ({
             userId: p.userId,
-            score: p.userId === 'bot-id' ? 100 : 20
+            score: winnerId === 'draw' ? 50 : (p.userId === 'bot-id' ? 100 : 20)
           }))
         });
         setTimeout(() => {
-          onComplete(20, 'bot-id');
+          onComplete(20, winnerId === 'draw' ? undefined : 'bot-id');
         }, 2000);
       }
     }
@@ -345,12 +588,8 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
     newBoard[toR][toC] = piece;
     newBoard[fromR][fromC] = null;
 
-    let isGameOver = false;
-    if (targetPiece?.toLowerCase() === 'k') {
-      isGameOver = true;
-    }
-
     setBoard(newBoard);
+    boardRef.current = newBoard;
     setSelectedSquare(null);
     setPossibleMoves([]);
     setLastMoveCoords({ fromR, fromC, toR, toC });
@@ -367,6 +606,25 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
       setBattleLogs(prev => [...prev.slice(-5), `⚡ Node warp: ${notation}`]);
     }
 
+    // Check check/checkmate/stalemate for the bot (next player)
+    const nextColor = myColor === 'w' ? 'b' : 'w';
+    let isGameOver = false;
+    let winnerId: string | null = null;
+
+    if (!hasAnyLegalMoves(nextColor, newBoard)) {
+      isGameOver = true;
+      if (isKingInCheck(nextColor, newBoard)) {
+        winnerId = currentUser.id;
+        setBattleLogs(prev => [...prev.slice(-5), `🏆 CHECKMATE! You won the battle!`]);
+      } else {
+        winnerId = 'draw';
+        setBattleLogs(prev => [...prev.slice(-5), `🤝 STALEMATE! The grid is locked in a draw.`]);
+      }
+    } else if (isKingInCheck(nextColor, newBoard)) {
+      audioSynth.playCheck();
+      setBattleLogs(prev => [...prev.slice(-5), `⚠️ Opponent King is in CHECK!`]);
+    }
+
     socketService.emit('chess_make_move', {
       roomId: matchData.roomId,
       move: { fromR, fromC, toR, toC, notation, capture: !!targetPiece },
@@ -375,21 +633,25 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
 
     if (isGameOver) {
       setGameOver(true);
+      gameOverRef.current = true;
       socketService.emit('game_completed', {
         roomId: matchData.roomId,
-        winnerId: currentUser.id,
+        winnerId: winnerId === 'draw' ? undefined : winnerId || undefined,
         scores: matchData.players.map((p: any) => ({
           userId: p.userId,
-          score: p.userId === currentUser.id ? 100 : 20
+          score: winnerId === 'draw' ? 50 : (p.userId === winnerId ? 100 : 20)
         }))
       });
       setTimeout(() => {
-        onComplete(100, currentUser.id);
+        onComplete(winnerId === currentUser.id ? 100 : 20, winnerId === 'draw' ? undefined : winnerId || undefined);
       }, 2000);
     }
   };
 
-  const getSquareThemeStyle = (isDark: boolean, isSelected: boolean, isHighlighted: boolean) => {
+  const getSquareThemeStyle = (isDark: boolean, isSelected: boolean, isHighlighted: boolean, isKingCheck: boolean) => {
+    if (isKingCheck) {
+      return 'bg-red-600/30 border border-red-500 animate-pulse scale-[0.98] z-10 shadow-[0_0_15px_rgba(239,68,68,0.4)]';
+    }
     if (isSelected) {
       return 'bg-gradient-to-br from-cyan-500/20 to-blue-500/30 border border-cyan-400 scale-[0.98] z-10 shadow-[0_0_12px_rgba(0,240,255,0.2)]';
     }
@@ -414,158 +676,272 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
     }
   };
 
+  const isPlayerInCheck = isKingInCheck(myColor, board);
+  const isBotInCheck = isKingInCheck(myColor === 'w' ? 'b' : 'w', board);
+
   return (
-    <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-6 gap-6 w-full h-full min-h-0">
+    <div className="flex-1 flex flex-col w-full h-full min-h-0 bg-gradient-to-br from-[#0c1445] via-[#0f2354] to-[#0a1128] text-white font-sans relative overflow-hidden select-none">
       
-      {/* Interactive Chessboard */}
-      <div className="flex flex-col space-y-4 w-full max-w-[420px]">
-        {/* Theme select HUD bar */}
-        <div className="flex items-center justify-between bg-black/40 border border-white/5 p-2 rounded-lg text-xs font-mono">
-          <span className="text-gray-400">BOARD_MATRICES:</span>
-          <div className="flex space-x-1.5">
-            {['neon', 'stone', 'lava'].map((theme) => (
-              <button
-                key={theme}
-                onClick={() => { audioSynth.playClick(); setActiveTheme(theme as any); }}
-                className={`px-2 py-0.5 rounded text-[10px] font-orbitron uppercase transition-all ${
-                  activeTheme === theme
-                    ? 'bg-neon-cyan/25 border border-neon-cyan text-neon-cyan'
-                    : 'bg-cyber-dark border border-white/5 text-gray-500'
-                }`}
-              >
-                {theme}
-              </button>
-            ))}
+      {/* Poki-style Floating Geometric backdrop elements */}
+      <div className="poki-shape shape-circle top-[-50px] left-[-50px]" />
+      <div className="poki-shape shape-square bottom-[10%] right-[-30px]" />
+      <div className="poki-shape shape-triangle top-[30%] right-[20%]" />
+
+      {/* 1. Top Navigation Bar */}
+      <nav className="w-full h-14 px-6 flex items-center justify-between border-b border-white/10 bg-white/5 backdrop-blur-md z-20">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => onComplete(20, 'bot-id')}
+            className="px-3 py-1.5 rounded-lg bg-[#FF6B6B] hover:bg-[#FF6B6B]/80 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            ← Leave
+          </button>
+          <span className="font-orbitron font-extrabold text-lg text-transparent bg-clip-text bg-gradient-to-r from-[#00D4FF] to-[#FFD93D] tracking-wider">
+            ARCADEVERSE
+          </span>
+        </div>
+        
+        <div className="px-4 py-1 rounded-full bg-white/10 border border-white/10 text-xs font-bold font-orbitron uppercase tracking-widest text-[#00D4FF] animate-pulse">
+          {isMyTurn && !gameOver ? '⚡ YOUR WARP ACTIVE' : '⌛ OPPONENT FLICKING...'}
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-[#FFD93D]/30 text-[#FFD93D] font-bold text-xs font-mono">
+            🪙 1,250 COINS
           </div>
+          <button
+            onClick={() => {
+              const isMuted = audioSynth.toggleMute();
+              audioSynth.playClick();
+            }}
+            className="p-1.5 rounded-lg bg-white/10 border border-white/10 hover:border-[#00D4FF]/50 text-gray-300 hover:text-white transition-all text-xs font-orbitron"
+          >
+            🔊 AUDIO
+          </button>
         </div>
+      </nav>
 
-        <div className={`aspect-square w-full border-2 rounded-lg p-2 flex flex-col justify-between shadow-2xl transition-colors duration-300 relative ${
-          activeTheme === 'stone'
-            ? 'bg-amber-950/20 border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.05)]'
-            : activeTheme === 'lava'
-            ? 'bg-red-950/20 border-orange-500/30 shadow-[0_0_20px_rgba(239,68,68,0.12)]'
-            : 'bg-cyber-dark/80 border-neon-cyan/20 shadow-[0_0_20px_rgba(0,240,255,0.08)]'
-        }`}>
-          {board.map((row, r) => (
-            <div key={r} className="flex flex-1 justify-between">
-              {row.map((piece, c) => {
-                const isSelected = selectedSquare?.r === r && selectedSquare?.c === c;
-                const isHighlighted = possibleMoves.some(m => m.r === r && m.c === c);
-                const isDark = (r + c) % 2 === 1;
-
-                return (
-                  <div
-                    key={c}
-                    onClick={() => handleSquareClick(r, c)}
-                    className={`flex-1 flex items-center justify-center text-3xl md:text-4xl select-none cursor-pointer border transition-all ${
-                      getSquareThemeStyle(isDark, isSelected, isHighlighted)
-                    } hover:scale-[1.03] duration-150`}
-                  >
-                    <span className={`filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] ${
-                      isWhitePiece(piece)
-                        ? activeTheme === 'stone'
-                          ? 'text-amber-200 drop-shadow-[0_0_4px_rgba(251,191,36,0.6)]'
-                          : activeTheme === 'lava'
-                          ? 'text-orange-400 drop-shadow-[0_0_6px_rgba(249,115,22,0.9)]'
-                          : 'text-neon-cyan drop-shadow-[0_0_7px_#00f0ff]'
-                        : activeTheme === 'stone'
-                          ? 'text-slate-500'
-                          : activeTheme === 'lava'
-                          ? 'text-red-700 drop-shadow-[0_0_5px_#ef4444]'
-                          : 'text-neon-magenta drop-shadow-[0_0_7px_#ff007f]'
-                    }`}>
-                      {getPieceEmoji(piece)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-
-          {/* Glowing Vector Last Move Trajectory Ray Overlay */}
-          {lastMoveCoords && (
-            <svg className="absolute inset-0 pointer-events-none w-full h-full z-20 p-2">
-              <defs>
-                <filter id="neon-line-glow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
-              <line
-                x1={`${lastMoveCoords.fromC * 12.5 + 6.25}%`}
-                y1={`${lastMoveCoords.fromR * 12.5 + 6.25}%`}
-                x2={`${lastMoveCoords.toC * 12.5 + 6.25}%`}
-                y2={`${lastMoveCoords.toR * 12.5 + 6.25}%`}
-                stroke={activeTheme === 'lava' ? '#ff4500' : activeTheme === 'stone' ? '#d97706' : '#00f0ff'}
-                strokeWidth="2.5"
-                strokeDasharray="5 3"
-                className="animate-pulse"
-                filter="url(#neon-line-glow)"
-              />
-              {/* Bullet spark core on endpoint */}
-              <circle
-                cx={`${lastMoveCoords.toC * 12.5 + 6.25}%`}
-                cy={`${lastMoveCoords.toR * 12.5 + 6.25}%`}
-                r="4"
-                fill="#ffffff"
-                filter="url(#neon-line-glow)"
-              />
-            </svg>
-          )}
-        </div>
-      </div>
-
-      {/* Game Status, Battle Logs & History */}
-      <div className="w-full md:w-64 glass-panel rounded-lg p-4 flex flex-col h-[320px] md:h-[470px] font-mono text-xs border border-neon-cyan/15 justify-between bg-cyber-dark/80">
-        <div>
-          <h4 className="text-neon-cyan font-bold font-orbitron uppercase tracking-wider border-b border-white/5 pb-2 mb-2">
-            // CHESS LEGENDS HUD
-          </h4>
+      {/* 2. Main Body Layout (Left Sidebar + Center Play Area) */}
+      <div className="flex-1 flex flex-row w-full min-h-0 overflow-hidden">
+        
+        {/* LEFT SIDEBAR: Player Card, Themes, Difficulty */}
+        <aside className="w-64 h-full p-4 flex flex-col gap-4 border-r border-white/10 bg-white/5 backdrop-blur-md overflow-y-auto hidden md:flex shrink-0">
           
-          <div className="space-y-1.5 mb-4 text-[11px]">
-            <div className="flex justify-between">
-              <span className="text-gray-400">YOUR_PILOT:</span>
-              <span className={myColor === 'w' ? 'text-neon-cyan font-bold' : 'text-neon-magenta font-bold'}>
-                {myColor === 'w' ? 'CYAN_SENTINEL' : 'MAGENTA_REBEL'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">TURN_STATE:</span>
-              <span className={isMyTurn && !gameOver ? 'text-neon-green animate-pulse font-bold' : 'text-gray-500'}>
-                {gameOver ? 'GRID_LOCKED' : isMyTurn ? 'YOUR_WARP_ACTIVE' : 'OPPONENT_STEERING'}
-              </span>
+          {/* Player Profile Card */}
+          <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2.5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#00D4FF] to-[#6C63FF] border-2 border-white flex items-center justify-center font-orbitron font-extrabold text-white text-base shadow-[0_0_15px_rgba(0,212,255,0.4)]">
+                {currentUser.username[0].toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-extrabold text-white truncate">{currentUser.username.toUpperCase()}</p>
+                <p className="text-[10px] text-[#00D4FF] font-bold tracking-widest font-orbitron">👑 CHESS GRANDMASTER</p>
+              </div>
             </div>
           </div>
 
-          <span className="text-[9px] text-gray-500 mb-1 block uppercase">// RPG BATTLE CHRONICLES</span>
-          <div className="bg-black/50 border border-white/5 p-2 rounded max-h-[88px] overflow-y-auto space-y-1 mb-3 text-[10px] text-orange-400 font-sans min-h-[64px]">
-            {battleLogs.length === 0 ? (
-              <div className="text-gray-600">// SCANNING TELEMETRY...</div>
-            ) : (
-              battleLogs.map((log, idx) => <div key={idx}>{log}</div>)
-            )}
+          {/* Bot Difficulty Setting */}
+          <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <h5 className="font-orbitron font-bold text-[10px] text-gray-400 tracking-wider uppercase">// BOT DIFFICULTY</h5>
+            <div className="flex flex-col gap-1.5">
+              {(['easy', 'medium', 'hard'] as const).map(diff => (
+                <button
+                  key={diff}
+                  disabled={!isMyTurn || gameOver}
+                  onClick={() => { audioSynth.playClick(); setDifficulty(diff); }}
+                  className={`px-3 py-2 rounded-lg text-xs uppercase font-bold border transition-all text-center cursor-pointer ${
+                    difficulty === diff
+                      ? 'bg-[#FFD93D] text-black border-[#FFD93D] shadow-[0_0_8px_rgba(255,217,61,0.4)] font-extrabold'
+                      : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'
+                  } disabled:opacity-50`}
+                >
+                  {diff}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Moves history log */}
-        <div className="flex-1 flex flex-col min-h-0 mt-2">
-          <span className="text-[9px] text-gray-500 mb-1 uppercase">// VECTOR SHIFT LOG</span>
-          <div className="flex-1 bg-black/40 border border-white/5 p-2 rounded overflow-y-auto space-y-1">
-            {moveHistory.length === 0 ? (
-              <div className="text-[10px] text-gray-600">// WAITING FOR FIRST MOVE...</div>
-            ) : (
-              moveHistory.map((mov, idx) => (
-                <div key={idx} className="flex justify-between border-b border-white/5 pb-0.5 last:border-0">
-                  <span className="text-gray-500">#{idx + 1}</span>
-                  <span className="text-gray-300 font-bold">{mov}</span>
+          {/* Matrix Themes Selection */}
+          <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <h5 className="font-orbitron font-bold text-[10px] text-gray-400 tracking-wider uppercase">// CYBER BOARD MATRIX</h5>
+            <div className="flex flex-col gap-1.5">
+              {['neon', 'stone', 'lava'].map(theme => (
+                <button
+                  key={theme}
+                  onClick={() => { audioSynth.playClick(); setActiveTheme(theme as any); }}
+                  className={`px-3 py-2 rounded-lg text-xs uppercase font-bold border transition-all text-center cursor-pointer ${
+                    activeTheme === theme
+                      ? 'bg-gradient-to-r from-[#00D4FF] to-[#6C63FF] text-white border-white shadow-[0_0_12px_rgba(0,212,255,0.4)] font-extrabold'
+                      : 'bg-black/40 text-gray-300 border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  {theme}
+                </button>
+              ))}
+            </div>
+          </div>
+
+        </aside>
+
+        {/* RIGHT AREA: Opponent avatar, Chessboard Canvas, HUD logs */}
+        <main className="flex-1 h-full p-4 flex flex-col items-center justify-center relative overflow-y-auto min-w-0">
+          
+          {/* Opponent Profile HUD Banner (Centered above the canvas) */}
+          <div className="w-full max-w-[420px] mb-4 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF6B6B] to-[#8a2be2] border-2 border-white/30 flex items-center justify-center text-lg">
+                🤖
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white font-orbitron tracking-wider">A.I. CHESS_BOT</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
+                  <span className="text-[9px] text-[#4ECDC4] font-bold uppercase tracking-widest">
+                    {difficulty.toUpperCase()} MODE
+                  </span>
                 </div>
-              ))
-            )}
+              </div>
+            </div>
+            
+            <div className="px-3 py-1 rounded bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-[10px] uppercase font-orbitron tracking-widest animate-pulse">
+              CYBER_BOARD
+            </div>
           </div>
-        </div>
+
+          {/* Blinking Check Warnings */}
+          {isPlayerInCheck && (
+            <div className="w-full max-w-[420px] bg-red-600/25 border border-red-500 text-red-200 px-4 py-2.5 rounded-xl text-[11px] font-mono text-center animate-pulse tracking-widest uppercase font-extrabold mb-4 shadow-[0_0_15px_rgba(239,68,68,0.3)] z-30">
+              ⚠️ WARNING: YOUR KING IS UNDER ATTACK (CHECK!)
+            </div>
+          )}
+          {isBotInCheck && (
+            <div className="w-full max-w-[420px] bg-[#FFD93D]/20 border border-[#FFD93D] text-[#FFD93D] px-4 py-2.5 rounded-xl text-[11px] font-mono text-center animate-pulse tracking-widest uppercase font-extrabold mb-4 shadow-[0_0_15px_rgba(255,217,61,0.2)] z-30">
+              👑 ENEMY KING DETECTED IN CHECK!
+            </div>
+          )}
+
+          {/* Interactive Chessboard */}
+          <div className="flex flex-col space-y-4 w-full max-w-[420px]">
+            <div className={`aspect-square w-full border-2 rounded-3xl p-2 flex flex-col justify-between shadow-2xl transition-all duration-700 relative ${
+              isMyTurn && !gameOver
+                ? 'scale-[1.01] border-[#FFD93D] shadow-[0_25px_65px_rgba(0,212,255,0.18)] bg-white/5'
+                : 'scale-100 border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)] bg-black/35'
+            }`}>
+              {board.map((row, r) => (
+                <div key={r} className="flex flex-1 justify-between">
+                  {row.map((piece, c) => {
+                    const isSelected = selectedSquare?.r === r && selectedSquare?.c === c;
+                    const isHighlighted = possibleMoves.some(m => m.r === r && m.c === c);
+                    const isDark = (r + c) % 2 === 1;
+
+                    // Flashing king check animation
+                    const isWhite = isWhitePiece(piece);
+                    const isKingCheck = piece && piece.toLowerCase() === 'k' && (
+                      (isWhite && isKingInCheck('w', board)) ||
+                      (!isWhite && isKingInCheck('b', board))
+                    );
+
+                    return (
+                      <div
+                        key={c}
+                        onClick={() => handleSquareClick(r, c)}
+                        className={`flex-1 flex items-center justify-center text-3.5xl md:text-4xl select-none cursor-pointer border transition-all ${
+                          getSquareThemeStyle(isDark, isSelected, isHighlighted, !!isKingCheck)
+                        } hover:scale-[1.03] duration-150 rounded`}
+                      >
+                        <span className={`filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] ${
+                          isWhitePiece(piece)
+                            ? activeTheme === 'stone'
+                              ? 'text-amber-200 drop-shadow-[0_0_4px_rgba(251,191,36,0.6)]'
+                              : activeTheme === 'lava'
+                              ? 'text-orange-400 drop-shadow-[0_0_6px_rgba(249,115,22,0.9)]'
+                              : 'text-neon-cyan drop-shadow-[0_0_7px_#00f0ff]'
+                            : activeTheme === 'stone'
+                              ? 'text-slate-500'
+                              : activeTheme === 'lava'
+                              ? 'text-red-700 drop-shadow-[0_0_5px_#ef4444]'
+                              : 'text-neon-magenta drop-shadow-[0_0_7px_#ff007f]'
+                        }`}>
+                          {getPieceEmoji(piece)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+
+              {/* Glowing Vector Last Move Trajectory Ray Overlay */}
+              {lastMoveCoords && (
+                <svg className="absolute inset-0 pointer-events-none w-full h-full z-20 p-2">
+                  <defs>
+                    <filter id="neon-line-glow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="4" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <line
+                    x1={`${lastMoveCoords.fromC * 12.5 + 6.25}%`}
+                    y1={`${lastMoveCoords.fromR * 12.5 + 6.25}%`}
+                    x2={`${lastMoveCoords.toC * 12.5 + 6.25}%`}
+                    y2={`${lastMoveCoords.toR * 12.5 + 6.25}%`}
+                    stroke={activeTheme === 'lava' ? '#ff4500' : activeTheme === 'stone' ? '#d97706' : '#00f0ff'}
+                    strokeWidth="2.5"
+                    strokeDasharray="5 3"
+                    className="animate-pulse"
+                    filter="url(#neon-line-glow)"
+                  />
+                  {/* Bullet spark core on endpoint */}
+                  <circle
+                    cx={`${lastMoveCoords.toC * 12.5 + 6.25}%`}
+                    cy={`${lastMoveCoords.toR * 12.5 + 6.25}%`}
+                    r="4"
+                    fill="#ffffff"
+                    filter="url(#neon-line-glow)"
+                  />
+                </svg>
+              )}
+            </div>
+          </div>
+
+          {/* Game Status, Battle Logs & History HUD */}
+          <div className="w-full max-w-[420px] mt-4 grid grid-cols-2 gap-3 text-xs font-mono">
+            
+            {/* Battle Chronicle logs */}
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-between h-[110px]">
+              <span className="text-[9px] text-gray-500 block uppercase font-orbitron tracking-widest">// RPG BATTLE CHRONICLES</span>
+              <div className="flex-1 bg-black/50 border border-white/5 p-1.5 rounded overflow-y-auto space-y-1 text-[9px] text-orange-400 font-sans min-h-[60px] mt-1">
+                {battleLogs.length === 0 ? (
+                  <div className="text-gray-600">// SCANNING TELEMETRY...</div>
+                ) : (
+                  battleLogs.map((log, idx) => <div key={idx}>{log}</div>)
+                )}
+              </div>
+            </div>
+
+            {/* Vector Shift logs */}
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-between h-[110px]">
+              <span className="text-[9px] text-gray-500 block uppercase font-orbitron tracking-widest">// VECTOR SHIFT LOG</span>
+              <div className="flex-1 bg-black/40 border border-white/5 p-1.5 rounded overflow-y-auto space-y-0.5 text-[9px] mt-1">
+                {moveHistory.length === 0 ? (
+                  <div className="text-gray-600">// NO WARPS YET...</div>
+                ) : (
+                  moveHistory.map((mov, idx) => (
+                    <div key={idx} className="flex justify-between border-b border-white/5 pb-0.5 last:border-0">
+                      <span className="text-gray-500">#{idx + 1}</span>
+                      <span className="text-gray-300 font-bold">{mov}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+          </div>
+
+        </main>
+
       </div>
 
     </div>
