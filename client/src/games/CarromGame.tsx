@@ -1281,49 +1281,57 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     ctx.strokeStyle = 'rgba(92, 58, 33, 0.4)';
     ctx.strokeRect(16, 16, BOARD_SIZE - 32, BOARD_SIZE - 32);
 
-    // Center concentric circles
-    ctx.strokeStyle = 'rgba(92, 58, 33, 0.35)';
+    // 1. Center Red Circle (Diameter 3.18 cm, radius 9px)
+    ctx.fillStyle = '#b7094c';
+    ctx.beginPath();
+    ctx.arc(BOARD_SIZE / 2, BOARD_SIZE / 2, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Outer Concentric Circles (Diameter 17 cm, radius 46px)
+    ctx.strokeStyle = 'rgba(92, 58, 33, 0.45)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(BOARD_SIZE/2, BOARD_SIZE/2, 42, 0, Math.PI * 2);
+    ctx.arc(BOARD_SIZE / 2, BOARD_SIZE / 2, 46, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.strokeStyle = 'rgba(183, 9, 76, 0.2)';
+    ctx.strokeStyle = 'rgba(183, 9, 76, 0.25)';
+    ctx.lineWidth = 1.0;
     ctx.beginPath();
-    ctx.arc(BOARD_SIZE/2, BOARD_SIZE/2, 38, 0, Math.PI * 2);
+    ctx.arc(BOARD_SIZE / 2, BOARD_SIZE / 2, 42, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Center circular pattern spokes
+    // 3. Center decorative spokes (running from the center red circle to the outer circle edge)
+    ctx.strokeStyle = 'rgba(92, 58, 33, 0.22)';
+    ctx.lineWidth = 1.0;
     for (let a = 0; a < 12; a++) {
       const rad = (a * Math.PI) / 6;
-      ctx.strokeStyle = 'rgba(92, 58, 33, 0.18)';
       ctx.beginPath();
-      ctx.moveTo(BOARD_SIZE/2 + Math.cos(rad) * 6, BOARD_SIZE/2 + Math.sin(rad) * 6);
-      ctx.lineTo(BOARD_SIZE/2 + Math.cos(rad) * 36, BOARD_SIZE/2 + Math.sin(rad) * 36);
+      ctx.moveTo(BOARD_SIZE / 2 + Math.cos(rad) * 9, BOARD_SIZE / 2 + Math.sin(rad) * 9);
+      ctx.lineTo(BOARD_SIZE / 2 + Math.cos(rad) * 42, BOARD_SIZE / 2 + Math.sin(rad) * 42);
       ctx.stroke();
     }
 
-    // Baselines (Top, Bottom, Left, Right)
-    ctx.strokeStyle = 'rgba(92, 58, 33, 0.35)';
-    ctx.lineWidth = 1.0;
+    // 4. Baselines (Top, Bottom, Left, Right)
+    ctx.strokeStyle = 'rgba(92, 58, 33, 0.4)';
+    ctx.lineWidth = 1.2;
 
-    // Bottom double line (x from 80 to 320, y = 348 and y = 352)
-    ctx.beginPath(); ctx.moveTo(80, BOARD_SIZE - 52); ctx.lineTo(BOARD_SIZE - 80, BOARD_SIZE - 52); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(80, BOARD_SIZE - 48); ctx.lineTo(BOARD_SIZE - 80, BOARD_SIZE - 48); ctx.stroke();
+    // Bottom double line (x from 80 to 320, tangent at y = 350, so y = 341 and y = 359)
+    ctx.beginPath(); ctx.moveTo(80, BOARD_SIZE - 59); ctx.lineTo(BOARD_SIZE - 80, BOARD_SIZE - 59); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(80, BOARD_SIZE - 41); ctx.lineTo(BOARD_SIZE - 80, BOARD_SIZE - 41); ctx.stroke();
     
-    // Top double line (x from 80 to 320, y = 48 and y = 52)
-    ctx.beginPath(); ctx.moveTo(80, 48); ctx.lineTo(BOARD_SIZE - 80, 48); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(80, 52); ctx.lineTo(BOARD_SIZE - 80, 52); ctx.stroke();
+    // Top double line (x from 80 to 320, tangent at y = 50, so y = 41 and y = 59)
+    ctx.beginPath(); ctx.moveTo(80, 41); ctx.lineTo(BOARD_SIZE - 80, 41); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(80, 59); ctx.lineTo(BOARD_SIZE - 80, 59); ctx.stroke();
 
-    // Left double line (y from 80 to 320, x = 48 and x = 52)
-    ctx.beginPath(); ctx.moveTo(48, 80); ctx.lineTo(48, BOARD_SIZE - 80); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(52, 80); ctx.lineTo(52, BOARD_SIZE - 80); ctx.stroke();
+    // Left double line (y from 80 to 320, tangent at x = 50, so x = 41 and x = 59)
+    ctx.beginPath(); ctx.moveTo(41, 80); ctx.lineTo(41, BOARD_SIZE - 80); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(59, 80); ctx.lineTo(59, BOARD_SIZE - 80); ctx.stroke();
 
-    // Right double line (y from 80 to 320, x = 348 and x = 352)
-    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 52, 80); ctx.lineTo(BOARD_SIZE - 52, BOARD_SIZE - 80); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 48, 80); ctx.lineTo(BOARD_SIZE - 48, BOARD_SIZE - 80); ctx.stroke();
+    // Right double line (y from 80 to 320, tangent at x = 350, so x = 341 and x = 359)
+    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 59, 80); ctx.lineTo(BOARD_SIZE - 59, BOARD_SIZE - 80); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 41, 80); ctx.lineTo(BOARD_SIZE - 41, BOARD_SIZE - 80); ctx.stroke();
 
-    // Baseline circles at the ends (8 base circles total)
+    // 5. Terminating Base Circles at the ends of baselines (8 base circles total, radius 9px)
     const baseCircles = [
       { x: 80, y: BOARD_SIZE - 50 },
       { x: BOARD_SIZE - 80, y: BOARD_SIZE - 50 },
@@ -1335,25 +1343,26 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       { x: BOARD_SIZE - 50, y: BOARD_SIZE - 80 }
     ];
 
-    ctx.strokeStyle = 'rgba(92, 58, 33, 0.4)';
+    ctx.strokeStyle = 'rgba(92, 58, 33, 0.45)';
+    ctx.lineWidth = 1.2;
     baseCircles.forEach(pt => {
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, 9, 0, Math.PI * 2);
       ctx.stroke();
     });
 
-    // Baseline red dots inside the circles
+    // 6. Base red circles/spots inside the terminating circles (radius 6px)
     ctx.fillStyle = '#b7094c';
     baseCircles.forEach(pt => {
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
       ctx.fill();
     });
 
-    // Diagonal lines pointing to pockets
-    ctx.strokeStyle = 'rgba(92, 58, 33, 0.3)';
+    // 7. Diagonal lines pointing to pockets (starts at offset 45px, ends at 110px, pointing to pocket centers)
+    ctx.strokeStyle = 'rgba(92, 58, 33, 0.35)';
     ctx.lineWidth = 1.0;
-    const arrowLength = 55; // length of diagonal line
+    const arrowLength = 65; // length of diagonal line
     const startOffset = 45; // offset from corner
 
     // Top-Left arrow
@@ -1380,7 +1389,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     ctx.lineTo(BOARD_SIZE - startOffset - arrowLength, BOARD_SIZE - startOffset - arrowLength);
     ctx.stroke();
 
-    // Small red circles at the tips of the diagonal arrows
+    // 8. Small red circles at the tips of the diagonal arrows
     ctx.fillStyle = '#b7094c';
     [
       { x: startOffset + arrowLength, y: startOffset + arrowLength },
@@ -1393,7 +1402,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       ctx.fill();
     });
 
-    // Corner Pockets
+    // 9. Corner Pockets
     pockets.forEach(p => {
       ctx.beginPath();
       ctx.arc(p.x, p.y, POCKET_RADIUS, 0, Math.PI * 2);
@@ -1849,25 +1858,25 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       <div className="poki-shape shape-triangle top-[30%] right-[20%]" />
 
       {/* 1. Top Navigation Bar */}
-      <nav className="w-full h-14 px-6 flex items-center justify-between border-b border-white/10 bg-white/5 backdrop-blur-md z-20">
+      <nav className="w-full h-11 px-6 flex items-center justify-between border-b border-white/10 bg-white/5 backdrop-blur-md z-20 shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={() => onComplete(myScore, 'bot-id')}
-            className="px-3 py-1.5 rounded-lg bg-[#FF6B6B] hover:bg-[#FF6B6B]/80 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+            className="px-3 py-1 rounded-lg bg-[#FF6B6B] hover:bg-[#FF6B6B]/80 text-white font-bold text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
           >
             ← Leave
           </button>
-          <span className="font-orbitron font-extrabold text-lg text-transparent bg-clip-text bg-gradient-to-r from-[#00D4FF] to-[#FFD93D] tracking-wider">
+          <span className="font-orbitron font-extrabold text-base text-transparent bg-clip-text bg-gradient-to-r from-[#00D4FF] to-[#FFD93D] tracking-wider">
             ARCADEVERSE
           </span>
         </div>
         
-        <div className="px-4 py-1 rounded-full bg-white/10 border border-white/10 text-xs font-bold font-orbitron uppercase tracking-widest text-[#00D4FF] animate-pulse">
+        <div className="px-3 py-0.5 rounded-full bg-white/10 border border-white/10 text-[9px] font-bold font-orbitron uppercase tracking-widest text-[#00D4FF] animate-pulse">
           {turn === currentUser.id ? '⚡ YOUR TURN ACTIVE' : '⌛ OPPONENT FLICKING...'}
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-[#FFD93D]/30 text-[#FFD93D] font-bold text-xs font-mono">
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 border border-[#FFD93D]/30 text-[#FFD93D] font-bold text-[10px] font-mono">
             🪙 1,250 COINS
           </div>
           <button
@@ -1875,7 +1884,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
               const isMuted = audioSynth.toggleMute();
               audioSynth.playClick();
             }}
-            className="p-1.5 rounded-lg bg-white/10 border border-white/10 hover:border-[#00D4FF]/50 text-gray-300 hover:text-white transition-all text-xs font-orbitron"
+            className="p-1 rounded-lg bg-white/10 border border-white/10 hover:border-[#00D4FF]/50 text-gray-300 hover:text-white transition-all text-[10px] font-orbitron"
           >
             🔊 AUDIO
           </button>
@@ -1979,9 +1988,9 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         <main className="flex-1 h-full p-4 flex flex-col items-center justify-center relative overflow-y-auto min-w-0">
           
           {/* Opponent Profile HUD Banner (Centered above the canvas) */}
-          <div className="w-full max-w-[400px] mb-4 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg">
+          <div className="w-full max-w-[min(320px,42vh)] mb-2.5 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF6B6B] to-[#8a2be2] border-2 border-white/30 flex items-center justify-center text-lg">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF6B6B] to-[#8a2be2] border-2 border-white/30 flex items-center justify-center text-lg animate-pulse">
                 🤖
               </div>
               <div>
@@ -2010,13 +2019,13 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           </div>
 
           {/* Board Canvas Wrapper with Floating Score Popups Container */}
-          <div className="relative w-full max-w-[400px] flex justify-center">
+          <div className="relative w-[min(320px,42vh)] h-[min(320px,42vh)] flex justify-center shrink-0">
             <canvas
               ref={canvasRef}
               width={BOARD_SIZE}
               height={BOARD_SIZE}
               onPointerDown={handleCanvasPointerDown}
-              className={`rounded-3xl bg-[#ebd2a3] cursor-pointer transition-all duration-700 w-full h-auto max-w-[400px] ${
+              className={`rounded-3xl bg-[#ebd2a3] cursor-pointer transition-all duration-700 w-full h-full ${
                 turn === currentUser.id && !isStrikerFlicked
                   ? 'scale-[1.03] border-[12px] border-[#FFD93D] shadow-[0_25px_65px_rgba(0,212,255,0.22)]'
                   : 'scale-100 border-[12px] border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)]'
@@ -2038,18 +2047,18 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           </div>
 
           {/* Bottom Game Controls */}
-          <div className="w-full max-w-[400px] mt-4 flex flex-col gap-3">
+          <div className="w-full max-w-[min(320px,42vh)] mt-2.5 flex flex-col gap-2.5 shrink-0">
             
             {/* Strike Power/Force Indicator during active aiming */}
             {isAiming && (
-              <div className="px-1 space-y-1.5 animate-pulse">
+              <div className="px-1 space-y-1 animate-pulse">
                 <div className="flex justify-between text-[10px] text-gray-300 font-mono font-bold tracking-widest uppercase">
                   <span>Strike Force</span>
                   <span className={shotPower > 80 ? 'text-[#FF6B6B]' : (shotPower > 50 ? 'text-[#FFD93D]' : 'text-[#4ECDC4]')}>
                     {shotPower}% {shotPower > 80 ? '🔥 MAX FORCE' : ''}
                   </span>
                 </div>
-                <div className="w-full h-3 bg-black/40 border border-white/10 rounded-full overflow-hidden p-0.5">
+                <div className="w-full h-2.5 bg-black/40 border border-white/10 rounded-full overflow-hidden p-0.5">
                   <div
                     style={{ width: `${shotPower}%` }}
                     className={`h-full rounded-full transition-all duration-75 ${
@@ -2064,7 +2073,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
             {/* Striker Slider control */}
             {turn === currentUser.id && !isStrikerFlicked && (
-              <div className="px-1 space-y-1">
+              <div className="px-1 space-y-0.5">
                 <div className="flex justify-between text-[10px] text-gray-300 font-mono font-bold tracking-widest uppercase">
                   <span>Flick Position</span>
                   <span className="text-[#00D4FF]">x: {Math.round(strikerX)}</span>
@@ -2076,13 +2085,13 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
                   value={strikerX}
                   disabled={isAiming}
                   onChange={(e) => handleStrikerSlider(parseInt(e.target.value))}
-                  className="w-full h-2 bg-[#0a1128] border border-white/10 rounded-lg appearance-none cursor-pointer accent-[#00D4FF] disabled:opacity-40"
+                  className="w-full h-1.5 bg-[#0a1128] border border-white/10 rounded-lg appearance-none cursor-pointer accent-[#00D4FF] disabled:opacity-40"
                 />
               </div>
             )}
 
             {/* Bottom HUD: Bot Difficulty List */}
-            <div className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10">
+            <div className="flex items-center justify-between p-1.5 rounded-xl bg-white/5 border border-white/10">
               <span className="text-[9px] font-bold text-gray-400 font-orbitron uppercase tracking-widest ml-1">Bot Diff:</span>
               <div className="flex gap-1">
                 {(['easy', 'medium', 'hard'] as const).map(diff => (
@@ -2093,7 +2102,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
                     className={`px-3 py-1 rounded-lg text-[9px] uppercase font-bold border transition-all cursor-pointer ${
                       difficulty === diff
                         ? 'bg-[#FFD93D] text-black border-[#FFD93D] shadow-[0_0_8px_rgba(255,217,61,0.4)]'
-                        : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'
+                        : 'bg-black/40 text-gray-300 border-white/10 hover:border-white/20'
                     } disabled:opacity-50`}
                   >
                     {diff}

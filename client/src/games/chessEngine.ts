@@ -20,7 +20,7 @@ export const isWhitePiece = (piece: Piece): boolean => {
 export const getPieceEmoji = (piece: Piece): string => {
   const map: Record<string, string> = {
     'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
-    'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
+    'P': '♟', 'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚'
   };
   return piece ? map[piece] || '' : '';
 };

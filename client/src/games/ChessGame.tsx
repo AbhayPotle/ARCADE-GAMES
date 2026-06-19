@@ -366,6 +366,55 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
     }
   };
 
+  const getPieceStyle = (piece: Piece): React.CSSProperties => {
+    if (!piece) return {};
+    const isWhite = isWhitePiece(piece);
+    
+    switch (activeTheme) {
+      case 'stone':
+        return isWhite
+          ? {
+              color: '#fef3c7',
+              textShadow: '-1.5px -1.5px 0 #451a03, 1.5px -1.5px 0 #451a03, -1.5px 1.5px 0 #451a03, 1.5px 1.5px 0 #451a03',
+            }
+          : {
+              color: '#451a03',
+              textShadow: '-1.5px -1.5px 0 #fde68a, 1.5px -1.5px 0 #fde68a, -1.5px 1.5px 0 #fde68a, 1.5px 1.5px 0 #fde68a',
+            };
+      case 'lava':
+        return isWhite
+          ? {
+              color: '#fb923c',
+              textShadow: '-1.5px -1.5px 0 #450a0a, 1.5px -1.5px 0 #450a0a, -1.5px 1.5px 0 #450a0a, 1.5px 1.5px 0 #450a0a',
+            }
+          : {
+              color: '#450a0a',
+              textShadow: '-1.5px -1.5px 0 #fb923c, 1.5px -1.5px 0 #fb923c, -1.5px 1.5px 0 #fb923c, 1.5px 1.5px 0 #fb923c, 0 0 6px #ef4444',
+            };
+      case 'classic':
+        return isWhite
+          ? {
+              color: '#ffffff',
+              textShadow: '-1.5px -1.5px 0 #1e293b, 1.5px -1.5px 0 #1e293b, -1.5px 1.5px 0 #1e293b, 1.5px 1.5px 0 #1e293b',
+            }
+          : {
+              color: '#0f172a',
+              textShadow: '-1.5px -1.5px 0 #ffffff, 1.5px -1.5px 0 #ffffff, -1.5px 1.5px 0 #ffffff, 1.5px 1.5px 0 #ffffff',
+            };
+      case 'neon':
+      default:
+        return isWhite
+          ? {
+              color: '#00f0ff',
+              textShadow: '0 0 7px #00f0ff, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000',
+            }
+          : {
+              color: '#ff007f',
+              textShadow: '0 0 7px #ff007f, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000',
+            };
+    }
+  };
+
   const isPlayerInCheck = isKingInCheck(myColor, board);
   const isBotInCheck = isKingInCheck(myColor === 'w' ? 'b' : 'w', board);
 
@@ -378,25 +427,25 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
       <div className="poki-shape shape-triangle top-[30%] right-[20%]" />
 
       {/* 1. Top Navigation Bar */}
-      <nav className="w-full h-14 px-6 flex items-center justify-between border-b border-white/10 bg-white/5 backdrop-blur-md z-20">
+      <nav className="w-full h-11 px-6 flex items-center justify-between border-b border-white/10 bg-white/5 backdrop-blur-md z-20 shrink-0">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => onComplete(20, 'bot-id')}
-            className="px-3 py-1.5 rounded-lg bg-[#FF6B6B] hover:bg-[#FF6B6B]/80 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+            onClick={() => onComplete(myColor === 'w' ? 100 : 20, 'bot-id')}
+            className="px-3 py-1 rounded-lg bg-[#FF6B6B] hover:bg-[#FF6B6B]/80 text-white font-bold text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
           >
             ← Leave
           </button>
-          <span className="font-orbitron font-extrabold text-lg text-transparent bg-clip-text bg-gradient-to-r from-[#00D4FF] to-[#FFD93D] tracking-wider">
+          <span className="font-orbitron font-extrabold text-base text-transparent bg-clip-text bg-gradient-to-r from-[#00D4FF] to-[#FFD93D] tracking-wider">
             ARCADEVERSE
           </span>
         </div>
         
-        <div className="px-4 py-1 rounded-full bg-white/10 border border-white/10 text-xs font-bold font-orbitron uppercase tracking-widest text-[#00D4FF] animate-pulse">
-          {isMyTurn && !gameOver ? '⚡ YOUR WARP ACTIVE' : '⌛ OPPONENT FLICKING...'}
+        <div className="px-3 py-0.5 rounded-full bg-white/10 border border-white/10 text-[9px] font-bold font-orbitron uppercase tracking-widest text-[#00D4FF] animate-pulse">
+          {isMyTurn && !gameOver ? '⚡ YOUR WARP ACTIVE' : '⌛ OPPONENT AIMING...'}
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-[#FFD93D]/30 text-[#FFD93D] font-bold text-xs font-mono">
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 border border-[#FFD93D]/30 text-[#FFD93D] font-bold text-[10px] font-mono">
             🪙 1,250 COINS
           </div>
           <button
@@ -404,7 +453,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
               const isMuted = audioSynth.toggleMute();
               audioSynth.playClick();
             }}
-            className="p-1.5 rounded-lg bg-white/10 border border-white/10 hover:border-[#00D4FF]/50 text-gray-300 hover:text-white transition-all text-xs font-orbitron"
+            className="p-1 rounded-lg bg-white/10 border border-white/10 hover:border-[#00D4FF]/50 text-gray-300 hover:text-white transition-all text-[10px] font-orbitron"
           >
             🔊 AUDIO
           </button>
@@ -425,7 +474,21 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-extrabold text-white truncate">{currentUser.username.toUpperCase()}</p>
-                <p className="text-[10px] text-[#00D4FF] font-bold tracking-widest font-orbitron">👑 CHESS GRANDMASTER</p>
+                <p className="text-[10px] text-[#00D4FF] font-bold tracking-widest font-orbitron">👑 GRANDMASTER</p>
+              </div>
+            </div>
+
+            {/* Win Probability Bar */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-[9px] font-bold text-gray-400">
+                <span>WIN PROBABILITY:</span>
+                <span className="text-[#00D4FF]">50%</span>
+              </div>
+              <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden border border-white/5">
+                <div
+                  style={{ width: '50%' }}
+                  className="h-full bg-gradient-to-r from-[#00D4FF] to-[#4ECDC4] rounded-full shadow-[0_0_8px_#00D4FF]"
+                />
               </div>
             </div>
           </div>
@@ -437,13 +500,12 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
               {(['easy', 'medium', 'hard'] as const).map(diff => (
                 <button
                   key={diff}
-                  disabled={!isMyTurn || gameOver}
                   onClick={() => { audioSynth.playClick(); setDifficulty(diff); }}
                   className={`px-3 py-2 rounded-lg text-xs uppercase font-bold border transition-all text-center cursor-pointer ${
                     difficulty === diff
-                      ? 'bg-[#FFD93D] text-black border-[#FFD93D] shadow-[0_0_8px_rgba(255,217,61,0.4)] font-extrabold'
-                      : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'
-                  } disabled:opacity-50`}
+                      ? 'bg-[#FFD93D] text-black border-[#FFD93D] shadow-[0_0_12px_rgba(255,217,61,0.4)] font-extrabold'
+                      : 'bg-black/40 text-gray-300 border-white/10 hover:border-white/20'
+                  }`}
                 >
                   {diff}
                 </button>
@@ -477,7 +539,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
         <main className="flex-1 h-full p-4 flex flex-col items-center justify-center relative overflow-y-auto min-w-0">
           
           {/* Opponent Profile HUD Banner (Centered above the canvas) */}
-          <div className="w-full max-w-[400px] mb-4 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg">
+          <div className="w-full max-w-[min(320px,42vh)] mb-2.5 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF6B6B] to-[#8a2be2] border-2 border-white/30 flex items-center justify-center text-lg">
                 🤖
@@ -500,19 +562,19 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
 
           {/* Blinking Check Warnings */}
           {isPlayerInCheck && (
-            <div className="w-full max-w-[400px] bg-red-600/25 border border-red-500 text-red-200 px-4 py-2.5 rounded-xl text-[11px] font-mono text-center animate-pulse tracking-widest uppercase font-extrabold mb-4 shadow-[0_0_15px_rgba(239,68,68,0.3)] z-30">
+            <div className="w-full max-w-[min(320px,42vh)] bg-red-600/25 border border-red-500 text-red-200 px-4 py-1.5 rounded-xl text-[10px] font-mono text-center animate-pulse tracking-widest uppercase font-extrabold mb-2.5 shadow-[0_0_15px_rgba(239,68,68,0.3)] z-30 shrink-0">
               ⚠️ WARNING: YOUR KING IS UNDER ATTACK (CHECK!)
             </div>
           )}
           {isBotInCheck && (
-            <div className="w-full max-w-[400px] bg-[#FFD93D]/20 border border-[#FFD93D] text-[#FFD93D] px-4 py-2.5 rounded-xl text-[11px] font-mono text-center animate-pulse tracking-widest uppercase font-extrabold mb-4 shadow-[0_0_15px_rgba(255,217,61,0.2)] z-30">
+            <div className="w-full max-w-[min(320px,42vh)] bg-[#FFD93D]/20 border border-[#FFD93D] text-[#FFD93D] px-4 py-1.5 rounded-xl text-[10px] font-mono text-center animate-pulse tracking-widest uppercase font-extrabold mb-2.5 shadow-[0_0_15px_rgba(255,217,61,0.2)] z-30 shrink-0">
               👑 ENEMY KING DETECTED IN CHECK!
             </div>
           )}
 
           {/* Interactive Chessboard */}
-          <div className="flex flex-col space-y-4 w-full max-w-[400px]">
-            <div className={`aspect-square w-full border-2 rounded-3xl p-2 flex flex-col justify-between shadow-2xl transition-all duration-700 relative ${
+          <div className="flex flex-col items-center w-full max-w-[min(320px,42vh)] shrink-0">
+            <div className={`aspect-square w-[min(320px,42vh)] h-[min(320px,42vh)] border-2 rounded-3xl p-2 flex flex-col justify-between shadow-2xl transition-all duration-700 relative ${
               isMyTurn && !gameOver
                 ? 'scale-[1.01] border-[#FFD93D] shadow-[0_25px_65px_rgba(0,212,255,0.18)] bg-white/5'
                 : 'scale-100 border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)] bg-black/35'
@@ -539,23 +601,10 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
                           getSquareThemeStyle(isDark, isSelected, isHighlighted, !!isKingCheck)
                         } hover:scale-[1.03] duration-150 rounded`}
                       >
-                        <span className={`filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] ${
-                          isWhitePiece(piece)
-                            ? activeTheme === 'stone'
-                              ? 'text-amber-200 drop-shadow-[0_0_4px_rgba(251,191,36,0.6)]'
-                              : activeTheme === 'lava'
-                              ? 'text-orange-400 drop-shadow-[0_0_6px_rgba(249,115,22,0.9)]'
-                              : activeTheme === 'classic'
-                              ? 'text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)]'
-                              : 'text-neon-cyan drop-shadow-[0_0_7px_#00f0ff]'
-                            : activeTheme === 'stone'
-                              ? 'text-slate-500'
-                              : activeTheme === 'lava'
-                              ? 'text-red-700 drop-shadow-[0_0_5px_#ef4444]'
-                              : activeTheme === 'classic'
-                              ? 'text-slate-950 drop-shadow-[0_0_2px_rgba(255,255,255,0.4)]'
-                              : 'text-neon-magenta drop-shadow-[0_0_7px_#ff007f]'
-                        }`}>
+                        <span 
+                          style={getPieceStyle(piece)}
+                          className="filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] select-none"
+                        >
                           {getPieceEmoji(piece)}
                         </span>
                       </div>
@@ -601,12 +650,12 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
           </div>
 
           {/* Game Status, Battle Logs & History HUD */}
-          <div className="w-full max-w-[400px] mt-4 grid grid-cols-2 gap-3 text-xs font-mono">
+          <div className="w-full max-w-[min(320px,42vh)] mt-2.5 grid grid-cols-2 gap-2 text-[10px] font-mono shrink-0">
             
             {/* Battle Chronicle logs */}
-            <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-between h-[110px]">
-              <span className="text-[9px] text-gray-500 block uppercase font-orbitron tracking-widest">// RPG BATTLE CHRONICLES</span>
-              <div className="flex-1 bg-black/50 border border-white/5 p-1.5 rounded overflow-y-auto space-y-1 text-[9px] text-orange-400 font-sans min-h-[60px] mt-1">
+            <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-between h-[90px]">
+              <span className="text-[8px] text-gray-500 block uppercase font-orbitron tracking-widest leading-none">// RPG BATTLE CHRONICLES</span>
+              <div className="flex-1 bg-black/50 border border-white/5 p-1 rounded overflow-y-auto space-y-1 text-[8px] text-orange-400 font-sans min-h-[40px] mt-1">
                 {battleLogs.length === 0 ? (
                   <div className="text-gray-600">// SCANNING TELEMETRY...</div>
                 ) : (
@@ -616,9 +665,9 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
             </div>
 
             {/* Vector Shift logs */}
-            <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-between h-[110px]">
-              <span className="text-[9px] text-gray-500 block uppercase font-orbitron tracking-widest">// VECTOR SHIFT LOG</span>
-              <div className="flex-1 bg-black/40 border border-white/5 p-1.5 rounded overflow-y-auto space-y-0.5 text-[9px] mt-1">
+            <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-between h-[90px]">
+              <span className="text-[8px] text-gray-500 block uppercase font-orbitron tracking-widest leading-none">// VECTOR SHIFT LOG</span>
+              <div className="flex-1 bg-black/40 border border-white/5 p-1 rounded overflow-y-auto space-y-0.5 text-[8px] mt-1">
                 {moveHistory.length === 0 ? (
                   <div className="text-gray-600">// NO WARPS YET...</div>
                 ) : (

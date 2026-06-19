@@ -6,13 +6,42 @@
       "passwordHash": "$2a$10$3yO1L3GJF8z4.oUmx2jHGOAo9shkJbCv8rqM4v7njghWkhwUZ0FCm",
       "avatar": "avatar_1",
       "xp": 25,
-      "level": 1,
-      "coins": 110,
+      "level": 3,
+      "coins": 220,
       "ranking": "Bronze IV",
       "achievements": [],
       "friendsList": [],
       "favoriteGames": [],
-      "createdAt": "2026-06-15T08:48:17.913Z"
+      "createdAt": "2026-06-15T08:48:17.913Z",
+      "lastClaimedDaily": "2026-06-19T06:35:16.050Z",
+      "upgrades": {
+        "engine": 3,
+        "tires": 1,
+        "stability": 1,
+        "thruster": 1
+      }
+    },
+    {
+      "id": "9eeec576-2a2b-4bbb-876a-e5efa0d28b73",
+      "username": "Guest_6590",
+      "passwordHash": "$2a$10$hifIuabVok3wGUTunDvo8.ugL3Ig1YLfOyhliOKSSVdztZ/itEMbW",
+      "avatar": "avatar_6",
+      "xp": 0,
+      "level": 1,
+      "coins": 100,
+      "ranking": "Bronze IV",
+      "achievements": [],
+      "friendsList": [],
+      "favoriteGames": [],
+      "purchasedItems": [],
+      "lastClaimedDaily": null,
+      "upgrades": {
+        "engine": 1,
+        "tires": 1,
+        "stability": 1,
+        "thruster": 1
+      },
+      "createdAt": "2026-06-18T05:33:02.113Z"
     }
   ],
   "matches": [],
@@ -24,7 +53,9 @@
       "entryFee": 10,
       "prizePool": 100,
       "maxPlayers": 16,
-      "registeredPlayers": [],
+      "registeredPlayers": [
+        "6642185e-4c83-4acf-aa58-4a878fd7bba4"
+      ],
       "status": "upcoming",
       "startDate": "2026-06-16T08:36:36.111Z",
       "winnerId": null
@@ -60,6 +91,18 @@
       "username": "Abhay14",
       "score": 100,
       "updatedAt": "2026-06-15T09:55:07.304Z"
+    },
+    {
+      "gameId": "carrom",
+      "username": "Abhay14",
+      "score": 140,
+      "updatedAt": "2026-06-17T09:31:53.829Z"
+    },
+    {
+      "gameId": "typing_warriors",
+      "username": "Abhay14",
+      "score": 20,
+      "updatedAt": "2026-06-19T06:45:56.347Z"
     }
   ]
 }
