@@ -102,10 +102,10 @@ export default function GameArea({ gameId, currentUser, onBackToDashboard }: Gam
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-center items-center p-3 md:p-6 relative z-10 w-full min-h-0">
+    <div className="flex-1 flex flex-col justify-center items-center p-6 relative z-10 w-full min-h-0">
       
       {/* Title Header */}
-      <div className="w-full max-w-4xl flex items-center justify-between mb-2 md:mb-4 shrink-0">
+      <div className="w-full max-w-4xl flex items-center justify-between mb-4 shrink-0">
         <button
           onClick={() => { audioSynth.playClick(); onBackToDashboard(); }}
           className="text-xs font-orbitron text-gray-400 hover:text-neon-cyan transition-colors"
@@ -124,7 +124,7 @@ export default function GameArea({ gameId, currentUser, onBackToDashboard }: Gam
         {gameState === 'playing' && (
           <div className="flex-1 flex flex-col min-h-0 relative bg-black/40">
             {/* HUD Forfeit controls */}
-            <div className="bg-black/80 border-b border-white/5 px-4 py-1.5 flex items-center justify-between shrink-0 text-xs font-mono">
+            <div className="bg-black/80 border-b border-white/5 px-4 py-2 flex items-center justify-between shrink-0 text-xs font-mono">
               <div className="flex items-center space-x-4">
                 <span className="text-neon-cyan uppercase font-bold tracking-widest">// ACTIVE: {gameId.toUpperCase()}</span>
                 {matchData?.roomId && (

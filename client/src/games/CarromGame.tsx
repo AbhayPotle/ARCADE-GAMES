@@ -238,12 +238,12 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     for (let offset = step; offset < maxOffset; offset += step) {
       // Try right
       const rightX = posX + offset;
-      if (rightX <= 327 && isSafe(rightX)) {
+      if (rightX <= BOARD_SIZE - 50 && isSafe(rightX)) {
         return rightX;
       }
       // Try left
       const leftX = posX - offset;
-      if (leftX >= 73 && isSafe(leftX)) {
+      if (leftX >= 50 && isSafe(leftX)) {
         return leftX;
       }
     }
@@ -281,7 +281,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     }
     
     // Keep within baseline bounds
-    return Math.min(327, Math.max(73, constrainedX));
+    return Math.min(BOARD_SIZE - 50, Math.max(50, constrainedX));
   };
 
   useEffect(() => {
@@ -519,7 +519,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
               const intersectX = pocket.x + (cx - pocket.x) * (50 - pocket.y) / dyLine;
 
-              if (intersectX >= 73 && intersectX <= 327) {
+              if (intersectX >= 80 && intersectX <= 320) {
                 // Physical check: striker must hit collision point before it hits the puck center
                 const distSC = Math.sqrt((cx - intersectX) * (cx - intersectX) + (cy - 50) * (cy - 50));
                 const distSP = Math.sqrt((puck.x - intersectX) * (puck.x - intersectX) + (puck.y - 50) * (puck.y - 50));
@@ -595,7 +595,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           // Direct hit fallback target
           const fallbackTarget = chosenPucks[Math.floor(Math.random() * chosenPucks.length)];
           if (fallbackTarget) {
-            chosenX = Math.min(327, Math.max(73, fallbackTarget.x));
+            chosenX = Math.min(320, Math.max(80, fallbackTarget.x));
             const sdx = fallbackTarget.x - chosenX;
             const sdy = fallbackTarget.y - 50;
             chosenAngle = Math.atan2(sdy, sdx);
@@ -1303,75 +1303,93 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       ctx.stroke();
     }
 
-     // Baselines
-    ctx.strokeStyle = 'rgba(92, 58, 33, 0.3)';
+    // Baselines (Top, Bottom, Left, Right)
+    ctx.strokeStyle = 'rgba(92, 58, 33, 0.35)';
     ctx.lineWidth = 1.0;
 
-    // Bottom double line (from X=73 to 327, Y=348 and 352)
-    ctx.beginPath(); ctx.moveTo(73, BOARD_SIZE - 52); ctx.lineTo(327, BOARD_SIZE - 52); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(73, BOARD_SIZE - 48); ctx.lineTo(327, BOARD_SIZE - 48); ctx.stroke();
+    // Bottom double line (x from 80 to 320, y = 348 and y = 352)
+    ctx.beginPath(); ctx.moveTo(80, BOARD_SIZE - 52); ctx.lineTo(BOARD_SIZE - 80, BOARD_SIZE - 52); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(80, BOARD_SIZE - 48); ctx.lineTo(BOARD_SIZE - 80, BOARD_SIZE - 48); ctx.stroke();
     
-    // Top double line (from X=73 to 327, Y=48 and 52)
-    ctx.beginPath(); ctx.moveTo(73, 48); ctx.lineTo(327, 48); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(73, 52); ctx.lineTo(327, 52); ctx.stroke();
+    // Top double line (x from 80 to 320, y = 48 and y = 52)
+    ctx.beginPath(); ctx.moveTo(80, 48); ctx.lineTo(BOARD_SIZE - 80, 48); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(80, 52); ctx.lineTo(BOARD_SIZE - 80, 52); ctx.stroke();
 
-    // Left double line (from Y=73 to 327, X=48 and 52)
-    ctx.beginPath(); ctx.moveTo(48, 73); ctx.lineTo(48, 327); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(52, 73); ctx.lineTo(52, 327); ctx.stroke();
+    // Left double line (y from 80 to 320, x = 48 and x = 52)
+    ctx.beginPath(); ctx.moveTo(48, 80); ctx.lineTo(48, BOARD_SIZE - 80); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(52, 80); ctx.lineTo(52, BOARD_SIZE - 80); ctx.stroke();
 
-    // Right double line (from Y=73 to 327, X=348 and 352)
-    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 52, 73); ctx.lineTo(BOARD_SIZE - 52, 327); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 48, 73); ctx.lineTo(BOARD_SIZE - 48, 327); ctx.stroke();
+    // Right double line (y from 80 to 320, x = 348 and x = 352)
+    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 52, 80); ctx.lineTo(BOARD_SIZE - 52, BOARD_SIZE - 80); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 48, 80); ctx.lineTo(BOARD_SIZE - 48, BOARD_SIZE - 80); ctx.stroke();
 
-    // Baseline circles at the ends (8 endpoints)
-    ctx.lineWidth = 1.0;
-    ctx.strokeStyle = 'rgba(92, 58, 33, 0.3)';
-    [
-      { x: 73, y: BOARD_SIZE - 50 }, { x: 327, y: BOARD_SIZE - 50 },
-      { x: 73, y: 50 }, { x: 327, y: 50 },
-      { x: 50, y: 73 }, { x: 50, y: 327 },
-      { x: BOARD_SIZE - 50, y: 73 }, { x: BOARD_SIZE - 50, y: 327 }
-    ].forEach(pt => {
+    // Baseline circles at the ends (8 base circles total)
+    const baseCircles = [
+      { x: 80, y: BOARD_SIZE - 50 },
+      { x: BOARD_SIZE - 80, y: BOARD_SIZE - 50 },
+      { x: 80, y: 50 },
+      { x: BOARD_SIZE - 80, y: 50 },
+      { x: 50, y: 80 },
+      { x: 50, y: BOARD_SIZE - 80 },
+      { x: BOARD_SIZE - 50, y: 80 },
+      { x: BOARD_SIZE - 50, y: BOARD_SIZE - 80 }
+    ];
+
+    ctx.strokeStyle = 'rgba(92, 58, 33, 0.4)';
+    baseCircles.forEach(pt => {
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 8, 0, Math.PI*2);
+      ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
       ctx.stroke();
     });
 
-    // Baseline red spots inside the 8 baseline circles
+    // Baseline red dots inside the circles
     ctx.fillStyle = '#b7094c';
-    [
-      { x: 73, y: BOARD_SIZE - 50 }, { x: 327, y: BOARD_SIZE - 50 },
-      { x: 73, y: 50 }, { x: 327, y: 50 },
-      { x: 50, y: 73 }, { x: 50, y: 327 },
-      { x: BOARD_SIZE - 50, y: 73 }, { x: BOARD_SIZE - 50, y: 327 }
-    ].forEach(pt => {
+    baseCircles.forEach(pt => {
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 5.5, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
       ctx.fill();
     });
 
-    // Elegant diagonal lines running towards the center circle
-    ctx.strokeStyle = 'rgba(92, 58, 33, 0.2)';
-    ctx.lineWidth = 1.2;
-    // Top-Left diagonal
-    ctx.beginPath(); ctx.moveTo(36, 36); ctx.lineTo(142, 142); ctx.stroke();
-    // Top-Right diagonal
-    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 36, 36); ctx.lineTo(BOARD_SIZE - 142, 142); ctx.stroke();
-    // Bottom-Left diagonal
-    ctx.beginPath(); ctx.moveTo(36, BOARD_SIZE - 36); ctx.lineTo(142, BOARD_SIZE - 142); ctx.stroke();
-    // Bottom-Right diagonal
-    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 36, BOARD_SIZE - 36); ctx.lineTo(BOARD_SIZE - 142, BOARD_SIZE - 142); ctx.stroke();
+    // Diagonal lines pointing to pockets
+    ctx.strokeStyle = 'rgba(92, 58, 33, 0.3)';
+    ctx.lineWidth = 1.0;
+    const arrowLength = 55; // length of diagonal line
+    const startOffset = 45; // offset from corner
 
-    // Red decorative circles at the pocket-end of each diagonal line
+    // Top-Left arrow
+    ctx.beginPath();
+    ctx.moveTo(startOffset, startOffset);
+    ctx.lineTo(startOffset + arrowLength, startOffset + arrowLength);
+    ctx.stroke();
+
+    // Top-Right arrow
+    ctx.beginPath();
+    ctx.moveTo(BOARD_SIZE - startOffset, startOffset);
+    ctx.lineTo(BOARD_SIZE - startOffset - arrowLength, startOffset + arrowLength);
+    ctx.stroke();
+
+    // Bottom-Left arrow
+    ctx.beginPath();
+    ctx.moveTo(startOffset, BOARD_SIZE - startOffset);
+    ctx.lineTo(startOffset + arrowLength, BOARD_SIZE - startOffset - arrowLength);
+    ctx.stroke();
+
+    // Bottom-Right arrow
+    ctx.beginPath();
+    ctx.moveTo(BOARD_SIZE - startOffset, BOARD_SIZE - startOffset);
+    ctx.lineTo(BOARD_SIZE - startOffset - arrowLength, BOARD_SIZE - startOffset - arrowLength);
+    ctx.stroke();
+
+    // Small red circles at the tips of the diagonal arrows
     ctx.fillStyle = '#b7094c';
     [
-      { x: 36, y: 36 },
-      { x: BOARD_SIZE - 36, y: 36 },
-      { x: 36, y: BOARD_SIZE - 36 },
-      { x: BOARD_SIZE - 36, y: BOARD_SIZE - 36 }
+      { x: startOffset + arrowLength, y: startOffset + arrowLength },
+      { x: BOARD_SIZE - startOffset - arrowLength, y: startOffset + arrowLength },
+      { x: startOffset + arrowLength, y: BOARD_SIZE - startOffset - arrowLength },
+      { x: BOARD_SIZE - startOffset - arrowLength, y: BOARD_SIZE - startOffset - arrowLength }
     ].forEach(pt => {
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 5.5, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
       ctx.fill();
     });
 
@@ -1961,7 +1979,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         <main className="flex-1 h-full p-4 flex flex-col items-center justify-center relative overflow-y-auto min-w-0">
           
           {/* Opponent Profile HUD Banner (Centered above the canvas) */}
-          <div className="w-full max-w-[560px] mb-4 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg">
+          <div className="w-full max-w-[400px] mb-4 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF6B6B] to-[#8a2be2] border-2 border-white/30 flex items-center justify-center text-lg">
                 🤖
@@ -1992,19 +2010,13 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           </div>
 
           {/* Board Canvas Wrapper with Floating Score Popups Container */}
-          <div
-            className="relative aspect-square flex justify-center items-center"
-            style={{
-              width: 'min(90vw, 50vh, 500px)',
-              height: 'min(90vw, 50vh, 500px)',
-            }}
-          >
+          <div className="relative w-full max-w-[400px] flex justify-center">
             <canvas
               ref={canvasRef}
               width={BOARD_SIZE}
               height={BOARD_SIZE}
               onPointerDown={handleCanvasPointerDown}
-              className={`rounded-3xl bg-[#ebd2a3] cursor-pointer transition-all duration-700 w-full h-full ${
+              className={`rounded-3xl bg-[#ebd2a3] cursor-pointer transition-all duration-700 w-full h-auto max-w-[400px] ${
                 turn === currentUser.id && !isStrikerFlicked
                   ? 'scale-[1.03] border-[12px] border-[#FFD93D] shadow-[0_25px_65px_rgba(0,212,255,0.22)]'
                   : 'scale-100 border-[12px] border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)]'
@@ -2026,7 +2038,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           </div>
 
           {/* Bottom Game Controls */}
-          <div className="w-full max-w-[560px] mt-4 flex flex-col gap-3">
+          <div className="w-full max-w-[400px] mt-4 flex flex-col gap-3">
             
             {/* Strike Power/Force Indicator during active aiming */}
             {isAiming && (
@@ -2059,8 +2071,8 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
                 </div>
                 <input
                   type="range"
-                  min={73}
-                  max={327}
+                  min={50}
+                  max={BOARD_SIZE - 50}
                   value={strikerX}
                   disabled={isAiming}
                   onChange={(e) => handleStrikerSlider(parseInt(e.target.value))}
