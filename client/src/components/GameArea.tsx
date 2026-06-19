@@ -68,13 +68,16 @@ export default function GameArea({ gameId, currentUser, onBackToDashboard }: Gam
   const handleGameCompletionSinglePlayer = async (score: number, winnerId?: string) => {
     const isWin = winnerId ? winnerId === currentUser.id : true;
     audioSynth.playGameOver(isWin);
+    
+    // Set gameResult immediately so the UI doesn't render defeat while loading
+    setGameResult({
+      winnerId: winnerId || currentUser.id,
+      score
+    });
     setGameState('ended');
+    
     try {
       const rewardDetails = await api.submitScore(gameId, score);
-      setGameResult({
-        winnerId: winnerId || currentUser.id,
-        score
-      });
       setRewards({
         level: rewardDetails.user?.level || currentUser.level,
         coins: rewardDetails.user?.coins || currentUser.coins,
@@ -86,10 +89,6 @@ export default function GameArea({ gameId, currentUser, onBackToDashboard }: Gam
     } catch (err) {
       console.error(err);
       // Fallback display if offline
-      setGameResult({
-        winnerId: winnerId || currentUser.id,
-        score
-      });
       setRewards({
         gainedCoins: 10,
         gainedXP: 25

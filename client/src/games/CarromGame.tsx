@@ -45,6 +45,77 @@ const BOARD_SIZE = 400;
 const FRICTION = 0.982;
 const POCKET_RADIUS = 22;
 
+const isPathBlocked = (
+  list: Disc[],
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  targetPuck: Disc,
+  strikerRadius: number
+): boolean => {
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const lensq = dx * dx + dy * dy;
+  if (lensq === 0) return false;
+
+  for (const d of list) {
+    if (d.isPocketed || d.type === 'striker' || d === targetPuck) continue;
+
+    const wx = d.x - startX;
+    const wy = d.y - startY;
+    let t = (wx * dx + wy * dy) / lensq;
+    t = Math.max(0, Math.min(1, t));
+
+    const projX = startX + t * dx;
+    const projY = startY + t * dy;
+
+    const pdx = d.x - projX;
+    const pdy = d.y - projY;
+    const dist = Math.sqrt(pdx * pdx + pdy * pdy);
+
+    if (dist < d.radius + strikerRadius - 0.5) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const isPuckPathBlocked = (
+  list: Disc[],
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  targetPuck: Disc
+): boolean => {
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const lensq = dx * dx + dy * dy;
+  if (lensq === 0) return false;
+
+  for (const d of list) {
+    if (d.isPocketed || d.type === 'striker' || d === targetPuck) continue;
+
+    const wx = d.x - startX;
+    const wy = d.y - startY;
+    let t = (wx * dx + wy * dy) / lensq;
+    t = Math.max(0, Math.min(1, t));
+
+    const projX = startX + t * dx;
+    const projY = startY + t * dy;
+
+    const pdx = d.x - projX;
+    const pdy = d.y - projY;
+    const dist = Math.sqrt(pdx * pdx + pdy * pdy);
+
+    if (dist < d.radius + targetPuck.radius - 0.5) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export default function CarromMasters({ matchData, currentUser, onComplete }: CarromGameProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [strikerX, setStrikerX] = useState<number>(BOARD_SIZE / 2);
@@ -217,8 +288,10 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     const playerIndex = matchData.players.findIndex((p: any) => p.userId === currentUser.id);
     const color = playerIndex === 0 ? 'white' : 'black';
     setMyColorType(color);
+    myColorTypeRef.current = color;
     const firstTurn = matchData.players[0].userId;
     setTurn(firstTurn);
+    turnRef.current = firstTurn;
 
     // Reset shot angle based on whose turn it is
     const initialAngle = firstTurn === currentUser.id ? -Math.PI / 2 : Math.PI / 2;
@@ -253,7 +326,9 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
     socketService.on('carrom_synced', (data: { pucks: any[]; scores: any; turn: string }) => {
       setScores(data.scores);
+      scoresRef.current = data.scores;
       setTurn(data.turn);
+      turnRef.current = data.turn;
     });
 
     return () => {
@@ -319,6 +394,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     });
 
     setDiscs(list);
+    discsRef.current = list;
   };
 
   useEffect(() => {
@@ -386,10 +462,12 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       striker.isPocketed = false;
       setStrikerX(safeX);
       setDiscs(list);
+      discsRef.current = list;
 
       // Start bot thinking timer (25 frames = ~0.4 second delay)
       botThinkingFramesRef.current = 25;
       setBotPlayState('thinking');
+      botPlayStateRef.current = 'thinking';
       return;
     }
 
@@ -401,6 +479,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         const targets = list.filter(d => !d.isPocketed && d.type !== 'striker');
         if (targets.length === 0) {
           setBotPlayState('idle');
+          botPlayStateRef.current = 'idle';
           return;
         }
 
@@ -416,9 +495,12 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         ];
 
         let bestShot: any = null;
-        let maxScore = -Infinity;
 
         if (difficultyRef.current !== 'easy') {
+          const tier1Shots: any[] = [];
+          const tier2Shots: any[] = [];
+          const tier3Shots: any[] = [];
+
           chosenPucks.forEach(puck => {
             pocketsList.forEach(pocket => {
               const pdx = puck.x - pocket.x;
@@ -438,33 +520,74 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
               const intersectX = pocket.x + (cx - pocket.x) * (50 - pocket.y) / dyLine;
 
               if (intersectX >= 80 && intersectX <= 320) {
-                const sdx = cx - intersectX;
-                const sdy = cy - 50;
-                const angle = Math.atan2(sdy, sdx);
+                // Physical check: striker must hit collision point before it hits the puck center
+                const distSC = Math.sqrt((cx - intersectX) * (cx - intersectX) + (cy - 50) * (cy - 50));
+                const distSP = Math.sqrt((puck.x - intersectX) * (puck.x - intersectX) + (puck.y - 50) * (puck.y - 50));
 
-                // Distance calculations for power estimation
-                const distToPuck = Math.sqrt(sdx * sdx + sdy * sdy);
-                const totalDist = distToPuck + pdist;
-                let power = Math.min(95, Math.max(45, Math.round(totalDist * 0.20)));
+                if (distSC < distSP) {
+                  const sdx = cx - intersectX;
+                  const sdy = cy - 50;
+                  const angle = Math.atan2(sdy, sdx);
 
-                // Add margin for clean rebounds
-                power = Math.min(98, power + 10);
-                const score = 1000 - pdist - distToPuck * 0.5;
+                  // Distance calculations for power estimation
+                  const distToPuck = Math.sqrt(sdx * sdx + sdy * sdy);
+                  const totalDist = distToPuck + pdist;
+                  let power = Math.min(95, Math.max(45, Math.round(totalDist * 0.20)));
 
-                if (score > maxScore) {
-                  maxScore = score;
-                  bestShot = { x: intersectX, angle, power };
+                  // Add margin for clean rebounds
+                  power = Math.min(98, power + 10);
+                  const score = 1000 - pdist - distToPuck * 0.5;
+
+                  const shot = { x: intersectX, angle, power, score };
+
+                  // Determine path blocking
+                  const strikerBlocked = isPathBlocked(list, intersectX, 50, cx, cy, puck, striker.radius);
+                  const puckBlocked = isPuckPathBlocked(list, puck.x, puck.y, pocket.x, pocket.y, puck);
+
+                  if (!strikerBlocked && !puckBlocked) {
+                    tier1Shots.push(shot);
+                  } else if (!puckBlocked) {
+                    tier2Shots.push(shot);
+                  } else {
+                    tier3Shots.push(shot);
+                  }
                 }
               }
             });
           });
+
+          // Tiered selection
+          if (difficultyRef.current === 'hard') {
+            if (tier1Shots.length > 0) {
+              tier1Shots.sort((a, b) => b.score - a.score);
+              bestShot = tier1Shots[0];
+            } else if (tier2Shots.length > 0) {
+              tier2Shots.sort((a, b) => b.score - a.score);
+              bestShot = tier2Shots[0];
+            } else if (tier3Shots.length > 0) {
+              tier3Shots.sort((a, b) => b.score - a.score);
+              bestShot = tier3Shots[0];
+            }
+          } else {
+            // Medium difficulty selection
+            if (tier1Shots.length > 0 && Math.random() > 0.25) {
+              tier1Shots.sort((a, b) => b.score - a.score);
+              bestShot = tier1Shots[0];
+            } else if (tier2Shots.length > 0 && Math.random() > 0.35) {
+              tier2Shots.sort((a, b) => b.score - a.score);
+              bestShot = tier2Shots[0];
+            } else if (tier3Shots.length > 0) {
+              tier3Shots.sort((a, b) => b.score - a.score);
+              bestShot = tier3Shots[0];
+            }
+          }
         }
 
         let chosenX = BOARD_SIZE / 2;
         let chosenAngle = Math.PI / 2;
         let chosenPower = 60;
 
-        if (bestShot && (difficultyRef.current === 'hard' || (difficultyRef.current === 'medium' && Math.random() > 0.35))) {
+        if (bestShot) {
           chosenX = bestShot.x;
           chosenAngle = bestShot.angle;
           chosenPower = bestShot.power;
@@ -494,6 +617,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         botTargetPowerRef.current = chosenPower;
 
         setBotPlayState('aligning');
+        botPlayStateRef.current = 'aligning';
       }
       return;
     }
@@ -505,16 +629,19 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         striker.y = 50;
         setStrikerX(striker.x);
         setDiscs(list);
+        discsRef.current = list;
       } else {
         striker.x = botTargetXRef.current;
         striker.y = 50;
         setStrikerX(striker.x);
         setDiscs(list);
+        discsRef.current = list;
 
         // Initiate visual aiming/pullback sequence (30 frames = ~0.5s aiming time)
         botAimFramesRef.current = 30;
         setIsAiming(true);
         setBotPlayState('aiming');
+        botPlayStateRef.current = 'aiming';
       }
       return;
     }
@@ -527,21 +654,26 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         // Linear increase of power and visual pullback representation
         const currentPower = Math.round(botTargetPowerRef.current * progress);
         setShotPower(currentPower);
+        shotPowerRef.current = currentPower;
         setShotAngle(botTargetAngleRef.current);
+        shotAngleRef.current = botTargetAngleRef.current;
       } else {
         setIsAiming(false);
         setBotPlayState('shooting');
+        botPlayStateRef.current = 'shooting';
       }
       return;
     }
 
     if (botPlayStateRef.current === 'shooting') {
       setBotPlayState('idle');
+      botPlayStateRef.current = 'idle';
       const targetPower = botTargetPowerRef.current;
       const targetAngle = botTargetAngleRef.current;
 
       audioSynth.playCarromStrike(targetPower);
       setIsStrikerFlicked(true);
+      isStrikerFlickedRef.current = true;
 
       const speedMultiplier = 0.22;
       const velocityScalar = targetPower * speedMultiplier;
@@ -549,6 +681,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       striker.vy = Math.sin(targetAngle) * velocityScalar;
       
       setDiscs(list);
+      discsRef.current = list;
 
       socketService.emit('carrom_strike', {
         roomId: matchData.roomId,
@@ -890,6 +1023,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
       if (whiteWins || blackWins || (!whitePucksRemaining && !blackPucksRemaining && !finalQueenRemaining)) {
         setGameOver(true);
+        gameOverRef.current = true;
         const winnerId = whiteWins 
           ? matchData.players[0].userId 
           : (blackWins ? matchData.players[1].userId : (newScores.white > newScores.black ? matchData.players[0].userId : matchData.players[1].userId));
@@ -925,7 +1059,9 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         }
 
         setDiscs(list);
+        discsRef.current = list;
         setTurn(nextTurn);
+        turnRef.current = nextTurn;
 
         // Reset aiming parameters for the next turn
         const nextAngle = nextTurn === currentUser.id ? -Math.PI / 2 : Math.PI / 2;
@@ -1465,6 +1601,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         return d;
       });
       setDiscs(updatedList);
+      discsRef.current = updatedList;
     }
   };
 
@@ -1619,6 +1756,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
   const triggerOpponentShot = (angle: number, power: number, xPos: number) => {
     setIsStrikerFlicked(true);
+    isStrikerFlickedRef.current = true;
     const list = [...discs];
     const striker = list.find(d => d.type === 'striker');
     if (striker) {
@@ -1633,6 +1771,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       striker.vy = Math.sin(mirroredAngle) * velocityScalar;
     }
     setDiscs(list);
+    discsRef.current = list;
   };
 
   const pockets = [
@@ -1899,7 +2038,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
                   <button
                     key={diff}
                     disabled={isStrikerFlicked}
-                    onClick={() => { audioSynth.playClick(); setDifficulty(diff); }}
+                    onClick={() => { audioSynth.playClick(); setDifficulty(diff); difficultyRef.current = diff; }}
                     className={`px-3 py-1 rounded-lg text-[9px] uppercase font-bold border transition-all cursor-pointer ${
                       difficulty === diff
                         ? 'bg-[#FFD93D] text-black border-[#FFD93D] shadow-[0_0_8px_rgba(255,217,61,0.4)]'
