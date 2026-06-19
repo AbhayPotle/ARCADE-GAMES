@@ -7,7 +7,6 @@ import { audioSynth } from '../services/audio';
 import AuthGate from '../components/AuthGate';
 import MainDashboard from '../components/MainDashboard';
 import GameArea from '../components/GameArea';
-import RightSidebar from '../components/RightSidebar';
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
@@ -36,6 +35,21 @@ export default function Home() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const handleInvite = (invite: any) => {
+      audioSynth.playAchievement();
+      setActiveInvite(invite);
+    };
+
+    socketService.on('receive_invite', handleInvite);
+
+    return () => {
+      socketService.off('receive_invite', handleInvite);
+    };
+  }, [user]);
 
   const handleAuthSuccess = async (authUser: any) => {
     setUser(authUser);
@@ -112,12 +126,6 @@ export default function Home() {
           />
         )}
       </main>
-
-      {/* Social and Chat Panel */}
-      <RightSidebar
-        currentUser={user}
-        onInviteReceived={setActiveInvite}
-      />
 
       {/* Interactive Floating invites notification card */}
       {activeInvite && (

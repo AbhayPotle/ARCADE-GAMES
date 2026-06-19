@@ -1928,7 +1928,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         <main className="flex-1 h-full p-4 flex flex-col items-center justify-center relative overflow-y-auto min-w-0">
           
           {/* Opponent Profile HUD Banner (Centered above the canvas) */}
-          <div className="w-full max-w-[420px] mb-4 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg">
+          <div className="w-full max-w-[560px] mb-4 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF6B6B] to-[#8a2be2] border-2 border-white/30 flex items-center justify-center text-lg">
                 🤖
@@ -1959,13 +1959,13 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           </div>
 
           {/* Board Canvas Wrapper with Floating Score Popups Container */}
-          <div className="relative">
+          <div className="relative w-full max-w-[560px] flex justify-center">
             <canvas
               ref={canvasRef}
               width={BOARD_SIZE}
               height={BOARD_SIZE}
               onPointerDown={handleCanvasPointerDown}
-              className={`rounded-3xl bg-[#ebd2a3] cursor-pointer transition-all duration-700 ${
+              className={`rounded-3xl bg-[#ebd2a3] cursor-pointer transition-all duration-700 w-full h-auto max-w-[560px] ${
                 turn === currentUser.id && !isStrikerFlicked
                   ? 'scale-[1.03] border-[12px] border-[#FFD93D] shadow-[0_25px_65px_rgba(0,212,255,0.22)]'
                   : 'scale-100 border-[12px] border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)]'
@@ -1987,7 +1987,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           </div>
 
           {/* Bottom Game Controls */}
-          <div className="w-full max-w-[420px] mt-4 flex flex-col gap-3">
+          <div className="w-full max-w-[560px] mt-4 flex flex-col gap-3">
             
             {/* Strike Power/Force Indicator during active aiming */}
             {isAiming && (
