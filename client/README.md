@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ArcadeVerse — Next.js Frontend Client
 
-## Getting Started
+This is the frontend client for the **ArcadeVerse** gaming platform, built with [Next.js](https://nextjs.org/) (App Router), React, Tailwind CSS, Framer Motion, and Socket.io-client.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js (v18 or higher)
+- npm or yarn
+
+### Installation
+1. Install client dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Start the local development server:
+   ```bash
+   npm run dev
+   ```
+
+3. Build the production client bundle:
+   ```bash
+   npm run build
+   ```
+
+---
+
+## 📁 Directory Structure
+
+```
+client/
+├── src/
+│   ├── app/                # Next.js App Router entrypoints & pages
+│   ├── components/         # Reusable dashboard, arena, and auth layouts
+│   ├── games/              # Game implementations (Carrom, Chess, etc.)
+│   │   ├── registry.ts     # Central game registration Catalog
+│   │   ├── chessEngine.ts  # Chess rules, castling, and Alpha-Beta minimax AI
+│   │   └── ...             # Other game modules
+│   └── services/           # Api client and Web Audio synthesizer
+└── package.json            # Scripts and dependencies
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🎮 Game Architecture
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+ArcadeVerse integrates games by registering them in `src/games/registry.ts`. Each game component is dynamically mounted when chosen from the central dashboard.
 
-## Learn More
+### Chess Engine (`chessEngine.ts`)
+Decoupled rules and bot engine logic:
+- **Pseudo-Legal Moves**: Checks geometric paths for all pieces.
+- **True Legal Moves**: Discards paths that expose or fail to resolve own King check.
+- **Castling Logic**: Checks state movements via stateless notation search (`Ke1->`, etc.) and safety bounds.
+- **Bot Engine**: Powered by a customizable depth-search **Minimax algorithm with Alpha-Beta Pruning** to cut off unviable branches early.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🎨 Themes and Custom Styling
+ArcadeVerse utilizes Tailwind CSS classes and vanilla CSS gradients to theme boards and layouts.
+- **Neon Theme**: Intense futuristic purple, indigo, and cyan overlays.
+- **Lava Theme**: Active volcanic red and deep stone shadows.
+- **Stone Theme**: Muted sand, gold, and timber gradients.
+- **Classic Theme**: Professional monochrome Black & White chessboard.
