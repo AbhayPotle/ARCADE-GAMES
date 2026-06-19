@@ -202,14 +202,30 @@ const isKingInCheck = (color: 'w' | 'b', boardState: Board): boolean => {
   return false;
 };
 
-// Returns only true legal moves (moves that do not put/leave own King in check)
-const getLegalMoves = (r: number, c: number, boardState: Board): { r: number; c: number }[] => {
+// Check if a specific square on the board is attacked by any piece of attackerColor
+const isSquareAttackedBy = (attackerColor: 'w' | 'b', row: number, col: number, boardState: Board): boolean => {
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = boardState[r][c];
+      if (piece && isWhitePiece(piece) === (attackerColor === 'w')) {
+        const moves = getPseudoLegalMoves(r, c, boardState);
+        if (moves.some(m => m.r === row && m.c === col)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+};
+
+// Returns only true legal moves (moves that do not put/leave own King in check, including castling)
+const getLegalMoves = (r: number, c: number, boardState: Board, moveHistory: string[] = []): { r: number; c: number }[] => {
   const piece = boardState[r][c];
   if (!piece) return [];
   const color = isWhitePiece(piece) ? 'w' : 'b';
   const pseudoMoves = getPseudoLegalMoves(r, c, boardState);
 
-  return pseudoMoves.filter(mv => {
+  const legalMoves = pseudoMoves.filter(mv => {
     // Simulate move
     const tempBoard = boardState.map(row => [...row]);
     tempBoard[mv.r][mv.c] = piece;
@@ -217,15 +233,61 @@ const getLegalMoves = (r: number, c: number, boardState: Board): { r: number; c:
     // Check if king is in check after the simulated move
     return !isKingInCheck(color, tempBoard);
   });
+
+  // Castling logic (only for King in its starting position)
+  if (piece.toLowerCase() === 'k') {
+    const opponentColor = color === 'w' ? 'b' : 'w';
+    const isWhite = color === 'w';
+    const startR = isWhite ? 7 : 0;
+    const startC = 4;
+
+    if (r === startR && c === startC && !isKingInCheck(color, boardState)) {
+      // Kingside castling
+      const kingSideRookMv = isWhite ? 'Rh1->' : 'Rh8->';
+      const kingSideRookCol = 7;
+      const kingSideMoved = isWhite 
+        ? moveHistory.some(m => m.startsWith('Ke1->'))
+        : moveHistory.some(m => m.startsWith('Ke8->'));
+      const rookSideMoved = moveHistory.some(m => m.startsWith(kingSideRookMv));
+
+      if (!kingSideMoved && !rookSideMoved && boardState[startR][kingSideRookCol]?.toLowerCase() === 'r') {
+        if (!boardState[startR][5] && !boardState[startR][6]) {
+          if (!isSquareAttackedBy(opponentColor, startR, 5, boardState) &&
+              !isSquareAttackedBy(opponentColor, startR, 6, boardState)) {
+            legalMoves.push({ r: startR, c: 6 });
+          }
+        }
+      }
+
+      // Queenside castling
+      const queenSideRookMv = isWhite ? 'Ra1->' : 'Ra8->';
+      const queenSideRookCol = 0;
+      const queenSideMoved = isWhite 
+        ? moveHistory.some(m => m.startsWith('Ke1->'))
+        : moveHistory.some(m => m.startsWith('Ke8->'));
+      const rookQueenMoved = moveHistory.some(m => m.startsWith(queenSideRookMv));
+
+      if (!queenSideMoved && !rookQueenMoved && boardState[startR][queenSideRookCol]?.toLowerCase() === 'r') {
+        if (!boardState[startR][1] && !boardState[startR][2] && !boardState[startR][3]) {
+          if (!isSquareAttackedBy(opponentColor, startR, 3, boardState) &&
+              !isSquareAttackedBy(opponentColor, startR, 2, boardState)) {
+            legalMoves.push({ r: startR, c: 2 });
+          }
+        }
+      }
+    }
+  }
+
+  return legalMoves;
 };
 
 // Check if a player has any legal moves remaining
-const hasAnyLegalMoves = (color: 'w' | 'b', boardState: Board): boolean => {
+const hasAnyLegalMoves = (color: 'w' | 'b', boardState: Board, moveHistory: string[] = []): boolean => {
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
       const piece = boardState[r][c];
       if (piece && isWhitePiece(piece) === (color === 'w')) {
-        const moves = getLegalMoves(r, c, boardState);
+        const moves = getLegalMoves(r, c, boardState, moveHistory);
         if (moves.length > 0) return true;
       }
     }
@@ -271,18 +333,15 @@ const evaluateBoard = (boardState: Board, botColor: 'w' | 'b'): number => {
   return score;
 };
 
-const getBestBotMove = (botColor: 'w' | 'b', boardState: Board): any => {
-  const opponentColor = botColor === 'w' ? 'b' : 'w';
-  
-  // Find all legal moves for the bot
-  const botMoves: any[] = [];
+const getAllLegalMovesForColor = (color: 'w' | 'b', boardState: Board, moveHistory: string[]): any[] => {
+  const moves: any[] = [];
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
       const piece = boardState[r][c];
-      if (piece && isWhitePiece(piece) === (botColor === 'w')) {
-        const pieceMoves = getLegalMoves(r, c, boardState);
+      if (piece && isWhitePiece(piece) === (color === 'w')) {
+        const pieceMoves = getLegalMoves(r, c, boardState, moveHistory);
         pieceMoves.forEach(mv => {
-          botMoves.push({
+          moves.push({
             fromR: r,
             fromC: c,
             toR: mv.r,
@@ -294,65 +353,121 @@ const getBestBotMove = (botColor: 'w' | 'b', boardState: Board): any => {
       }
     }
   }
+  return moves;
+};
 
-  if (botMoves.length === 0) return null;
+const getMoveNotation = (move: any): string => {
+  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+  return `${move.piece.toUpperCase()}${files[move.fromC]}${ranks[move.fromR]}->${files[move.toC]}${ranks[move.toR]}`;
+};
 
-  // Minimax depth 2 search
-  let bestMove = botMoves[0];
+const simulateMove = (boardState: Board, move: any, color: 'w' | 'b'): Board => {
+  const newBoard = boardState.map(row => [...row]);
+  let piece = move.piece;
+  if (piece.toLowerCase() === 'p' && (move.toR === 0 || move.toR === 7)) {
+    piece = color === 'w' ? 'Q' : 'q';
+  }
+  newBoard[move.toR][move.toC] = piece;
+  newBoard[move.fromR][move.fromC] = null;
+
+  // Handle castling rook movement in simulation
+  if (piece.toLowerCase() === 'k' && Math.abs(move.fromC - move.toC) === 2) {
+    if (move.toC === 6) {
+      newBoard[move.fromR][5] = newBoard[move.fromR][7];
+      newBoard[move.fromR][7] = null;
+    } else if (move.toC === 2) {
+      newBoard[move.fromR][3] = newBoard[move.fromR][0];
+      newBoard[move.fromR][0] = null;
+    }
+  }
+  return newBoard;
+};
+
+const minimax = (
+  boardState: Board,
+  depth: number,
+  alpha: number,
+  beta: number,
+  isMaximizing: boolean,
+  botColor: 'w' | 'b',
+  moveHistory: string[]
+): number => {
+  const activeColor = isMaximizing ? botColor : (botColor === 'w' ? 'b' : 'w');
+  const opponentColor = activeColor === 'w' ? 'b' : 'w';
+
+  const legalMoves = getAllLegalMovesForColor(activeColor, boardState, moveHistory);
+
+  if (legalMoves.length === 0) {
+    if (isKingInCheck(activeColor, boardState)) {
+      return isMaximizing ? -100000 + (3 - depth) : 100000 - (3 - depth);
+    } else {
+      return 0; // Stalemate
+    }
+  }
+
+  if (depth === 0) {
+    return evaluateBoard(boardState, botColor);
+  }
+
+  if (isMaximizing) {
+    let maxEval = -Infinity;
+    for (let i = 0; i < legalMoves.length; i++) {
+      const move = legalMoves[i];
+      const nextBoard = simulateMove(boardState, move, botColor);
+      const notation = getMoveNotation(move);
+      const nextHistory = [...moveHistory, notation];
+
+      const evalVal = minimax(nextBoard, depth - 1, alpha, beta, false, botColor, nextHistory);
+      maxEval = Math.max(maxEval, evalVal);
+      alpha = Math.max(alpha, evalVal);
+      if (beta <= alpha) {
+        break;
+      }
+    }
+    return maxEval;
+  } else {
+    let minEval = Infinity;
+    const opponentColorCode = botColor === 'w' ? 'b' : 'w';
+    for (let i = 0; i < legalMoves.length; i++) {
+      const move = legalMoves[i];
+      const nextBoard = simulateMove(boardState, move, opponentColorCode);
+      const notation = getMoveNotation(move);
+      const nextHistory = [...moveHistory, notation];
+
+      const evalVal = minimax(nextBoard, depth - 1, alpha, beta, true, botColor, nextHistory);
+      minEval = Math.min(minEval, evalVal);
+      beta = Math.min(beta, evalVal);
+      if (beta <= alpha) {
+        break;
+      }
+    }
+    return minEval;
+  }
+};
+
+const getBestBotMove = (botColor: 'w' | 'b', boardState: Board, moveHistory: string[], depth: number): any => {
+  const legalMoves = getAllLegalMovesForColor(botColor, boardState, moveHistory);
+  if (legalMoves.length === 0) return null;
+
+  let bestMove = null;
   let bestScore = -Infinity;
 
-  botMoves.forEach(move => {
-    // 1. Simulate bot move
-    const tempBoard1 = boardState.map(row => [...row]);
-    tempBoard1[move.toR][move.toC] = move.piece;
-    tempBoard1[move.fromR][move.fromC] = null;
+  // Shuffle moves to add variety
+  const shuffledMoves = [...legalMoves].sort(() => Math.random() - 0.5);
 
-    // 2. Find opponent's best response (minimizes score for bot)
-    let minOpponentScore = Infinity;
-    
-    const opponentMoves: any[] = [];
-    for (let r = 0; r < 8; r++) {
-      for (let c = 0; c < 8; c++) {
-        const piece = tempBoard1[r][c];
-        if (piece && isWhitePiece(piece) === (opponentColor === 'w')) {
-          const pieceMoves = getLegalMoves(r, c, tempBoard1);
-          pieceMoves.forEach(mv => {
-            opponentMoves.push({
-              fromR: r,
-              fromC: c,
-              toR: mv.r,
-              toC: mv.c,
-              piece
-            });
-          });
-        }
-      }
-    }
+  for (let i = 0; i < shuffledMoves.length; i++) {
+    const move = shuffledMoves[i];
+    const nextBoard = simulateMove(boardState, move, botColor);
+    const notation = getMoveNotation(move);
+    const nextHistory = [...moveHistory, notation];
 
-    if (opponentMoves.length === 0) {
-      if (isKingInCheck(opponentColor, tempBoard1)) {
-        minOpponentScore = 90000; // Checkmate opponent
-      } else {
-        minOpponentScore = 0; // Stalemate
-      }
-    } else {
-      opponentMoves.forEach(oppMove => {
-        const tempBoard2 = tempBoard1.map(row => [...row]);
-        tempBoard2[oppMove.toR][oppMove.toC] = oppMove.piece;
-        tempBoard2[oppMove.fromR][oppMove.fromC] = null;
-
-        const score = evaluateBoard(tempBoard2, botColor);
-        if (score < minOpponentScore) {
-          minOpponentScore = score;
-        }
-      });
-    }
-
-    if (minOpponentScore > bestScore) {
-      bestScore = minOpponentScore;
+    const score = minimax(nextBoard, depth - 1, -Infinity, Infinity, false, botColor, nextHistory);
+    if (score > bestScore) {
+      bestScore = score;
       bestMove = move;
     }
-  });
+  }
 
   return bestMove;
 };
@@ -365,7 +480,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
   const [myColor, setMyColor] = useState<'w' | 'b'>('w');
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   
-  const [activeTheme, setActiveTheme] = useState<'neon' | 'stone' | 'lava'>('neon');
+  const [activeTheme, setActiveTheme] = useState<'neon' | 'stone' | 'lava' | 'classic'>('neon');
   const [battleLogs, setBattleLogs] = useState<string[]>([]);
   const [gameOver, setGameOver] = useState(false);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
@@ -385,6 +500,9 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
 
   const difficultyRef = React.useRef(difficulty);
   difficultyRef.current = difficulty;
+
+  const moveHistoryRef = React.useRef(moveHistory);
+  moveHistoryRef.current = moveHistory;
 
   useEffect(() => {
     const playerIndex = matchData.players.findIndex((p: any) => p.userId === currentUser.id);
@@ -446,7 +564,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
         if (piece) {
           const isWhite = isWhitePiece(piece);
           if ((botColor === 'w' && isWhite) || (botColor === 'b' && !isWhite)) {
-            const pieceMoves = getLegalMoves(r, c, boardRef.current);
+            const pieceMoves = getLegalMoves(r, c, boardRef.current, moveHistoryRef.current);
             pieceMoves.forEach(mv => {
               allLegalMoves.push({
                 fromR: r,
@@ -467,19 +585,15 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
       
       // Select best move based on difficulty
       if (difficultyRef.current === 'easy') {
-        if (Math.random() < 0.7) {
+        if (Math.random() < 0.4) {
           chosenMove = allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
         } else {
-          chosenMove = getBestBotMove(botColor, boardRef.current) || allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
+          chosenMove = getBestBotMove(botColor, boardRef.current, moveHistoryRef.current, 1) || allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
         }
       } else if (difficultyRef.current === 'medium') {
-        if (Math.random() < 0.3) {
-          chosenMove = allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
-        } else {
-          chosenMove = getBestBotMove(botColor, boardRef.current) || allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
-        }
+        chosenMove = getBestBotMove(botColor, boardRef.current, moveHistoryRef.current, 2) || allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
       } else {
-        chosenMove = getBestBotMove(botColor, boardRef.current) || allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
+        chosenMove = getBestBotMove(botColor, boardRef.current, moveHistoryRef.current, 3) || allLegalMoves[Math.floor(Math.random() * allLegalMoves.length)];
       }
 
       audioSynth.playChessMove();
@@ -492,6 +606,17 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
 
       newBoard[chosenMove.toR][chosenMove.toC] = finalPiece;
       newBoard[chosenMove.fromR][chosenMove.fromC] = null;
+
+      // Handle castling rook repositioning for bot
+      if (finalPiece?.toLowerCase() === 'k' && Math.abs(chosenMove.fromC - chosenMove.toC) === 2) {
+        if (chosenMove.toC === 6) {
+          newBoard[chosenMove.fromR][5] = newBoard[chosenMove.fromR][7];
+          newBoard[chosenMove.fromR][7] = null;
+        } else if (chosenMove.toC === 2) {
+          newBoard[chosenMove.fromR][3] = newBoard[chosenMove.fromR][0];
+          newBoard[chosenMove.fromR][0] = null;
+        }
+      }
       
       setBoard(newBoard);
       boardRef.current = newBoard;
@@ -566,7 +691,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
       if ((myColor === 'w' && isWhite) || (myColor === 'b' && !isWhite)) {
         audioSynth.playHover();
         setSelectedSquare({ r, c });
-        setPossibleMoves(getLegalMoves(r, c, board));
+        setPossibleMoves(getLegalMoves(r, c, board, moveHistory));
       }
     } else {
       setSelectedSquare(null);
@@ -587,6 +712,17 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
 
     newBoard[toR][toC] = piece;
     newBoard[fromR][fromC] = null;
+
+    // Handle castling rook repositioning for player
+    if (piece?.toLowerCase() === 'k' && Math.abs(fromC - toC) === 2) {
+      if (toC === 6) {
+        newBoard[fromR][5] = newBoard[fromR][7];
+        newBoard[fromR][7] = null;
+      } else if (toC === 2) {
+        newBoard[fromR][3] = newBoard[fromR][0];
+        newBoard[fromR][0] = null;
+      }
+    }
 
     setBoard(newBoard);
     boardRef.current = newBoard;
@@ -668,6 +804,10 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
         return isDark
           ? 'bg-gradient-to-br from-red-950/70 to-stone-900/80 border border-red-900/20 text-orange-500'
           : 'bg-gradient-to-br from-stone-900/80 to-stone-850/60 border border-orange-500/10 text-orange-500';
+      case 'classic':
+        return isDark
+          ? 'bg-gradient-to-br from-[#2c3540] to-[#182026] border border-slate-900/40 text-slate-950'
+          : 'bg-gradient-to-br from-[#f0f2f5] to-[#d3d6db] border border-white/40 text-white';
       case 'neon':
       default:
         return isDark
@@ -765,7 +905,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
           <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
             <h5 className="font-orbitron font-bold text-[10px] text-gray-400 tracking-wider uppercase">// CYBER BOARD MATRIX</h5>
             <div className="flex flex-col gap-1.5">
-              {['neon', 'stone', 'lava'].map(theme => (
+              {['neon', 'stone', 'lava', 'classic'].map(theme => (
                 <button
                   key={theme}
                   onClick={() => { audioSynth.playClick(); setActiveTheme(theme as any); }}
@@ -836,9 +976,9 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
 
                     // Flashing king check animation
                     const isWhite = isWhitePiece(piece);
+                    const pieceColor = isWhite ? 'w' : 'b';
                     const isKingCheck = piece && piece.toLowerCase() === 'k' && (
-                      (isWhite && isKingInCheck('w', board)) ||
-                      (!isWhite && isKingInCheck('b', board))
+                      pieceColor === myColor ? isPlayerInCheck : isBotInCheck
                     );
 
                     return (
@@ -855,11 +995,15 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
                               ? 'text-amber-200 drop-shadow-[0_0_4px_rgba(251,191,36,0.6)]'
                               : activeTheme === 'lava'
                               ? 'text-orange-400 drop-shadow-[0_0_6px_rgba(249,115,22,0.9)]'
+                              : activeTheme === 'classic'
+                              ? 'text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)]'
                               : 'text-neon-cyan drop-shadow-[0_0_7px_#00f0ff]'
                             : activeTheme === 'stone'
                               ? 'text-slate-500'
                               : activeTheme === 'lava'
                               ? 'text-red-700 drop-shadow-[0_0_5px_#ef4444]'
+                              : activeTheme === 'classic'
+                              ? 'text-slate-950 drop-shadow-[0_0_2px_rgba(255,255,255,0.4)]'
                               : 'text-neon-magenta drop-shadow-[0_0_7px_#ff007f]'
                         }`}>
                           {getPieceEmoji(piece)}
@@ -887,7 +1031,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
                     y1={`${lastMoveCoords.fromR * 12.5 + 6.25}%`}
                     x2={`${lastMoveCoords.toC * 12.5 + 6.25}%`}
                     y2={`${lastMoveCoords.toR * 12.5 + 6.25}%`}
-                    stroke={activeTheme === 'lava' ? '#ff4500' : activeTheme === 'stone' ? '#d97706' : '#00f0ff'}
+                    stroke={activeTheme === 'lava' ? '#ff4500' : activeTheme === 'stone' ? '#d97706' : activeTheme === 'classic' ? '#ffffff' : '#00f0ff'}
                     strokeWidth="2.5"
                     strokeDasharray="5 3"
                     className="animate-pulse"
