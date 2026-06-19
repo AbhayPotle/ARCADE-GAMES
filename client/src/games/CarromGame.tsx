@@ -238,12 +238,12 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     for (let offset = step; offset < maxOffset; offset += step) {
       // Try right
       const rightX = posX + offset;
-      if (rightX <= BOARD_SIZE - 50 && isSafe(rightX)) {
+      if (rightX <= 327 && isSafe(rightX)) {
         return rightX;
       }
       // Try left
       const leftX = posX - offset;
-      if (leftX >= 50 && isSafe(leftX)) {
+      if (leftX >= 73 && isSafe(leftX)) {
         return leftX;
       }
     }
@@ -281,7 +281,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
     }
     
     // Keep within baseline bounds
-    return Math.min(BOARD_SIZE - 50, Math.max(50, constrainedX));
+    return Math.min(327, Math.max(73, constrainedX));
   };
 
   useEffect(() => {
@@ -519,7 +519,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
 
               const intersectX = pocket.x + (cx - pocket.x) * (50 - pocket.y) / dyLine;
 
-              if (intersectX >= 80 && intersectX <= 320) {
+              if (intersectX >= 73 && intersectX <= 327) {
                 // Physical check: striker must hit collision point before it hits the puck center
                 const distSC = Math.sqrt((cx - intersectX) * (cx - intersectX) + (cy - 50) * (cy - 50));
                 const distSP = Math.sqrt((puck.x - intersectX) * (puck.x - intersectX) + (puck.y - 50) * (puck.y - 50));
@@ -595,7 +595,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           // Direct hit fallback target
           const fallbackTarget = chosenPucks[Math.floor(Math.random() * chosenPucks.length)];
           if (fallbackTarget) {
-            chosenX = Math.min(320, Math.max(80, fallbackTarget.x));
+            chosenX = Math.min(327, Math.max(73, fallbackTarget.x));
             const sdx = fallbackTarget.x - chosenX;
             const sdy = fallbackTarget.y - 50;
             chosenAngle = Math.atan2(sdy, sdx);
@@ -1303,42 +1303,75 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       ctx.stroke();
     }
 
-    // Baselines
+     // Baselines
     ctx.strokeStyle = 'rgba(92, 58, 33, 0.3)';
     ctx.lineWidth = 1.0;
 
-    // Bottom double line
-    ctx.beginPath(); ctx.moveTo(50, BOARD_SIZE - 52); ctx.lineTo(BOARD_SIZE - 50, BOARD_SIZE - 52); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(50, BOARD_SIZE - 48); ctx.lineTo(BOARD_SIZE - 50, BOARD_SIZE - 48); ctx.stroke();
+    // Bottom double line (from X=73 to 327, Y=348 and 352)
+    ctx.beginPath(); ctx.moveTo(73, BOARD_SIZE - 52); ctx.lineTo(327, BOARD_SIZE - 52); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(73, BOARD_SIZE - 48); ctx.lineTo(327, BOARD_SIZE - 48); ctx.stroke();
     
-    // Top double line
-    ctx.beginPath(); ctx.moveTo(50, 48); ctx.lineTo(BOARD_SIZE - 50, 48); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(50, 52); ctx.lineTo(BOARD_SIZE - 50, 52); ctx.stroke();
+    // Top double line (from X=73 to 327, Y=48 and 52)
+    ctx.beginPath(); ctx.moveTo(73, 48); ctx.lineTo(327, 48); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(73, 52); ctx.lineTo(327, 52); ctx.stroke();
 
-    // Baseline circles at the ends
+    // Left double line (from Y=73 to 327, X=48 and 52)
+    ctx.beginPath(); ctx.moveTo(48, 73); ctx.lineTo(48, 327); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(52, 73); ctx.lineTo(52, 327); ctx.stroke();
+
+    // Right double line (from Y=73 to 327, X=348 and 352)
+    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 52, 73); ctx.lineTo(BOARD_SIZE - 52, 327); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 48, 73); ctx.lineTo(BOARD_SIZE - 48, 327); ctx.stroke();
+
+    // Baseline circles at the ends (8 endpoints)
     ctx.lineWidth = 1.0;
     ctx.strokeStyle = 'rgba(92, 58, 33, 0.3)';
     [
-      { x: 50, y: BOARD_SIZE - 50 },
-      { x: BOARD_SIZE - 50, y: BOARD_SIZE - 50 },
-      { x: 50, y: 50 },
-      { x: BOARD_SIZE - 50, y: 50 }
+      { x: 73, y: BOARD_SIZE - 50 }, { x: 327, y: BOARD_SIZE - 50 },
+      { x: 73, y: 50 }, { x: 327, y: 50 },
+      { x: 50, y: 73 }, { x: 50, y: 327 },
+      { x: BOARD_SIZE - 50, y: 73 }, { x: BOARD_SIZE - 50, y: 327 }
     ].forEach(pt => {
       ctx.beginPath();
       ctx.arc(pt.x, pt.y, 8, 0, Math.PI*2);
       ctx.stroke();
     });
 
-    // Baseline red dots
+    // Baseline red spots inside the 8 baseline circles
     ctx.fillStyle = '#b7094c';
     [
-      { x: 50, y: BOARD_SIZE - 50 },
-      { x: BOARD_SIZE - 50, y: BOARD_SIZE - 50 },
-      { x: 50, y: 50 },
-      { x: BOARD_SIZE - 50, y: 50 }
+      { x: 73, y: BOARD_SIZE - 50 }, { x: 327, y: BOARD_SIZE - 50 },
+      { x: 73, y: 50 }, { x: 327, y: 50 },
+      { x: 50, y: 73 }, { x: 50, y: 327 },
+      { x: BOARD_SIZE - 50, y: 73 }, { x: BOARD_SIZE - 50, y: 327 }
     ].forEach(pt => {
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Elegant diagonal lines running towards the center circle
+    ctx.strokeStyle = 'rgba(92, 58, 33, 0.2)';
+    ctx.lineWidth = 1.2;
+    // Top-Left diagonal
+    ctx.beginPath(); ctx.moveTo(36, 36); ctx.lineTo(142, 142); ctx.stroke();
+    // Top-Right diagonal
+    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 36, 36); ctx.lineTo(BOARD_SIZE - 142, 142); ctx.stroke();
+    // Bottom-Left diagonal
+    ctx.beginPath(); ctx.moveTo(36, BOARD_SIZE - 36); ctx.lineTo(142, BOARD_SIZE - 142); ctx.stroke();
+    // Bottom-Right diagonal
+    ctx.beginPath(); ctx.moveTo(BOARD_SIZE - 36, BOARD_SIZE - 36); ctx.lineTo(BOARD_SIZE - 142, BOARD_SIZE - 142); ctx.stroke();
+
+    // Red decorative circles at the pocket-end of each diagonal line
+    ctx.fillStyle = '#b7094c';
+    [
+      { x: 36, y: 36 },
+      { x: BOARD_SIZE - 36, y: 36 },
+      { x: 36, y: BOARD_SIZE - 36 },
+      { x: BOARD_SIZE - 36, y: BOARD_SIZE - 36 }
+    ].forEach(pt => {
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 5.5, 0, Math.PI * 2);
       ctx.fill();
     });
 
@@ -2026,8 +2059,8 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
                 </div>
                 <input
                   type="range"
-                  min={50}
-                  max={BOARD_SIZE - 50}
+                  min={73}
+                  max={327}
                   value={strikerX}
                   disabled={isAiming}
                   onChange={(e) => handleStrikerSlider(parseInt(e.target.value))}
