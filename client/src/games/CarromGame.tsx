@@ -1959,13 +1959,13 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           </div>
 
           {/* Board Canvas Wrapper with Floating Score Popups Container */}
-          <div className="relative w-full max-w-[560px] flex justify-center">
+          <div className="relative w-full max-w-[560px] aspect-square max-h-[52vh] max-w-[52vh] flex justify-center">
             <canvas
               ref={canvasRef}
               width={BOARD_SIZE}
               height={BOARD_SIZE}
               onPointerDown={handleCanvasPointerDown}
-              className={`rounded-3xl bg-[#ebd2a3] cursor-pointer transition-all duration-700 w-full h-auto max-w-[560px] ${
+              className={`rounded-3xl bg-[#ebd2a3] cursor-pointer transition-all duration-700 w-full h-full ${
                 turn === currentUser.id && !isStrikerFlicked
                   ? 'scale-[1.03] border-[12px] border-[#FFD93D] shadow-[0_25px_65px_rgba(0,212,255,0.22)]'
                   : 'scale-100 border-[12px] border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)]'
