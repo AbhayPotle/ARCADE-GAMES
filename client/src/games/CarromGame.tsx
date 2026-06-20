@@ -116,6 +116,51 @@ const isPuckPathBlocked = (
   return false;
 };
 
+const getFirstHitPuck = (
+  list: Disc[],
+  startX: number,
+  startY: number,
+  angle: number,
+  strikerRadius: number
+): Disc | null => {
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+  
+  let closestT = Infinity;
+  let closestPuck: Disc | null = null;
+
+  for (const d of list) {
+    if (d.isPocketed || d.type === 'striker') continue;
+
+    const vx = startX - d.x;
+    const vy = startY - d.y;
+    const rCol = strikerRadius + d.radius;
+
+    const b = 2 * (vx * dx + vy * dy);
+    const c = vx * vx + vy * vy - rCol * rCol;
+    const discr = b * b - 4 * c;
+
+    if (discr >= 0) {
+      const sqrtDiscr = Math.sqrt(discr);
+      const t1 = (-b - sqrtDiscr) / 2;
+      const t2 = (-b + sqrtDiscr) / 2;
+
+      let t = -1;
+      if (t1 > 0.1) {
+        t = t1;
+      } else if (t2 > 0.1) {
+        t = t2;
+      }
+
+      if (t > 0.1 && t < closestT) {
+        closestT = t;
+        closestPuck = d;
+      }
+    }
+  }
+  return closestPuck;
+};
+
 export default function CarromMasters({ matchData, currentUser, onComplete }: CarromGameProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [strikerX, setStrikerX] = useState<number>(BOARD_SIZE / 2);
@@ -544,12 +589,17 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
                   const strikerBlocked = isPathBlocked(list, intersectX, 50, cx, cy, puck, striker.radius);
                   const puckBlocked = isPuckPathBlocked(list, puck.x, puck.y, pocket.x, pocket.y, puck);
 
-                  if (!strikerBlocked && !puckBlocked) {
-                    tier1Shots.push(shot);
-                  } else if (!puckBlocked) {
-                    tier2Shots.push(shot);
-                  } else {
-                    tier3Shots.push(shot);
+                  const firstHit = getFirstHitPuck(list, intersectX, 50, angle, striker.radius);
+                  const hitsOwnPuckFirst = firstHit && (firstHit.type === botColor || firstHit.type === 'queen');
+
+                  if (hitsOwnPuckFirst) {
+                    if (!strikerBlocked && !puckBlocked) {
+                      tier1Shots.push(shot);
+                    } else if (!puckBlocked) {
+                      tier2Shots.push(shot);
+                    } else {
+                      tier3Shots.push(shot);
+                    }
                   }
                 }
               }
@@ -592,14 +642,49 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           chosenAngle = bestShot.angle;
           chosenPower = bestShot.power;
         } else {
-          // Direct hit fallback target
-          const fallbackTarget = chosenPucks[Math.floor(Math.random() * chosenPucks.length)];
-          if (fallbackTarget) {
-            chosenX = Math.min(320, Math.max(80, fallbackTarget.x));
-            const sdx = fallbackTarget.x - chosenX;
-            const sdy = fallbackTarget.y - 50;
-            chosenAngle = Math.atan2(sdy, sdx);
-            chosenPower = 55 + Math.floor(Math.random() * 25);
+          // Fallback search: find a baseline position and angle that hits one of our pucks first
+          const fallbacks: any[] = [];
+          for (let x = 80; x <= 320; x += 10) {
+            // Check if baseline coordinate overlaps with any pucks
+            const isSafe = !list.some(d => {
+              if (d.type === 'striker' || d.isPocketed) return false;
+              const dx = x - d.x;
+              const dy = 50 - d.y;
+              return Math.sqrt(dx * dx + dy * dy) < striker.radius + d.radius;
+            });
+            if (!isSafe) continue;
+
+            for (const puck of chosenPucks) {
+              const dx = puck.x - x;
+              const dy = puck.y - 50;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist === 0) continue;
+
+              const angle = Math.atan2(dy, dx);
+              const firstHit = getFirstHitPuck(list, x, 50, angle, striker.radius);
+              if (firstHit && (firstHit.type === botColor || firstHit.type === 'queen')) {
+                const power = Math.min(85, Math.max(45, Math.round(dist * 0.22 + 10)));
+                fallbacks.push({ x, angle, power, dist });
+              }
+            }
+          }
+
+          if (fallbacks.length > 0) {
+            fallbacks.sort((a, b) => a.dist - b.dist);
+            const chosen = fallbacks[0];
+            chosenX = chosen.x;
+            chosenAngle = chosen.angle;
+            chosenPower = chosen.power;
+          } else {
+            // Ultimate fallback: shoot directly from a safe baseline position
+            const fallbackTarget = chosenPucks[Math.floor(Math.random() * chosenPucks.length)];
+            if (fallbackTarget) {
+              chosenX = Math.min(320, Math.max(80, fallbackTarget.x));
+              const sdx = fallbackTarget.x - chosenX;
+              const sdy = fallbackTarget.y - 50;
+              chosenAngle = Math.atan2(sdy, sdx);
+              chosenPower = 55 + Math.floor(Math.random() * 25);
+            }
           }
         }
 
@@ -731,165 +816,176 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
       slowMoRatioRef.current = Math.min(1.0, slowMoRatioRef.current + 0.12);
     }
 
+    const subSteps = 8;
     const speedFactor = slowMoRatioRef.current;
+    const dt = speedFactor / subSteps;
 
-    list.forEach(d => {
-      if (d.isPocketed) return;
+    for (let step = 0; step < subSteps; step++) {
+      list.forEach(d => {
+        if (d.isPocketed) return;
 
-      // Defensive check to prevent NaN locks
-      if (isNaN(d.x) || isNaN(d.y) || isNaN(d.vx) || isNaN(d.vy)) {
-        d.vx = 0;
-        d.vy = 0;
-        if (d.type === 'striker') {
-          const strikerY = turnRef.current === currentUser.id ? BOARD_SIZE - 50 : 50;
-          d.x = findSafeStrikerPosition(list, BOARD_SIZE / 2, strikerY);
-          d.y = strikerY;
-        } else {
-          d.x = BOARD_SIZE / 2 + (Math.random() - 0.5) * 10;
-          d.y = BOARD_SIZE / 2 + (Math.random() - 0.5) * 10;
+        // Defensive check to prevent NaN locks
+        if (isNaN(d.x) || isNaN(d.y) || isNaN(d.vx) || isNaN(d.vy)) {
+          d.vx = 0;
+          d.vy = 0;
+          if (d.type === 'striker') {
+            const strikerY = turnRef.current === currentUser.id ? BOARD_SIZE - 50 : 50;
+            d.x = findSafeStrikerPosition(list, BOARD_SIZE / 2, strikerY);
+            d.y = strikerY;
+          } else {
+            d.x = BOARD_SIZE / 2 + (Math.random() - 0.5) * 10;
+            d.y = BOARD_SIZE / 2 + (Math.random() - 0.5) * 10;
+          }
+        }
+
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        d.vx *= Math.pow(FRICTION, dt);
+        d.vy *= Math.pow(FRICTION, dt);
+
+        if (Math.abs(d.vx) < 0.05) d.vx = 0;
+        if (Math.abs(d.vy) < 0.05) d.vy = 0;
+      });
+
+      // Wall reflections
+      list.forEach(d => {
+        if (d.isPocketed) return;
+
+        const border = 15;
+        if (d.x - d.radius < border) {
+          d.x = border + d.radius;
+          const impact = Math.abs(d.vx);
+          d.vx = -d.vx * 0.8;
+          if (impact > 0.15) {
+            createImpactSparks(d.x - d.radius, d.y, d.color);
+          }
+        } else if (d.x + d.radius > BOARD_SIZE - border) {
+          d.x = BOARD_SIZE - border - d.radius;
+          const impact = Math.abs(d.vx);
+          d.vx = -d.vx * 0.8;
+          if (impact > 0.15) {
+            createImpactSparks(d.x + d.radius, d.y, d.color);
+          }
+        }
+
+        if (d.y - d.radius < border) {
+          d.y = border + d.radius;
+          const impact = Math.abs(d.vy);
+          d.vy = -d.vy * 0.8;
+          if (impact > 0.15) {
+            createImpactSparks(d.x, d.y - d.radius, d.color);
+          }
+        } else if (d.y + d.radius > BOARD_SIZE - border) {
+          d.y = BOARD_SIZE - border - d.radius;
+          const impact = Math.abs(d.vy);
+          d.vy = -d.vy * 0.8;
+          if (impact > 0.15) {
+            createImpactSparks(d.x, d.y + d.radius, d.color);
+          }
+        }
+      });
+
+      // Puck-to-Puck collision checks
+      for (let i = 0; i < list.length; i++) {
+        for (let j = i + 1; j < list.length; j++) {
+          const d1 = list[i];
+          const d2 = list[j];
+
+          if (d1.isPocketed || d2.isPocketed) continue;
+
+          // Skip collision/overlap resolution for the striker if it has not been flicked/shot
+          const isStrikerOverlap = d1.type === 'striker' || d2.type === 'striker';
+          if (isStrikerOverlap && !isStrikerFlickedRef.current) {
+            continue;
+          }
+
+          const dx = d2.x - d1.x;
+          const dy = d2.y - d1.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = d1.radius + d2.radius;
+
+          if (dist < minDist) {
+            const overlap = minDist - dist;
+            const nx = dist > 0 ? dx / dist : 1;
+            const ny = dist > 0 ? dy / dist : 0;
+            d1.x -= nx * overlap * 0.5;
+            d1.y -= ny * overlap * 0.5;
+            d2.x += nx * overlap * 0.5;
+            d2.y += ny * overlap * 0.5;
+
+            const kx = d1.vx - d2.vx;
+            const ky = d1.vy - d2.vy;
+            const normalVelocity = nx * kx + ny * ky;
+
+            // Resolve elastic collision only if moving towards each other
+            if (normalVelocity > 0) {
+              const p = normalVelocity;
+              d1.vx -= p * nx;
+              d1.vy -= p * ny;
+              d2.vx += p * nx;
+              d2.vy += p * ny;
+
+              if (Math.abs(normalVelocity) > 0.15) {
+                const cx = d1.x + nx * d1.radius;
+                const cy = d1.y + ny * d1.radius;
+                createImpactSparks(cx, cy, d1.color, d2.color);
+
+                // Screen shake for powerful striker impacts
+                if (isStrikerOverlap && Math.abs(normalVelocity) > 1.8) {
+                  shakeIntensityRef.current = Math.min(10, Math.abs(normalVelocity) * 2.5);
+                }
+              }
+            }
+          }
         }
       }
 
-      d.x += d.vx * speedFactor;
-      d.y += d.vy * speedFactor;
-      d.vx *= Math.pow(FRICTION, speedFactor);
-      d.vy *= Math.pow(FRICTION, speedFactor);
+      // Pocket checks
+      list.forEach(d => {
+        if (d.isPocketed) return;
 
-      if (Math.abs(d.vx) < 0.05) d.vx = 0;
-      if (Math.abs(d.vy) < 0.05) d.vy = 0;
+        pockets.forEach(p => {
+          const dx = d.x - p.x;
+          const dy = d.y - p.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (dist < POCKET_RADIUS - 2) {
+            d.isPocketed = true;
+            d.vx = 0;
+            d.vy = 0;
+            audioSynth.playPocket();
+            createPocketBlastSparks(p.x, p.y, d.color);
 
+            // Add score popup visually above pocket
+            const isPlayerTurn = turnRef.current === currentUser.id;
+            let popupText = '';
+            if (d.type === 'queen') {
+              popupText = '👑 +50 QUEEN!';
+            } else if (d.type === 'striker') {
+              popupText = '⚠️ FOUL!';
+            } else {
+              const currentStrikerColor = turnRef.current === currentUser.id ? myColorTypeRef.current : (myColorTypeRef.current === 'white' ? 'black' : 'white');
+              if (d.type === currentStrikerColor) {
+                popupText = isPlayerTurn ? '⭐ +10 PUCK' : 'OPPONENT +10';
+              } else {
+                popupText = isPlayerTurn ? 'OPPONENT +10' : '⭐ +10 PUCK';
+              }
+            }
+            addScorePopup(p.x, p.y - 10, popupText);
+
+            // Add to current shot pocketed coins list
+            pocketedThisTurnRef.current.push(d.type);
+          }
+        });
+      });
+    }
+
+    // Now check if anything is still moving
+    list.forEach(d => {
+      if (d.isPocketed) return;
       if (d.vx !== 0 || d.vy !== 0) {
         moving = true;
       }
-    });
-
-    // Wall reflections
-    list.forEach(d => {
-      if (d.isPocketed) return;
-
-      const border = 15;
-      if (d.x - d.radius < border) {
-        d.x = border + d.radius;
-        const impact = Math.abs(d.vx);
-        d.vx = -d.vx * 0.8;
-        if (impact > 0.15) {
-          createImpactSparks(d.x - d.radius, d.y, d.color);
-        }
-      } else if (d.x + d.radius > BOARD_SIZE - border) {
-        d.x = BOARD_SIZE - border - d.radius;
-        const impact = Math.abs(d.vx);
-        d.vx = -d.vx * 0.8;
-        if (impact > 0.15) {
-          createImpactSparks(d.x + d.radius, d.y, d.color);
-        }
-      }
-
-      if (d.y - d.radius < border) {
-        d.y = border + d.radius;
-        const impact = Math.abs(d.vy);
-        d.vy = -d.vy * 0.8;
-        if (impact > 0.15) {
-          createImpactSparks(d.x, d.y - d.radius, d.color);
-        }
-      } else if (d.y + d.radius > BOARD_SIZE - border) {
-        d.y = BOARD_SIZE - border - d.radius;
-        const impact = Math.abs(d.vy);
-        d.vy = -d.vy * 0.8;
-        if (impact > 0.15) {
-          createImpactSparks(d.x, d.y + d.radius, d.color);
-        }
-      }
-    });
-
-    // Puck-to-Puck collision checks
-    for (let i = 0; i < list.length; i++) {
-      for (let j = i + 1; j < list.length; j++) {
-        const d1 = list[i];
-        const d2 = list[j];
-
-        if (d1.isPocketed || d2.isPocketed) continue;
-
-        // Skip collision/overlap resolution for the striker if it has not been flicked/shot
-        const isStrikerOverlap = d1.type === 'striker' || d2.type === 'striker';
-        if (isStrikerOverlap && !isStrikerFlickedRef.current) {
-          continue;
-        }
-
-        const dx = d2.x - d1.x;
-        const dy = d2.y - d1.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const minDist = d1.radius + d2.radius;
-
-        if (dist < minDist) {
-          const overlap = minDist - dist;
-          const nx = dist > 0 ? dx / dist : 1;
-          const ny = dist > 0 ? dy / dist : 0;
-          d1.x -= nx * overlap * 0.5;
-          d1.y -= ny * overlap * 0.5;
-          d2.x += nx * overlap * 0.5;
-          d2.y += ny * overlap * 0.5;
-
-          const kx = d1.vx - d2.vx;
-          const ky = d1.vy - d2.vy;
-          const normalVelocity = nx * kx + ny * ky;
-          const p = 2 * normalVelocity / 2;
-
-          d1.vx -= p * nx;
-          d1.vy -= p * ny;
-          d2.vx += p * nx;
-          d2.vy += p * ny;
-
-          if (Math.abs(normalVelocity) > 0.15) {
-            const cx = d1.x + nx * d1.radius;
-            const cy = d1.y + ny * d1.radius;
-            createImpactSparks(cx, cy, d1.color, d2.color);
-
-            // Screen shake for powerful striker impacts
-            if (isStrikerOverlap && Math.abs(normalVelocity) > 1.8) {
-              shakeIntensityRef.current = Math.min(10, Math.abs(normalVelocity) * 2.5);
-            }
-          }
-        }
-      }
-    }
-
-
-    list.forEach(d => {
-      if (d.isPocketed) return;
-
-      pockets.forEach(p => {
-        const dx = d.x - p.x;
-        const dy = d.y - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        if (dist < POCKET_RADIUS - 2) {
-          d.isPocketed = true;
-          d.vx = 0;
-          d.vy = 0;
-          audioSynth.playPocket();
-          createPocketBlastSparks(p.x, p.y, d.color);
-
-          // Add score popup visually above pocket
-          const isPlayerTurn = turnRef.current === currentUser.id;
-          let popupText = '';
-          if (d.type === 'queen') {
-            popupText = '👑 +50 QUEEN!';
-          } else if (d.type === 'striker') {
-            popupText = '⚠️ FOUL!';
-          } else {
-            const currentStrikerColor = turnRef.current === currentUser.id ? myColorTypeRef.current : (myColorTypeRef.current === 'white' ? 'black' : 'white');
-            if (d.type === currentStrikerColor) {
-              popupText = isPlayerTurn ? '⭐ +10 PUCK' : 'OPPONENT +10';
-            } else {
-              popupText = isPlayerTurn ? 'OPPONENT +10' : '⭐ +10 PUCK';
-            }
-          }
-          addScorePopup(p.x, p.y - 10, popupText);
-
-          // Add to current shot pocketed coins list
-          pocketedThisTurnRef.current.push(d.type);
-        }
-      });
     });
 
     if (isStrikerFlickedRef.current && !moving) {
@@ -1748,24 +1844,25 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           const mx = (moveEvt.clientX - cRect.left - border) * sX;
           const my = (moveEvt.clientY - cRect.top - border) * sY;
 
-          // Calculate angle relative to the striker center for unbiased aiming direction
-          const dxCenter = mx - striker.x;
-          const dyCenter = my - striker.y;
-          const angleVal = Math.atan2(-dyCenter, -dxCenter);
-          setShotAngle(angleVal);
-          shotAngleRef.current = angleVal; // Update ref synchronously!
-
           const mdx = mx - dragStartXRef.current;
           const mdy = my - dragStartYRef.current;
           const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+
+          // Calculate angle relative to the drag displacement vector for a stable slingshot aiming direction
+          let angleVal = shotAngleRef.current;
+          if (mdist > 2) {
+            angleVal = Math.atan2(-mdy, -mdx);
+          }
+          setShotAngle(angleVal);
+          shotAngleRef.current = angleVal; // Update ref synchronously!
 
           const powerVal = Math.min(100, Math.max(20, Math.round(mdist * 0.75)));
           setShotPower(powerVal);
           shotPowerRef.current = powerVal; // Update ref synchronously!
 
           setAimCurrent({
-            x: striker.x - Math.cos(angleVal) * (mdist),
-            y: striker.y - Math.sin(angleVal) * (mdist)
+            x: striker.x - Math.cos(angleVal) * mdist,
+            y: striker.y - Math.sin(angleVal) * mdist
           });
         };
 
