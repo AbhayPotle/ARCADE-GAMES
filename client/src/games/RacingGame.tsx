@@ -680,83 +680,88 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const p1 = project3D(0, segment.z, segment.y, trackPosition, playerX, roadSegments);
       const p2 = project3D(0, segment.z + SEGMENT_LENGTH, nextSegment.y, trackPosition, playerX, roadSegments);
 
-      if (!p1 || !p2 || p1.y >= maxy || p2.y >= p1.y) {
+      if (!p1 || !p2 || p2.y >= maxy || p2.y >= p1.y) {
         continue;
       }
 
-      if (p1.y < maxy) {
-        // Draw Grass backdrop
-        ctx.fillStyle = segment.color.grass;
-        ctx.fillRect(0, p2.y, CANVAS_WIDTH, p1.y - p2.y);
+      // Draw Grass backdrop
+      ctx.fillStyle = segment.color.grass;
+      ctx.fillRect(0, p2.y, CANVAS_WIDTH, Math.min(maxy, p1.y) - p2.y);
 
-        const w1 = p1.size * (490 / 68);
-        const w2 = p2.size * (490 / 68);
-        const x1 = p1.x;
-        const x2 = p2.x;
-        const y1 = p1.y;
-        const y2 = p2.y;
+      let w1 = p1.size * (490 / 68);
+      const w2 = p2.size * (490 / 68);
+      let x1 = p1.x;
+      const x2 = p2.x;
+      let y1 = p1.y;
+      const y2 = p2.y;
 
-        const rum1 = w1 * 0.055;
-        const rum2 = w2 * 0.055;
-
-        // Draw Rumble strip curbs (alternating red/white)
-        ctx.fillStyle = segment.color.rumble;
-        
-        // Left Curb
-        ctx.beginPath();
-        ctx.moveTo(x1 - w1 / 2 - rum1, y1);
-        ctx.lineTo(x2 - w2 / 2 - rum2, y2);
-        ctx.lineTo(x2 - w2 / 2, y2);
-        ctx.lineTo(x1 - w1 / 2, y1);
-        ctx.closePath();
-        ctx.fill();
-
-        // Right Curb
-        ctx.beginPath();
-        ctx.moveTo(x1 + w1 / 2, y1);
-        ctx.lineTo(x2 + w2 / 2, y2);
-        ctx.lineTo(x2 + w2 / 2 + rum2, y2);
-        ctx.lineTo(x1 + w1 / 2 + rum1, y1);
-        ctx.closePath();
-        ctx.fill();
-
-        // Draw Dark asphalt road surface
-        ctx.fillStyle = segment.color.road;
-        ctx.beginPath();
-        ctx.moveTo(x1 - w1 / 2, y1);
-        ctx.lineTo(x2 - w2 / 2, y2);
-        ctx.lineTo(x2 + w2 / 2, y2);
-        ctx.lineTo(x1 + w1 / 2, y1);
-        ctx.closePath();
-        ctx.fill();
-
-        // Dashed lane dividers
-        if (segment.color.lane) {
-          ctx.fillStyle = segment.color.lane;
-          const d1 = w1 * 0.015;
-          const d2 = w2 * 0.015;
-
-          // Lane 0-1 separator
-          ctx.beginPath();
-          ctx.moveTo(x1 - w1 / 6 - d1 / 2, y1);
-          ctx.lineTo(x2 - w2 / 6 - d2 / 2, y2);
-          ctx.lineTo(x2 - w2 / 6 + d2 / 2, y2);
-          ctx.lineTo(x1 - w1 / 6 + d1 / 2, y1);
-          ctx.closePath();
-          ctx.fill();
-
-          // Lane 1-2 separator
-          ctx.beginPath();
-          ctx.moveTo(x1 + w1 / 6 - d1 / 2, y1);
-          ctx.lineTo(x2 + w2 / 6 - d2 / 2, y2);
-          ctx.lineTo(x2 + w2 / 6 + d2 / 2, y2);
-          ctx.lineTo(x1 + w1 / 6 + d1 / 2, y1);
-          ctx.closePath();
-          ctx.fill();
-        }
-
-        maxy = p1.y; // Update occlusion boundary
+      if (y1 > maxy) {
+        const ratio = (maxy - y2) / (y1 - y2);
+        x1 = x2 + (x1 - x2) * ratio;
+        w1 = w2 + (w1 - w2) * ratio;
+        y1 = maxy;
       }
+
+      const rum1 = w1 * 0.055;
+      const rum2 = w2 * 0.055;
+
+      // Draw Rumble strip curbs (alternating red/white)
+      ctx.fillStyle = segment.color.rumble;
+      
+      // Left Curb
+      ctx.beginPath();
+      ctx.moveTo(x1 - w1 / 2 - rum1, y1);
+      ctx.lineTo(x2 - w2 / 2 - rum2, y2);
+      ctx.lineTo(x2 - w2 / 2, y2);
+      ctx.lineTo(x1 - w1 / 2, y1);
+      ctx.closePath();
+      ctx.fill();
+
+      // Right Curb
+      ctx.beginPath();
+      ctx.moveTo(x1 + w1 / 2, y1);
+      ctx.lineTo(x2 + w2 / 2, y2);
+      ctx.lineTo(x2 + w2 / 2 + rum2, y2);
+      ctx.lineTo(x1 + w1 / 2 + rum1, y1);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw Dark asphalt road surface
+      ctx.fillStyle = segment.color.road;
+      ctx.beginPath();
+      ctx.moveTo(x1 - w1 / 2, y1);
+      ctx.lineTo(x2 - w2 / 2, y2);
+      ctx.lineTo(x2 + w2 / 2, y2);
+      ctx.lineTo(x1 + w1 / 2, y1);
+      ctx.closePath();
+      ctx.fill();
+
+      // Dashed lane dividers
+      if (segment.color.lane) {
+        ctx.fillStyle = segment.color.lane;
+        const d1 = w1 * 0.015;
+        const d2 = w2 * 0.015;
+
+        // Lane 0-1 separator
+        ctx.beginPath();
+        ctx.moveTo(x1 - w1 / 6 - d1 / 2, y1);
+        ctx.lineTo(x2 - w2 / 6 - d2 / 2, y2);
+        ctx.lineTo(x2 - w2 / 6 + d2 / 2, y2);
+        ctx.lineTo(x1 - w1 / 6 + d1 / 2, y1);
+        ctx.closePath();
+        ctx.fill();
+
+        // Lane 1-2 separator
+        ctx.beginPath();
+        ctx.moveTo(x1 + w1 / 6 - d1 / 2, y1);
+        ctx.lineTo(x2 + w2 / 6 - d2 / 2, y2);
+        ctx.lineTo(x2 + w2 / 6 + d2 / 2, y2);
+        ctx.lineTo(x1 + w1 / 6 + d1 / 2, y1);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      maxy = Math.min(maxy, p1.y); // Update occlusion boundary
     }
 
     // 3. Scan & Populate Objects Queue matching Z range
