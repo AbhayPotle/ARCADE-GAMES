@@ -122,10 +122,40 @@ class AudioSynth {
     this.playTone([300, 600, 150], [0.1, 0.15], 'sine', 0.12);
   }
 
-  // Typing character hit
+  // Typing character click (mechanical keyboard click sound)
   public playType() {
-    const pitch = 300 + Math.random() * 200;
-    this.playTone([pitch], [0.03], 'triangle', 0.02);
+    this.init();
+    if (!this.ctx || this.isMuted) return;
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+
+    const now = this.ctx.currentTime;
+
+    // 1. High-frequency click transient (tactile switch tick)
+    const oscClick = this.ctx.createOscillator();
+    const gainClick = this.ctx.createGain();
+    oscClick.type = 'sine';
+    oscClick.frequency.setValueAtTime(6000 + Math.random() * 1500, now);
+    oscClick.frequency.exponentialRampToValueAtTime(1200, now + 0.012);
+    gainClick.gain.setValueAtTime(0.05, now);
+    gainClick.gain.exponentialRampToValueAtTime(0.0001, now + 0.012);
+    oscClick.connect(gainClick);
+    gainClick.connect(this.ctx.destination);
+    oscClick.start(now);
+    oscClick.stop(now + 0.012);
+
+    // 2. Lower frequency body (keycap bottom-out resonance)
+    const oscBody = this.ctx.createOscillator();
+    const gainBody = this.ctx.createGain();
+    oscBody.type = 'triangle';
+    oscBody.frequency.setValueAtTime(280 + Math.random() * 50, now);
+    gainBody.gain.setValueAtTime(0.09, now);
+    gainBody.gain.exponentialRampToValueAtTime(0.0001, now + 0.035);
+    oscBody.connect(gainBody);
+    gainBody.connect(this.ctx.destination);
+    oscBody.start(now);
+    oscBody.stop(now + 0.035);
   }
 
   // Typing typo error
