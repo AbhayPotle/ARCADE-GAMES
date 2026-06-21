@@ -32,16 +32,71 @@ interface TypoSpark {
   maxLife: number;
 }
 
-const SENTENCES = [
-  "quantum computing modules interface seamlessly with grid vectors to establish full real-time telemetry pipelines across cybernetic node matrices.",
-  "stellar exploration probes transmit high-frequency telemetry streams back to central processing vaults through deep-space wormhole relays.",
-  "artificial intelligence networks distribute neural weights across decentralized blockchain ledgers to secure multi-agent consensus algorithms.",
-  "cybernetic hackers bypass terminal firewalls by injectively tunneling encrypted script packages into main database cores.",
-  "neon grids illuminate virtual landscapes where security cores defend computational modules from autonomous trojan drones.",
-  "hyperloop transit arrays coordinate magnetic suspension grids using high-speed distributed synchronization protocols.",
-  "nano-robotic surgical swarms repair microscopic arterial fissures under deep-learning autonomous precision control.",
-  "photonic mainframe units encode holographic datasets using quantum entanglements across multi-dimensional fiber nodes."
+const SUBJECTS = [
+  "quantum processors", "neural networks", "photonic mainframes", "cybernetic arrays",
+  "orbital beacons", "nanite swarms", "biosensor matrices", "encryption keys",
+  "blockchain ledgers", "hyperloop grids", "holographic cores", "plasma manifolds",
+  "tactical overlays", "data pipelines", "telemetry sensors", "sub-space relays",
+  "gravity disruptors", "fusion chambers", "dark-matter arrays", "synaptic nodes",
+  "heuristic firewalls", "vector fields", "matrix injectors", "packet streams"
 ];
+
+const ADJECTIVES = [
+  "autonomous", "decentralized", "high-frequency", "quantum-entangled",
+  "encrypted", "hyper-threaded", "photosensitive", "recursive",
+  "cybernetic", "stellar", "microscopic", "multi-dimensional",
+  "photonic", "holographic", "nanorobotic", "superconductive",
+  "algorithmic", "synaptic", "biometric", "thermonuclear",
+  "kinetic", "spectral", "subatomic", "vectorized"
+];
+
+const VERBS = [
+  "interface seamlessly with", "transmit encrypted streams to", "distribute computational load across",
+  "bypass terminal firewalls of", "illuminate virtual pathways for", "coordinate magnetic suspension with",
+  "repair micro-arterial fissures in", "encode complex datasets for", "synchronize telemetry data with",
+  "analyze atmospheric displacement inside", "recalibrate containment fields within", "stabilize power fluctuations of",
+  "defragment active memory sectors on", "intercept communications from", "optimize signal propagation through",
+  "modulate frequency oscillations inside", "verify integrity signatures for", "accelerate packet delivery to"
+];
+
+const TARGETS = [
+  "grid vectors", "wormhole relays", "consensus ledgers", "database cores",
+  "trojan drones", "transit arrays", "precision controls", "fiber nodes",
+  "uplink terminals", "supercomputers", "shield generators", "navigation grids",
+  "cryo chambers", "warp drives", "mainframe cells", "biosphere shields",
+  "energy meshes", "cloning modules", "satellite dishes", "firewall nodes"
+];
+
+const ENDINGS = [
+  "to establish real-time telemetry pipelines.",
+  "to secure multi-agent consensus algorithms.",
+  "to defend computational modules from cyber threats.",
+  "to prevent critical system failures.",
+  "to bypass security constraints in sub-grids.",
+  "to unlock deep-learning autonomous precision control.",
+  "to initiate secure quantum handshake protocols.",
+  "to facilitate high-speed data synchronization.",
+  "to monitor atmospheric pressure anomalies.",
+  "to route packet traffic away from compromised nodes.",
+  "to isolate malware injection vectors.",
+  "to calibrate navigational telemetry."
+];
+
+function generateProceduralSentence(): string {
+  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+  const sub = SUBJECTS[Math.floor(Math.random() * SUBJECTS.length)];
+  const verb = VERBS[Math.floor(Math.random() * VERBS.length)];
+  const tar = TARGETS[Math.floor(Math.random() * TARGETS.length)];
+  const end = ENDINGS[Math.floor(Math.random() * ENDINGS.length)];
+  
+  const templates = [
+    `${adj} ${sub} ${verb} ${tar} ${end}`,
+    `by utilizing ${adj} ${sub}, cybernetic agents can ${verb} ${tar} ${end}`,
+    `whenever ${adj} ${sub} trigger, they immediately ${verb} ${tar} ${end}`
+  ];
+  
+  return templates[Math.floor(Math.random() * templates.length)];
+}
 
 const BOARD_SIZE = 400;
 
@@ -82,7 +137,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
 
   // Initialize Opponent stats list
   useEffect(() => {
-    const randomSentence = SENTENCES[Math.floor(Math.random() * SENTENCES.length)];
+    const randomSentence = generateProceduralSentence();
     setTextToType(randomSentence);
 
     const otherPlayers = matchData.players
@@ -370,7 +425,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
       // Sentence fully completed
       if (val.length === textToType.length) {
         audioSynth.playAchievement();
-        const nextSentence = SENTENCES[Math.floor(Math.random() * SENTENCES.length)];
+        const nextSentence = generateProceduralSentence();
         setTextToType(nextSentence);
         setInputVal('');
         setCurrentIndex(0);
