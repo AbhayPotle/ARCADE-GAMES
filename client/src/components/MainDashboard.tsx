@@ -303,32 +303,6 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
             </div>
           </div>
 
-          {/* Multiplayer Arena Playlist */}
-          <div className="space-y-4 pt-4 border-t border-white/5">
-            <h3 className="text-lg font-extrabold font-orbitron tracking-wider text-white flex items-center space-x-2">
-              <span className="text-neon-magenta">//</span>
-              <span>MULTIPLAYER ARENA PLAYLIST</span>
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {multiplayerArenaGames.map(game => (
-                <div
-                  key={game.id}
-                  onClick={() => onSelectGame(game.id)}
-                  className="p-3 bg-cyber-dark/80 border border-neon-magenta/20 hover:border-neon-magenta rounded-lg cursor-pointer transition-all flex flex-col justify-between h-28"
-                >
-                  <div className="flex justify-between items-start">
-                    <span className="text-2xl">{game.icon}</span>
-                    <span className="text-[8px] font-orbitron bg-neon-magenta/10 text-neon-magenta px-1 rounded">SYNC_OK</span>
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold font-orbitron text-white leading-tight">{game.title}</h4>
-                    <p className="text-[9px] text-gray-500 font-mono mt-0.5">{game.players}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Racing Hub Playlist */}
           <div className="space-y-4 pt-4 border-t border-white/5">
             <h3 className="text-lg font-extrabold font-orbitron tracking-wider text-white flex items-center space-x-2">
