@@ -98,12 +98,12 @@ class AudioSynth {
 
   // Game starting countdown tick
   public playCountDown() {
-    this.playTone([440], [0.1], 'square', 0.05);
+    this.playTone([440], [0.1], 'square', 0.18);
   }
 
   // High pitch countdown end / start game
   public playStart() {
-    this.playTone([880], [0.3], 'square', 0.08);
+    this.playTone([880], [0.3], 'square', 0.22);
   }
 
   // Chess move tick
@@ -137,30 +137,43 @@ class AudioSynth {
     const gainClick = this.ctx.createGain();
     oscClick.type = 'sine';
     oscClick.frequency.setValueAtTime(6000 + Math.random() * 1500, now);
-    oscClick.frequency.exponentialRampToValueAtTime(1200, now + 0.012);
-    gainClick.gain.setValueAtTime(0.05, now);
-    gainClick.gain.exponentialRampToValueAtTime(0.0001, now + 0.012);
+    oscClick.frequency.exponentialRampToValueAtTime(1200, now + 0.015);
+    gainClick.gain.setValueAtTime(0.58, now); // Increased from 0.24 for 8K audio depth
+    gainClick.gain.exponentialRampToValueAtTime(0.0001, now + 0.015);
     oscClick.connect(gainClick);
     gainClick.connect(this.ctx.destination);
     oscClick.start(now);
-    oscClick.stop(now + 0.012);
+    oscClick.stop(now + 0.015);
 
     // 2. Lower frequency body (keycap bottom-out resonance)
     const oscBody = this.ctx.createOscillator();
     const gainBody = this.ctx.createGain();
     oscBody.type = 'triangle';
     oscBody.frequency.setValueAtTime(280 + Math.random() * 50, now);
-    gainBody.gain.setValueAtTime(0.09, now);
-    gainBody.gain.exponentialRampToValueAtTime(0.0001, now + 0.035);
+    gainBody.gain.setValueAtTime(0.68, now); // Increased from 0.38 for deep room presence
+    gainBody.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
     oscBody.connect(gainBody);
     gainBody.connect(this.ctx.destination);
     oscBody.start(now);
-    oscBody.stop(now + 0.035);
+    oscBody.stop(now + 0.045);
+
+    // 3. Metallic tactile snap/spring click sweep (Cherry MX Blue sound)
+    const oscSnap = this.ctx.createOscillator();
+    const gainSnap = this.ctx.createGain();
+    oscSnap.type = 'triangle';
+    oscSnap.frequency.setValueAtTime(4800 + Math.random() * 400, now);
+    oscSnap.frequency.exponentialRampToValueAtTime(3200, now + 0.008);
+    gainSnap.gain.setValueAtTime(0.45, now);
+    gainSnap.gain.exponentialRampToValueAtTime(0.0001, now + 0.008);
+    oscSnap.connect(gainSnap);
+    gainSnap.connect(this.ctx.destination);
+    oscSnap.start(now);
+    oscSnap.stop(now + 0.008);
   }
 
   // Typing typo error
   public playError() {
-    this.playTone([150, 100], [0.15], 'sawtooth', 0.08);
+    this.playTone([150, 100], [0.15], 'sawtooth', 0.22); // Increased from 0.08
   }
 
   // Car Engine sound (based on speed/acceleration)
@@ -192,9 +205,9 @@ class AudioSynth {
   // GameOver failure/success
   public playGameOver(success: boolean) {
     if (success) {
-      this.playTone([523.3, 659.3, 784.0, 1047], [0.1, 0.1, 0.1, 0.5], 'triangle', 0.15);
+      this.playTone([523.3, 659.3, 784.0, 1047], [0.1, 0.1, 0.1, 0.5], 'triangle', 0.25);
     } else {
-      this.playTone([300, 200, 120], [0.15, 0.15, 0.3], 'sawtooth', 0.15);
+      this.playTone([300, 200, 120], [0.15, 0.15, 0.3], 'sawtooth', 0.25);
     }
   }
 }
