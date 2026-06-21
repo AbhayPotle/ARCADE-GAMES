@@ -47,10 +47,14 @@ const BOARD_SIZE = 400;
 
 export default function TypingWarriors({ matchData, currentUser, onComplete }: TypingGameProps) {
   // Game state controls
-  const [gameState, setGameState] = useState<'setup' | 'playing' | 'ended'>('setup');
+  const [gameState, setGameState] = useState<'setup' | 'countdown' | 'playing' | 'ended'>('setup');
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [duration, setDuration] = useState<30 | 45 | 60>(30);
   const [timeLeft, setTimeLeft] = useState<number>(30);
+  const [countdownVal, setCountdownVal] = useState<number>(3);
+
+  // Mouse tilt holographic coordinate tracking
+  const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
 
   const [textToType, setTextToType] = useState<string>('');
   const [inputVal, setInputVal] = useState<string>('');
@@ -173,6 +177,34 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
     return () => clearInterval(botTimer);
   }, [gameState, finished, textToType, difficulty]);
 
+  // Start countdown sequence tick loop
+  useEffect(() => {
+    if (gameState === 'countdown') {
+      // Play first countdown sound immediately
+      audioSynth.playCountDown();
+
+      const timer = setInterval(() => {
+        setCountdownVal(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            // Engage hyperdrive warp speed!
+            audioSynth.playStart();
+            setGameState('playing');
+            setTimeLeft(duration);
+            setStartTime(Date.now());
+            setInputVal('');
+            setCurrentIndex(0);
+            setProgress(0);
+            return 3; // Reset for next game
+          }
+          audioSynth.playCountDown();
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [gameState]);
+
   // Main countdown timer loop
   useEffect(() => {
     if (gameState === 'playing' && timeLeft > 0 && !finished) {
@@ -189,6 +221,23 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
       return () => clearInterval(timer);
     }
   }, [gameState, timeLeft, finished]);
+
+  // Mouse tilt calculation
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const xc = rect.width / 2;
+    const yc = rect.height / 2;
+    const rx = -(y - yc) / 22; // subtle tilt limit
+    const ry = (x - xc) / 22;
+    setTilt({ rx, ry });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ rx: 0, ry: 0 });
+  };
 
   // Spark drawing logic
   const updateAndDrawSparks = (ctx: CanvasRenderingContext2D) => {
@@ -244,9 +293,8 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
 
   const handleStartGame = () => {
     audioSynth.playClick();
-    setGameState('playing');
-    setTimeLeft(duration);
-    setStartTime(Date.now());
+    setCountdownVal(3);
+    setGameState('countdown');
   };
 
   const handleTimeExpired = () => {
@@ -342,7 +390,15 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
   // Render 1: Setup configuration cockpit
   if (gameState === 'setup') {
     return (
-      <div className="flex-1 flex flex-col p-6 w-full h-full min-h-0 justify-center items-center max-w-2xl bg-gradient-to-br from-cyber-purple via-cyber-dark to-cyber-black rounded-3xl border border-neon-cyan/25 relative overflow-hidden select-none shadow-[0_0_50px_rgba(0,240,255,0.18)]">
+      <div 
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{
+          transform: `perspective(1000px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
+          transition: 'transform 0.1s ease-out'
+        }}
+        className="flex-1 flex flex-col p-6 w-full h-full min-h-0 justify-center items-center max-w-2xl bg-gradient-to-br from-cyber-purple via-cyber-dark to-cyber-black rounded-3xl border border-neon-cyan/25 relative overflow-hidden select-none shadow-[0_0_50px_rgba(0,240,255,0.18)]"
+      >
         {/* Background grids */}
         <div className="absolute inset-0 bg-cyber-grid -z-10 pointer-events-none opacity-40 animate-grid-scroll" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,240,255,0.08)_0%,transparent_75%)] pointer-events-none -z-10" />
@@ -420,9 +476,49 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
     );
   }
 
-  // Render 2: Active Gameplay or Ended Screen
+  // Render 2: Countdown overlay view
+  if (gameState === 'countdown') {
+    return (
+      <div className="flex-1 flex flex-col p-6 w-full h-full min-h-0 justify-center items-center max-w-2xl bg-gradient-to-br from-cyber-purple via-cyber-dark to-cyber-black rounded-3xl border border-neon-cyan/25 relative overflow-hidden select-none shadow-[0_0_50px_rgba(0,240,255,0.18)]">
+        <div className="absolute inset-0 bg-cyber-grid -z-10 pointer-events-none opacity-40 animate-grid-scroll" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,240,255,0.08)_0%,transparent_75%)] pointer-events-none -z-10" />
+
+        <div className="text-center space-y-6 z-10">
+          <p className="text-xs font-mono text-neon-cyan uppercase tracking-widest leading-none">
+            // INITIATING WARP HANDSHAKE
+          </p>
+          
+          {/* Animated 4D countdown scale */}
+          <div className="relative w-44 h-44 flex items-center justify-center mx-auto">
+            {/* Spinning energy rings */}
+            <div className="absolute inset-0 border-4 border-dashed border-neon-cyan rounded-full animate-[spin_8s_linear_infinite] shadow-[0_0_15px_rgba(0,240,255,0.3)]" />
+            <div className="absolute inset-2 border-4 border-dotted border-neon-magenta rounded-full animate-[spin_4s_linear_infinite_reverse] shadow-[0_0_15px_rgba(255,0,127,0.3)]" />
+            <div className="absolute inset-6 bg-cyber-dark rounded-full border border-white/10 shadow-[0_0_30px_rgba(0,240,255,0.25)] flex items-center justify-center" />
+            
+            <span className="text-7xl font-black font-orbitron text-white leading-none z-10 animate-[ping_1s_infinite] drop-shadow-[0_0_20px_#00f0ff]">
+              {countdownVal}
+            </span>
+          </div>
+
+          <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest leading-none animate-pulse">
+            STAND BY FOR WEAPONS DISCHARGE
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Render 3: Active Gameplay or Ended Screen
   return (
-    <div className="flex-1 flex flex-col p-6 w-full h-full min-h-0 justify-between max-w-2xl bg-gradient-to-br from-cyber-purple via-cyber-dark to-[#030209]/95 rounded-3xl border border-neon-cyan/20 relative overflow-hidden select-none shadow-[0_0_40px_rgba(0,240,255,0.12)]">
+    <div 
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        transform: `perspective(1000px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
+        transition: 'transform 0.1s ease-out'
+      }}
+      className="flex-1 flex flex-col p-6 w-full h-full min-h-0 justify-between max-w-2xl bg-gradient-to-br from-cyber-purple via-cyber-dark to-[#030209]/95 rounded-3xl border border-neon-cyan/20 relative overflow-hidden select-none shadow-[0_0_40px_rgba(0,240,255,0.12)]"
+    >
       {/* 8K Starfield & mesh background */}
       <div className="absolute inset-0 bg-cyber-grid -z-20 pointer-events-none opacity-30 animate-grid-scroll" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(18,9,48,0.55)_0%,rgba(0,0,0,1)_100%)] pointer-events-none -z-10" />
