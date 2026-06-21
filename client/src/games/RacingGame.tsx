@@ -141,13 +141,16 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const relativeZ = worldZ - currentPosition;
     if (relativeZ <= 0) return null;
 
+    if (!segmentsList || segmentsList.length === 0) return null;
     const segIndex = Math.floor(worldZ / SEGMENT_LENGTH) % segmentsList.length;
     const segment = segmentsList[segIndex];
+    if (!segment) return null;
     
     const playerSegIndex = Math.floor(currentPosition / SEGMENT_LENGTH) % segmentsList.length;
     const playerSegment = segmentsList[playerSegIndex];
+    if (!playerSegment) return null;
 
-    const cameraDepth = 0.8;
+    const cameraDepth = 60;
     const scale = cameraDepth / relativeZ;
     
     const curveOffset = (segment.x - playerSegment.x) * 12.5; // scaling factor for bend curves
