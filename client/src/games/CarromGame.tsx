@@ -2082,7 +2082,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         </aside>
 
         {/* RIGHT AREA: Opponent avatar, Carrom Board Canvas, Bottom controls */}
-        <main className="flex-1 h-full p-4 flex flex-col items-center justify-center relative overflow-y-auto min-w-0">
+        <main className="flex-1 h-full p-4 flex flex-col items-center justify-center relative overflow-hidden min-w-0">
           
           {/* Opponent Profile HUD Banner (Centered above the canvas) */}
           <div className="w-full max-w-[min(400px,92vw,50vh)] mb-2.5 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg shrink-0">

@@ -21,14 +21,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full w-full overflow-x-hidden dark">
+    <html lang="en" className="h-screen w-screen overflow-hidden dark">
       <head>
         <link rel="icon" href="/favicon.ico" />
         <meta name="theme-color" content="#030209" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className="min-h-full w-full flex flex-col bg-cyber-black text-gray-100 antialiased relative selection:bg-neon-cyan selection:text-black overflow-x-hidden">
+      <body className="h-screen w-screen overflow-hidden flex flex-col bg-cyber-black text-gray-100 antialiased relative selection:bg-neon-cyan selection:text-black">
         {/* Background Grids */}
         <div className="fixed inset-0 cyber-grid -z-20 pointer-events-none" />
         <div className="fixed inset-0 cyber-grid-radial -z-10 pointer-events-none" />

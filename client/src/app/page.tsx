@@ -111,7 +111,7 @@ export default function Home() {
     <div className="flex-1 flex flex-col md:flex-row relative min-h-0 overflow-hidden w-full h-full">
       
       {/* Central Screen Arena */}
-      <main className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+      <main className={`flex-1 flex flex-col min-h-0 ${selectedGame ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         {selectedGame ? (
           <GameArea
             gameId={selectedGame}

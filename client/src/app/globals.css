@@ -274,7 +274,7 @@ body {
 
 /* Esports Cyber Arena perspective floor */
 .cyber-arena-floor {
-  position: absolute;
+  position: fixed;
   width: 200%;
   height: 120%;
   bottom: -40%;
