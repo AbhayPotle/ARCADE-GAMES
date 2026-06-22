@@ -187,6 +187,59 @@ class AudioSynth {
     this.playTone([600, 500, 650], [0.08, 0.08], 'sawtooth', 0.04);
   }
 
+  // Gear shift pop and clutch sound
+  public playGearShift() {
+    this.init();
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    
+    // 1. Mechanical clunk
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(160, now);
+    osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+
+    // 2. Exhaust Pop (white noise burst)
+    try {
+      const bufferSize = this.ctx.sampleRate * 0.06;
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 350;
+      
+      const noiseGain = this.ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.24, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
+      
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(this.ctx.destination);
+      noise.start(now);
+      noise.stop(now + 0.06);
+    } catch (e) {
+      // Fallback tone if buffer creation fails
+      this.playTone([240, 100], [0.06], 'sawtooth', 0.15);
+    }
+  }
+
+  // Nitro NOS engine sound sweep
+  public playNitro() {
+    this.playTone([500, 1500], [0.2], 'triangle', 0.07);
+  }
+
   // Runner jumps
   public playJump() {
     this.playTone([200, 600], [0.15], 'sine', 0.06);
