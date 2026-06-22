@@ -1361,7 +1361,14 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   // Scenery traffic drawing
   const drawPerspectiveTraffic = (ctx: CanvasRenderingContext2D, car: any, z: number) => {
     const targetZ = trackPosition + z;
-    const laneOffset = LANE_OFFSETS[car.lane] + car.wobble;
+    // Handle lane change animation interpolation
+    let currentLaneOffset = LANE_OFFSETS[car.lane];
+    if (car.isChangingLane && car.laneTarget !== undefined && car.laneChangeProgress !== undefined) {
+      const fromOffset = LANE_OFFSETS[car.lane];
+      const toOffset = LANE_OFFSETS[car.laneTarget];
+      currentLaneOffset = fromOffset + (toOffset - fromOffset) * car.laneChangeProgress;
+    }
+    const laneOffset = currentLaneOffset + car.wobble;
     const proj = project3D(laneOffset, targetZ, 0, trackPosition, playerX, roadSegments);
     if (!proj || proj.scale < 0.01) return;
 
@@ -1369,45 +1376,161 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.translate(proj.x, proj.y);
     ctx.scale(proj.scale, proj.scale);
 
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fillRect(-35, 10, 70, 15);
+    const model = car.model !== undefined ? car.model : (car.id % 3);
 
-    // Chassis body shapes
-    ctx.fillStyle = car.color;
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(-34, -20, 68, 32, 6) : ctx.rect(-34, -20, 68, 32);
-    ctx.fill();
+    // Blinking lane change indicators
+    const isBlinkingOn = Math.floor(Date.now() / 200) % 2 === 0;
 
-    // Black cockpit glass
-    ctx.fillStyle = '#111111';
-    ctx.beginPath();
-    ctx.moveTo(-24, -20);
-    ctx.lineTo(-18, -42);
-    ctx.lineTo(18, -42);
-    ctx.lineTo(24, -20);
-    ctx.closePath();
-    ctx.fill();
+    if (model === 0) {
+      // SEDAN COMMUTER
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(-35, 10, 70, 15);
 
-    // Windshield reflection
-    ctx.fillStyle = '#80deea';
-    ctx.beginPath();
-    ctx.moveTo(-20, -22);
-    ctx.lineTo(-15, -39);
-    ctx.lineTo(15, -39);
-    ctx.lineTo(20, -22);
-    ctx.closePath();
-    ctx.fill();
+      // Chassis Body
+      ctx.fillStyle = car.color;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(-32, -18, 64, 28, 6) : ctx.rect(-32, -18, 64, 28);
+      ctx.fill();
 
-    // Tail light bars
-    ctx.fillStyle = '#ef5350';
-    ctx.fillRect(-31, -8, 10, 6);
-    ctx.fillRect(21, -8, 10, 6);
+      // Cockpit Glass
+      ctx.fillStyle = '#111111';
+      ctx.beginPath();
+      ctx.moveTo(-22, -18);
+      ctx.lineTo(-16, -38);
+      ctx.lineTo(16, -38);
+      ctx.lineTo(22, -18);
+      ctx.closePath();
+      ctx.fill();
 
-    // Wheels
-    ctx.fillStyle = '#1c1c1c';
-    ctx.fillRect(-31, 8, 10, 15);
-    ctx.fillRect(21, 8, 10, 15);
+      // Glass shine highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.beginPath();
+      ctx.moveTo(-10, -36);
+      ctx.lineTo(4, -36);
+      ctx.lineTo(-2, -20);
+      ctx.lineTo(-16, -20);
+      ctx.closePath();
+      ctx.fill();
+
+      // Rear tail lights
+      ctx.fillStyle = '#e53935';
+      ctx.fillRect(-29, -8, 8, 5);
+      ctx.fillRect(21, -8, 8, 5);
+
+      // Wheels
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(-28, 8, 8, 14);
+      ctx.fillRect(20, 8, 8, 14);
+
+    } else if (model === 1) {
+      // SUPERCAR SPORT
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(-38, 10, 76, 15);
+
+      // Spoiler Wing
+      ctx.fillStyle = '#111111';
+      ctx.fillRect(-38, -42, 76, 4);
+      ctx.fillRect(-32, -38, 3, 4);
+      ctx.fillRect(29, -38, 3, 4);
+
+      // Wide Chassis
+      ctx.fillStyle = car.color;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(-36, -16, 72, 26, 4) : ctx.rect(-36, -16, 72, 26);
+      ctx.fill();
+
+      // Center Racing Stripes
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-6, -16, 4, 26);
+      ctx.fillRect(2, -16, 4, 26);
+
+      // Cockpit
+      ctx.fillStyle = '#1c1c1c';
+      ctx.beginPath();
+      ctx.moveTo(-25, -16);
+      ctx.lineTo(-18, -36);
+      ctx.lineTo(18, -36);
+      ctx.lineTo(25, -16);
+      ctx.closePath();
+      ctx.fill();
+
+      // Taillight bars
+      ctx.fillStyle = '#ff1744';
+      ctx.fillRect(-33, -8, 12, 4);
+      ctx.fillRect(21, -8, 12, 4);
+
+      // Chrome exhausts
+      ctx.fillStyle = '#9e9e9e';
+      ctx.fillRect(-18, 8, 4, 4);
+      ctx.fillRect(14, 8, 4, 4);
+
+      // Tires
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(-33, 8, 9, 14);
+      ctx.fillRect(24, 8, 9, 14);
+
+    } else {
+      // CARGO TRUCK / SEMI-TRUCK
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-42, 10, 84, 18);
+
+      // Heavy Cargo Box
+      ctx.fillStyle = '#eceff1'; // Light grey/white box
+      ctx.strokeStyle = '#b0bec5';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(-38, -62, 76, 52, 4) : ctx.rect(-38, -62, 76, 52);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Rear door locking bars
+      ctx.fillStyle = '#78909c';
+      ctx.fillRect(-15, -60, 2, 48);
+      ctx.fillRect(13, -60, 2, 48);
+
+      // Red/Yellow chevron decals
+      ctx.fillStyle = '#d32f2f';
+      ctx.fillRect(-35, -20, 25, 6);
+      ctx.fillRect(10, -20, 25, 6);
+
+      // Cab chassis
+      ctx.fillStyle = car.color;
+      ctx.fillRect(-40, -10, 80, 20);
+
+      // Safety beacon orange markers (blinking)
+      ctx.fillStyle = isBlinkingOn ? '#ffb300' : '#ff6f00';
+      ctx.beginPath();
+      ctx.arc(-20, -64, 3, 0, Math.PI * 2);
+      ctx.arc(0, -64, 3, 0, Math.PI * 2);
+      ctx.arc(20, -64, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Large mudflaps
+      ctx.fillStyle = '#111111';
+      ctx.fillRect(-36, 10, 16, 8);
+      ctx.fillRect(20, 10, 16, 8);
+    }
+
+    // Draw turning indicator if signaling
+    if (car.blinkSignal && isBlinkingOn) {
+      ctx.fillStyle = '#ffaa00';
+      ctx.shadowColor = '#ffaa00';
+      ctx.shadowBlur = 10;
+      if (car.blinkSignal === 'left') {
+        ctx.beginPath();
+        ctx.arc(-30, -5, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(30, -5, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+    }
 
     ctx.restore();
   };
@@ -1422,15 +1545,34 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.translate(proj.x, proj.y);
     ctx.scale(proj.scale, proj.scale);
 
+    // 1. Neon Green Rival underglow
+    const glowGrad = ctx.createRadialGradient(0, 15, 2, 0, 15, 38);
+    glowGrad.addColorStop(0, 'rgba(0, 255, 66, 0.7)');
+    glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.ellipse(0, 15, 45, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fillRect(-35, 10, 70, 15);
+
+    // Spoiler Wing
+    ctx.fillStyle = '#151515';
+    ctx.fillRect(-36, -46, 72, 4);
+    ctx.fillRect(-30, -42, 3, 4);
+    ctx.fillRect(27, -42, 3, 4);
 
     // Body (Red sports hatchback)
     ctx.fillStyle = '#d32f2f';
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(-34, -20, 68, 32, 6) : ctx.rect(-34, -20, 68, 32);
     ctx.fill();
+
+    // Racing Stripes
+    ctx.fillStyle = '#111111';
+    ctx.fillRect(-6, -20, 12, 32);
 
     // Cabin
     ctx.fillStyle = '#1e1e1e';
