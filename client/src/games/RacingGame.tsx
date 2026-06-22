@@ -1505,23 +1505,68 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     if (keys['arrowright'] || keys['d']) rollAngle = 0.045;
     ctx.rotate(rollAngle);
 
-    // Shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    // 1. Headlight cones projecting forward on the road shoulder/lanes
+    if (weather !== 'clear') {
+      ctx.save();
+      // Draw left light beam
+      let leftGrad = ctx.createLinearGradient(-24, 0, -60, -115);
+      leftGrad.addColorStop(0, 'rgba(255, 255, 230, 0.45)');
+      leftGrad.addColorStop(1, 'rgba(255, 255, 230, 0.0)');
+      ctx.fillStyle = leftGrad;
+      ctx.beginPath();
+      ctx.moveTo(-26, 5);
+      ctx.lineTo(-75, -115);
+      ctx.lineTo(-5, -115);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw right light beam
+      let rightGrad = ctx.createLinearGradient(24, 0, 60, -115);
+      rightGrad.addColorStop(0, 'rgba(255, 255, 230, 0.45)');
+      rightGrad.addColorStop(1, 'rgba(255, 255, 230, 0.0)');
+      ctx.fillStyle = rightGrad;
+      ctx.beginPath();
+      ctx.moveTo(26, 5);
+      ctx.lineTo(5, -115);
+      ctx.lineTo(75, -115);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 2. Underglow Neon Glow
+    const glowColor = isNitroActive ? 'rgba(0, 240, 255, 0.75)' : 'rgba(245, 158, 11, 0.55)';
+    const glowGrad = ctx.createRadialGradient(0, 15, 2, 0, 15, 42);
+    glowGrad.addColorStop(0, glowColor);
+    glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.ellipse(0, 15, 45, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 3. Shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
     ctx.fillRect(-28, 22, 56, 12);
 
-    // 1. Black tires
-    ctx.fillStyle = '#1c1c1c';
+    // 4. Black tires
+    ctx.fillStyle = '#111111';
     ctx.fillRect(-32, 10, 12, 22);
     ctx.fillRect(20, 10, 12, 22);
 
-    // 2. Yellow hatchback body
+    // 5. Spoiler Wing (Black Carbon)
+    ctx.fillStyle = '#171717';
+    ctx.fillRect(-35, -47, 70, 5); // Main wing
+    ctx.fillRect(-29, -43, 3, 5);  // Supports
+    ctx.fillRect(26, -43, 3, 5);
+
+    // 6. Yellow hatchback body
     ctx.fillStyle = '#ffcc00';
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(-34, -20, 68, 32, 8) : ctx.rect(-34, -20, 68, 32);
     ctx.fill();
 
     // Specular body reflection highlight (top chassis curves)
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.fillRect(-30, -18, 60, 4);
 
     // Cabin shell
@@ -1564,7 +1609,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.closePath();
     ctx.fill();
 
-    // 3. Taillights (glow bright neon red when braking)
+    // 7. Taillights (glow bright neon red when braking)
     const isBraking = keys['arrowdown'] || keys['s'];
     ctx.save();
     if (isBraking) {
@@ -1580,7 +1625,26 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.fill();
     ctx.restore();
 
-    // 4. White License plate
+    // 8. Turn Signals (Blinkers)
+    const isBlinkOn = Math.floor(Date.now() / 250) % 2 === 0;
+    if (isBlinkOn) {
+      ctx.fillStyle = '#ff9100';
+      ctx.shadowColor = '#ff9100';
+      ctx.shadowBlur = 10;
+      if (keys['arrowleft'] || keys['a']) {
+        ctx.beginPath();
+        ctx.arc(-31, -5, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (keys['arrowright'] || keys['d']) {
+        ctx.beginPath();
+        ctx.arc(31, -5, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0; // Reset
+    }
+
+    // 9. White License plate
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(-15, 2, 30, 10);
     ctx.strokeStyle = '#333333';
@@ -1592,13 +1656,40 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.textAlign = 'center';
     ctx.fillText('MR RACER', 0, 10);
 
-    // 5. Exhaust pipes
+    // 10. Exhaust pipes & Flames
     ctx.fillStyle = '#444444';
     ctx.fillRect(-22, 10, 6, 4);
     ctx.fillRect(16, 10, 6, 4);
     ctx.fillStyle = '#888888';
     ctx.fillRect(-21, 11, 4, 2);
     ctx.fillRect(17, 11, 4, 2);
+
+    const drawFlame = (exX: number, exY: number, color1: string, color2: string, size: number) => {
+      ctx.save();
+      ctx.translate(exX, exY);
+      const flameGrad = ctx.createLinearGradient(0, 0, 0, size);
+      flameGrad.addColorStop(0, '#ffffff');
+      flameGrad.addColorStop(0.3, color1);
+      flameGrad.addColorStop(1, color2);
+      ctx.fillStyle = flameGrad;
+      ctx.beginPath();
+      ctx.moveTo(-4, 0);
+      ctx.quadraticCurveTo(0, size, 4, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    };
+
+    const gearShiftAge = Date.now() - lastGearShiftTime;
+    if (isNitroActive) {
+      const flameSize = 15 + Math.random() * 12;
+      drawFlame(-22, 12, '#00f0ff', 'rgba(0, 240, 255, 0)', flameSize);
+      drawFlame(16, 12, '#00f0ff', 'rgba(0, 240, 255, 0)', flameSize);
+    } else if (gearShiftAge < 180) {
+      const flameSize = 12 + Math.random() * 8;
+      drawFlame(-22, 12, '#ff6600', 'rgba(255, 102, 0, 0)', flameSize);
+      drawFlame(16, 12, '#ff6600', 'rgba(255, 102, 0, 0)', flameSize);
+    }
 
     ctx.restore();
   };
