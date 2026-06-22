@@ -140,6 +140,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   const conesRef = useRef<{ id: number; lane: number; z: number; hit: boolean; vx: number; vy: number; rx: number; ry: number }[]>([]);
   const oilSpillsRef = useRef<{ id: number; lane: number; z: number }[]>([]);
   const skidmarksRef = useRef<{ z: number; laneOffset: number }[]>([]);
+  const cameraDepthRef = useRef<number>(60);
 
   // Obstacles & Coins lists
   const trafficRef = useRef<TrafficCar[]>([
@@ -168,7 +169,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const playerSegment = segmentsList[playerSegIndex];
     if (!playerSegment) return null;
 
-    const cameraDepth = 60;
+    const cameraDepth = cameraDepthRef.current;
     const scale = cameraDepth / relativeZ;
     
     const curveOffset = (segment.x - playerSegment.x) * 12.5; // scaling factor for bend curves
