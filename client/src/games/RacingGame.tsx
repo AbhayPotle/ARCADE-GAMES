@@ -810,7 +810,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
             car.blinkSignal = nextLane > car.lane ? 'right' : 'left';
           }
 
-          if (car.isChangingLane) {
+          if (car.isChangingLane && car.laneTarget !== undefined && car.laneChangeProgress !== undefined) {
             car.laneChangeProgress = Math.min(1.0, car.laneChangeProgress + dt * 0.8);
             if (car.laneChangeProgress >= 1.0) {
               car.lane = car.laneTarget;
@@ -821,7 +821,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
           // Respawn traffic loop
           if (car.z <= 0.8) {
-            const currentLaneOffsetVal = car.isChangingLane ? (LANE_OFFSETS[car.lane] + (LANE_OFFSETS[car.laneTarget] - LANE_OFFSETS[car.lane]) * car.laneChangeProgress) : LANE_OFFSETS[car.lane];
+            const currentLaneOffsetVal = (car.isChangingLane && car.laneTarget !== undefined && car.laneChangeProgress !== undefined)
+              ? (LANE_OFFSETS[car.lane] + (LANE_OFFSETS[car.laneTarget] - LANE_OFFSETS[car.lane]) * car.laneChangeProgress)
+              : LANE_OFFSETS[car.lane];
             const lanePos = currentLaneOffsetVal + car.wobble;
             
             if (Math.abs(lanePos - currentX) < 0.44) {
