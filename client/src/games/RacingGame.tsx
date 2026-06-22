@@ -123,6 +123,24 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   const [trees, setTrees] = useState<{ lane: number; z: number; assetIndex: number; scale: number }[]>([]);
   const [leaves, setLeaves] = useState<LeafDebris[]>([]);
 
+  // NEW Gameplay & Visual states
+  const [isNitroActive, setIsNitroActive] = useState(false);
+  const [nitroRemaining, setNitroRemaining] = useState(100);
+  const [rpm, setRpm] = useState(1000);
+  const [gear, setGear] = useState(1);
+  const [gearMode, setGearMode] = useState<'auto' | 'manual'>('auto');
+  const [lastGearShiftTime, setLastGearShiftTime] = useState(0);
+  const [showShiftPrompt, setShowShiftPrompt] = useState(false);
+  const [shakeIntensity, setShakeIntensity] = useState(0);
+  const [spinOutTime, setSpinOutTime] = useState(0); // slide control
+
+  // Refs for static objects and high-frequency updates
+  const billboardsRef = useRef<{ side: number; z: number; text: string; color: string }[]>([]);
+  const streetlightsRef = useRef<{ side: number; z: number }[]>([]);
+  const conesRef = useRef<{ id: number; lane: number; z: number; hit: boolean; vx: number; vy: number; rx: number; ry: number }[]>([]);
+  const oilSpillsRef = useRef<{ id: number; lane: number; z: number }[]>([]);
+  const skidmarksRef = useRef<{ z: number; laneOffset: number }[]>([]);
+
   // Obstacles & Coins lists
   const trafficRef = useRef<TrafficCar[]>([
     { id: 1, lane: 0, z: 120, speed: 45, color: '#f44336', wobble: 0 },
@@ -313,6 +331,51 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
     setLeaves(leafList);
 
+    // 5. Generate Billboards
+    const billboardAds = ['ARCADE', 'VELOCITY', 'NOS BOOST', 'NEON', 'MR RACER', '8K ULTRA', 'CYBER'];
+    const billList = [];
+    for (let i = 1; i < 15; i++) {
+      const side = i % 2 === 0 ? 1 : -1;
+      billList.push({
+        side: side * 1.5,
+        z: i * 100 * SEGMENT_LENGTH,
+        text: billboardAds[i % billboardAds.length],
+        color: i % 2 === 0 ? '#ff007f' : '#00f0ff'
+      });
+    }
+    billboardsRef.current = billList;
+
+    // 6. Generate Streetlights
+    const lightList = [];
+    for (let z = 50 * SEGMENT_LENGTH; z < 1500 * SEGMENT_LENGTH; z += 60 * SEGMENT_LENGTH) {
+      lightList.push({ side: -1.4, z });
+      lightList.push({ side: 1.4, z });
+    }
+    streetlightsRef.current = lightList;
+
+    // 7. Generate Physical Cones
+    const coneList = [];
+    for (let i = 0; i < 25; i++) {
+      const z = (60 + i * 55) * SEGMENT_LENGTH;
+      const lane = Math.floor(Math.random() * 3);
+      // Spawn a cluster of 2 cones
+      coneList.push({ id: i * 2, lane, z, hit: false, vx: 0, vy: 0, rx: 0, ry: 0 });
+      coneList.push({ id: i * 2 + 1, lane, z: z + 8, hit: false, vx: 0, vy: 0, rx: 0, ry: 0 });
+    }
+    conesRef.current = coneList;
+
+    // 8. Generate Oil Spills
+    const spillList = [];
+    for (let i = 0; i < 20; i++) {
+      const z = (90 + i * 70) * SEGMENT_LENGTH;
+      const lane = Math.floor(Math.random() * 3);
+      spillList.push({ id: i, lane, z });
+    }
+    oilSpillsRef.current = spillList;
+
+    // Reset skidmarks
+    skidmarksRef.current = [];
+
     // 4. Generate raindrops
     const rain: RainDrop[] = [];
     for (let i = 0; i < 40; i++) {
@@ -346,6 +409,35 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const handleKeyDown = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       setKeys(prev => ({ ...prev, [k]: true }));
+
+      // Manual Gear shift controls
+      if (k === 'e') {
+        setGearMode('manual');
+        setGear(prev => {
+          if (prev < 6) {
+            audioSynth.playGearShift();
+            setLastGearShiftTime(Date.now());
+            return prev + 1;
+          }
+          return prev;
+        });
+      } else if (k === 'q') {
+        setGearMode('manual');
+        setGear(prev => {
+          if (prev > 1) {
+            audioSynth.playGearShift();
+            setLastGearShiftTime(Date.now());
+            return prev - 1;
+          }
+          return prev;
+        });
+      } else if (k === 'm') {
+        setGearMode(prev => {
+          const next = prev === 'auto' ? 'manual' : 'auto';
+          audioSynth.playClick();
+          return next;
+        });
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
