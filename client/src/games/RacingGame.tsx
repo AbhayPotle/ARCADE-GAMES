@@ -916,6 +916,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   const drawScene = (ctx: CanvasRenderingContext2D) => {
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.save();
+
+    // Screen shake on Nitro boost
+    if (isNitroActive) {
+      const shake = 3.5;
+      ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    }
 
     // 1. Scrolling background layers (hills, sky, sun)
     drawScrollingBackground(ctx);
@@ -1184,6 +1191,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
       }
     }
+    ctx.restore();
   };
 
   // Background drawing helper
