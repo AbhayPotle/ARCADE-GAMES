@@ -32,6 +32,11 @@ interface TrafficCar {
   speed: number;   // m/s
   color: string;
   wobble: number;  // slight steering offset
+  model?: number;
+  isChangingLane?: boolean;
+  laneTarget?: number;
+  laneChangeProgress?: number;
+  blinkSignal?: 'left' | 'right' | null;
 }
 
 interface Coin {
