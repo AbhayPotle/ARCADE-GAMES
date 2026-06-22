@@ -2012,15 +2012,6 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   // Convert speed to KPH
   const speedKph = Math.round(speed * 1.6);
-  
-  // Dynamic automated gear shifts based on KPH
-  let gear = 1;
-  if (speedKph < 30) gear = 1;
-  else if (speedKph < 60) gear = 2;
-  else if (speedKph < 100) gear = 3;
-  else if (speedKph < 140) gear = 4;
-  else if (speedKph < 180) gear = 5;
-  else gear = 6;
 
   // Progress to finish line (2.0 KM)
   const progressPercent = Math.min(100, Math.round((distanceKm / 2.00) * 100));
