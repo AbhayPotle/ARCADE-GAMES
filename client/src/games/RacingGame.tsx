@@ -2099,6 +2099,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
             className="border-2 border-amber-500/20 rounded-2xl bg-[#030209] shadow-[0_0_40px_rgba(245,158,11,0.15)] w-full max-w-[640px] relative z-10"
           />
 
+          {/* Flashing Shift up Alert */}
+          {showShiftPrompt && (
+            <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30 bg-red-600/95 text-white font-orbitron px-4 py-1.5 rounded-full border border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.85)] animate-bounce text-[10px] font-black tracking-widest leading-none">
+              ⚡ SHIFT UP ⚡
+            </div>
+          )}
+
           {/* Interactive Screen Glare overlay */}
           <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(7,14,14,0)_50%,rgba(245,158,11,0.015)_50%)] bg-[length:100%_4px] pointer-events-none z-20 rounded-2xl border border-white/5 shadow-[inset_0_0_30px_rgba(0,0,0,0.85)]" />
           
@@ -2107,7 +2114,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         </div>
 
         {/* HUD SIDE telemetry cluster dashboard */}
-        <div className="w-full md:w-56 bg-gradient-to-br from-[#121c1f]/80 to-[#1e1227]/80 rounded-2xl p-4 flex flex-col h-[280px] md:h-[400px] font-mono text-[9px] border border-amber-500/20 justify-between backdrop-blur-xl shadow-2xl z-10 text-gray-500 shrink-0">
+        <div className="w-full md:w-56 bg-gradient-to-br from-[#121c1f]/80 to-[#1e1227]/80 rounded-2xl p-4 flex flex-col h-[320px] md:h-[400px] font-mono text-[9px] border border-amber-500/20 justify-between backdrop-blur-xl shadow-2xl z-10 text-gray-500 shrink-0">
           <div className="space-y-4">
             <div>
               <span className="text-[8px] text-amber-500 font-bold uppercase tracking-widest">// TELEMETRY</span>
@@ -2128,6 +2135,56 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
                     ⏱️ {timerRemaining.toFixed(2)}s
                   </span>
                 </div>
+              </div>
+            </div>
+
+            {/* RPM & NITRO GAUGES */}
+            <div className="space-y-3 border-t border-white/5 pt-2">
+              <div>
+                <div className="flex justify-between text-[8px] text-gray-400 font-bold">
+                  <span>ENGINE RPM:</span>
+                  <span className={`font-orbitron ${rpm > 7200 ? 'text-red-500 animate-pulse font-black' : 'text-amber-400'}`}>
+                    {rpm} {rpm > 7200 ? 'REDLINE!' : ''}
+                  </span>
+                </div>
+                <div className="w-full bg-white/5 h-2 rounded-full mt-1 border border-white/5 overflow-hidden flex">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-75 ${
+                      rpm > 7200 ? 'bg-gradient-to-r from-red-600 to-red-400 animate-pulse' : rpm > 5500 ? 'bg-gradient-to-r from-yellow-500 to-yellow-400' : 'bg-gradient-to-r from-emerald-500 to-emerald-400'
+                    }`}
+                    style={{ width: `${Math.min(100, (rpm / 8200) * 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[8px] text-gray-400 font-bold">
+                  <span>NITRO BOOST (NOS):</span>
+                  <span className="text-cyan-400 font-orbitron">{Math.round(nitroRemaining)}%</span>
+                </div>
+                <div className="w-full bg-white/5 h-2 rounded-full mt-1 border border-white/5 overflow-hidden flex">
+                  <div 
+                    className="h-full bg-gradient-to-r from-cyan-600 to-cyan-300 rounded-full shadow-[0_0_6px_rgba(6,182,212,0.5)] transition-all"
+                    style={{ width: `${nitroRemaining}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center border-t border-white/5 pt-2">
+                <span className="text-[8px] text-gray-400 font-bold">GEARBOX:</span>
+                <button 
+                  onClick={() => {
+                    setGearMode(prev => prev === 'auto' ? 'manual' : 'auto');
+                    audioSynth.playClick();
+                  }}
+                  className={`px-2 py-0.5 rounded text-[8px] font-bold font-orbitron transition-all border ${
+                    gearMode === 'auto' 
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' 
+                      : 'bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20 hover:bg-neon-magenta/20'
+                  }`}
+                >
+                  {gearMode.toUpperCase()} [M]
+                </button>
               </div>
             </div>
 
@@ -2152,8 +2209,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
             </div>
           </div>
 
-          <div className="p-3 bg-black/40 rounded-xl border border-white/5 text-[8px] text-gray-500 leading-normal">
-            // Controls: Steer Left/Right [A/D] or [Arrows] | Accelerate [W/Up] | Brake [S/Down]
+          <div className="p-3 bg-black/40 rounded-xl border border-white/5 text-[7px] text-gray-500 leading-normal">
+            Steer: [A/D] or [Arrows] | Accel: [W/Up] | Brake: [S/Down] | Nitro: Hold [Space] / [Shift] | Gear Shift: [Q] / [E] | Toggle Gearbox: [M]
           </div>
         </div>
       </div>
