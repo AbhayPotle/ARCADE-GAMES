@@ -828,6 +828,33 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       ctx.closePath();
       ctx.fill();
 
+      // Draw skidmarks if active on this segment
+      const segmentSkidmarks = skidmarksRef.current.filter(skid => Math.abs(skid.z - segment.z) < SEGMENT_LENGTH * 0.5);
+      segmentSkidmarks.forEach(skid => {
+        ctx.fillStyle = 'rgba(15, 15, 15, 0.7)';
+        const skidX = x1 + (skid.laneOffset * w1 / 2);
+        ctx.fillRect(skidX - w1 * 0.08 - 2, y1 - 2, 4, 3);
+        ctx.fillRect(skidX + w1 * 0.08 - 2, y1 - 2, 4, 3);
+      });
+
+      // Draw oil spills flat on asphalt
+      const spill = oilSpillsRef.current.find(s => Math.abs(s.z - segment.z) < SEGMENT_LENGTH * 0.5);
+      if (spill) {
+        ctx.fillStyle = 'rgba(25, 20, 10, 0.9)'; // Dark oil puddle
+        ctx.beginPath();
+        const spillX = x1 + (LANE_OFFSETS[spill.lane] * w1 / 2);
+        ctx.ellipse(spillX, y1, w1 * 0.12, 6 * p1.scale, 0, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Oil rainbow sheen warning rings
+        ctx.strokeStyle = 'rgba(255, 100, 200, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(spillX, y1, w1 * 0.10, 4 * p1.scale, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
       // Dashed lane dividers
       if (segment.color.lane) {
         ctx.fillStyle = segment.color.lane;
@@ -851,6 +878,34 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         ctx.lineTo(x1 + w1 / 6 + d1 / 2, y1);
         ctx.closePath();
         ctx.fill();
+      }
+
+      // Draw 3D Guardrails on outer curb edges
+      ctx.fillStyle = segment.index % 2 === 0 ? '#7f8c8d' : '#95a5a6'; // Alternating metallic grey
+      
+      // Left Guardrail plate
+      ctx.beginPath();
+      ctx.moveTo(x1 - w1 / 2 - rum1, y1);
+      ctx.lineTo(x1 - w1 / 2 - rum1, y1 - 12 * p1.scale);
+      ctx.lineTo(x2 - w2 / 2 - rum2, y2 - 12 * p2.scale);
+      ctx.lineTo(x2 - w2 / 2 - rum2, y2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Right Guardrail plate
+      ctx.beginPath();
+      ctx.moveTo(x1 + w1 / 2 + rum1, y1);
+      ctx.lineTo(x1 + w1 / 2 + rum1, y1 - 12 * p1.scale);
+      ctx.lineTo(x2 + w2 / 2 + rum2, y2 - 12 * p2.scale);
+      ctx.lineTo(x2 + w2 / 2 + rum2, y2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Red/white reflector strips on guardrails
+      if (segment.index % 8 === 0) {
+        ctx.fillStyle = '#ff3300';
+        ctx.fillRect(x1 - w1 / 2 - rum1 + 1, y1 - 10 * p1.scale, 2 * p1.scale, 4 * p1.scale);
+        ctx.fillRect(x1 + w1 / 2 + rum1 - 3, y1 - 10 * p1.scale, 2 * p1.scale, 4 * p1.scale);
       }
 
       maxy = Math.min(maxy, p1.y); // Update occlusion boundary
