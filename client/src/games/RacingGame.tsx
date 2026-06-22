@@ -960,6 +960,27 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.fill();
     ctx.restore();
 
+    // Neon Cyberpunk City Skyline Parallax
+    ctx.fillStyle = '#130c2c';
+    const cityX = (CANVAS_WIDTH / 2 - playerX * 4) * 0.4;
+    for (let i = 0; i < 15; i++) {
+      const w = 45 + (i * 7) % 30;
+      const h = 50 + (i * 13) % 45;
+      const cx = (i * 55 + cityX) % (CANVAS_WIDTH + w) - w;
+      
+      ctx.fillRect(cx, HORIZON - h, w, h);
+
+      // Window dots
+      ctx.fillStyle = i % 2 === 0 ? '#00f0ff' : '#ff007f';
+      for (let wx = cx + 5; wx < cx + w - 5; wx += 10) {
+        for (let wy = HORIZON - h + 8; wy < HORIZON - 5; wy += 12) {
+          if ((wx + wy) % 3 === 0) {
+            ctx.fillRect(wx, wy, 2, 2);
+          }
+        }
+      }
+    }
+
     // Mountains (two layers)
     ctx.fillStyle = '#0f051c'; // Dark mountain front
     ctx.beginPath();
