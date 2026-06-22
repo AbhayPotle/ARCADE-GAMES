@@ -943,6 +943,30 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
     });
 
+    billboardsRef.current.forEach(bill => {
+      let relZ = bill.z - trackPosition;
+      if (relZ < 0) relZ += 1500 * SEGMENT_LENGTH;
+      if (relZ > 0 && relZ < maxViewDist) {
+        drawQueue.push({ type: 'billboard' as any, obj: bill, z: relZ });
+      }
+    });
+
+    streetlightsRef.current.forEach(light => {
+      let relZ = light.z - trackPosition;
+      if (relZ < 0) relZ += 1500 * SEGMENT_LENGTH;
+      if (relZ > 0 && relZ < maxViewDist) {
+        drawQueue.push({ type: 'streetlight' as any, obj: light, z: relZ });
+      }
+    });
+
+    conesRef.current.forEach(cone => {
+      let relZ = cone.z - trackPosition;
+      if (relZ < 0) relZ += 1500 * SEGMENT_LENGTH;
+      if (relZ > 0 && relZ < maxViewDist) {
+        drawQueue.push({ type: 'cone' as any, obj: cone, z: relZ });
+      }
+    });
+
     // Sort objects back-to-front (descending distance)
     drawQueue.sort((a, b) => b.z - a.z);
 
@@ -956,6 +980,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         drawPerspectiveCoin(ctx, item.obj, item.z);
       } else if (item.type === 'traffic') {
         drawPerspectiveTraffic(ctx, item.obj, item.z);
+      } else if (item.type === 'billboard' as any) {
+        drawPerspectiveBillboard(ctx, item.obj, item.z);
+      } else if (item.type === 'streetlight' as any) {
+        drawPerspectiveStreetlight(ctx, item.obj, item.z);
+      } else if (item.type === 'cone' as any) {
+        drawPerspectiveCone(ctx, item.obj, item.z);
       }
     });
 
@@ -1113,6 +1143,160 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       ctx.arc(10, -25, 16, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    ctx.restore();
+  };
+
+  // Billboard drawing in perspective
+  const drawPerspectiveBillboard = (ctx: CanvasRenderingContext2D, bill: any, z: number) => {
+    const targetZ = trackPosition + z;
+    const proj = project3D(bill.side, targetZ, 0, trackPosition, playerX, roadSegments);
+    if (!proj || proj.scale < 0.01) return;
+
+    ctx.save();
+    ctx.translate(proj.x, proj.y);
+    ctx.scale(proj.scale, proj.scale);
+
+    const w = 110;
+    const h = 50;
+
+    // 1. Metal support pole
+    ctx.fillStyle = '#4b5563';
+    ctx.fillRect(-4, -h - 40, 8, 40);
+    ctx.fillStyle = '#1f2937';
+    ctx.fillRect(-4, -h - 40, 3, 40);
+
+    // Concrete base
+    ctx.fillStyle = '#9ca3af';
+    ctx.fillRect(-10, -10, 20, 10);
+
+    // 2. Billboard screen border
+    ctx.fillStyle = '#111827';
+    ctx.strokeStyle = bill.color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(-w / 2, -h - 40 - h, w, h, 6) : ctx.rect(-w / 2, -h - 40 - h, w, h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Outer Neon Glow
+    ctx.shadowColor = bill.color;
+    ctx.shadowBlur = 15;
+    ctx.strokeStyle = bill.color;
+    ctx.stroke();
+
+    // 3. Ad Text
+    ctx.shadowBlur = 5;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'black 12px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(bill.text, 0, -h - 40 - h / 2);
+
+    ctx.restore();
+  };
+
+  // Streetlight drawing in perspective
+  const drawPerspectiveStreetlight = (ctx: CanvasRenderingContext2D, light: any, z: number) => {
+    const targetZ = trackPosition + z;
+    const proj = project3D(light.side, targetZ, 0, trackPosition, playerX, roadSegments);
+    if (!proj || proj.scale < 0.01) return;
+
+    ctx.save();
+    ctx.translate(proj.x, proj.y);
+    ctx.scale(proj.scale, proj.scale);
+
+    const h = 100;
+    const sideOffset = light.side > 0 ? -1 : 1; // curve arm towards road
+
+    // Pole
+    ctx.fillStyle = '#374151';
+    ctx.fillRect(-2, -h, 4, h);
+
+    // Lamp arm
+    ctx.beginPath();
+    ctx.moveTo(0, -h);
+    ctx.quadraticCurveTo(sideOffset * 15, -h - 10, sideOffset * 25, -h - 5);
+    ctx.strokeStyle = '#374151';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Lamp Head
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(sideOffset * 22, -h - 8, sideOffset * 8, 4);
+
+    // Light Bulb Glow
+    ctx.fillStyle = '#ffea00';
+    ctx.beginPath();
+    ctx.arc(sideOffset * 26, -h - 4, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Project light cone in storm/rain weather onto road
+    if (weather !== 'clear') {
+      const coneGrad = ctx.createLinearGradient(
+        sideOffset * 26,
+        -h - 4,
+        sideOffset * 26,
+        30
+      );
+      coneGrad.addColorStop(0, 'rgba(255, 234, 0, 0.4)');
+      coneGrad.addColorStop(1, 'rgba(255, 234, 0, 0.0)');
+
+      ctx.fillStyle = coneGrad;
+      ctx.beginPath();
+      ctx.moveTo(sideOffset * 26, -h - 4);
+      ctx.lineTo(sideOffset * 50, 30);
+      ctx.lineTo(sideOffset * 5, 30);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
+  };
+
+  // Construction cone drawing in perspective
+  const drawPerspectiveCone = (ctx: CanvasRenderingContext2D, cone: any, z: number) => {
+    const targetZ = trackPosition + z;
+    let projOffset = LANE_OFFSETS[cone.lane];
+    if (cone.hit) {
+      projOffset += cone.rx; // animate flying sideways
+    }
+    const proj = project3D(projOffset, targetZ, 0, trackPosition, playerX, roadSegments);
+    if (!proj || proj.scale < 0.015) return;
+
+    ctx.save();
+    const flyY = cone.hit ? cone.ry : 0;
+    ctx.translate(proj.x, proj.y + flyY * proj.scale);
+    ctx.scale(proj.scale, proj.scale);
+
+    if (cone.hit) {
+      ctx.rotate(cone.vx * 0.1);
+    }
+
+    // Cone base
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(-10, -2, 20, 3);
+
+    // Cone body (Orange)
+    ctx.fillStyle = '#ff6d00';
+    ctx.beginPath();
+    ctx.moveTo(-7, -2);
+    ctx.lineTo(-2, -22);
+    ctx.lineTo(2, -22);
+    ctx.lineTo(7, -2);
+    ctx.closePath();
+    ctx.fill();
+
+    // White reflective stripe
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(-5, -8);
+    ctx.lineTo(-3.5, -15);
+    ctx.lineTo(3.5, -15);
+    ctx.lineTo(5, -8);
+    ctx.closePath();
+    ctx.fill();
 
     ctx.restore();
   };
