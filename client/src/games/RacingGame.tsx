@@ -556,15 +556,108 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         // Player speed logic
         let currentSpeed = speed;
         const acceleration = 185;
+
+        // 1. Dynamic Auto Shifting / Gear & RPM systems
+        const speedKphVal = Math.round(currentSpeed * 1.6);
+        if (gearMode === 'auto') {
+          let nextGear = gear;
+          if (speedKphVal > 25 && gear === 1) nextGear = 2;
+          else if (speedKphVal > 55 && gear === 2) nextGear = 3;
+          else if (speedKphVal > 90 && gear === 3) nextGear = 4;
+          else if (speedKphVal > 130 && gear === 4) nextGear = 5;
+          else if (speedKphVal > 175 && gear === 5) nextGear = 6;
+          else if (speedKphVal < 20 && gear === 2) nextGear = 1;
+          else if (speedKphVal < 45 && gear === 3) nextGear = 2;
+          else if (speedKphVal < 80 && gear === 4) nextGear = 3;
+          else if (speedKphVal < 115 && gear === 5) nextGear = 4;
+          else if (speedKphVal < 155 && gear === 6) nextGear = 5;
+          
+          if (nextGear !== gear) {
+            audioSynth.playGearShift();
+            setLastGearShiftTime(Date.now());
+            setGear(nextGear);
+          }
+        }
+        
+        const getGearMaxSpeed = (g: number, totalMaxSpeed: number) => totalMaxSpeed * [0.15, 0.32, 0.52, 0.72, 0.88, 1.0][g - 1];
+        const getGearAccelMultiplier = (g: number) => [1.8, 1.4, 1.1, 0.85, 0.65, 0.45][g - 1];
+
+        const gearMax = getGearMaxSpeed(gear, maxSpeed);
+        const gearMin = gear === 1 ? 0 : getGearMaxSpeed(gear - 1, maxSpeed);
+
+        let currentRpm = 1000;
+        if (currentSpeed <= 0.1) {
+          currentRpm = (keys['arrowup'] || keys['w']) ? 2500 : 1000;
+        } else {
+          const gearRange = gearMax - gearMin;
+          const speedInGear = Math.max(0, currentSpeed - gearMin);
+          currentRpm = 1500 + Math.round((speedInGear / Math.max(1, gearRange)) * 6500);
+          if (currentRpm > 8200) currentRpm = 8200;
+        }
+        setRpm(currentRpm);
+        setShowShiftPrompt(currentRpm > 7200 && gear < 6);
+
+        // 2. Nitro NOS Boost
+        const isNosPressed = (keys[' '] || keys['shift']) && !gameOver;
+        let nitroActive = false;
+        let nitroLeft = nitroRemaining;
+        if (isNosPressed && nitroRemaining > 0 && currentSpeed > 5) {
+          nitroActive = true;
+          nitroLeft = Math.max(0, nitroRemaining - 25 * dt);
+          if (Math.floor(Date.now() / 150) % 2 === 0 && Math.random() > 0.6) {
+            audioSynth.playNitro();
+          }
+          if (Math.random() > 0.45) {
+            particlesRef.current.push({
+              id: Math.random() + Date.now(),
+              type: 'wind',
+              x: CANVAS_WIDTH / 2 + (Math.random() - 0.5) * 20,
+              y: CANVAS_HEIGHT - 55,
+              vx: (Math.random() - 0.5) * 30,
+              vy: 120 + Math.random() * 80,
+              color: 'rgba(0, 240, 255, 0.6)',
+              size: 2 + Math.random() * 3,
+              alpha: 0.8,
+              life: 0,
+              maxLife: 15
+            });
+          }
+        } else {
+          nitroLeft = Math.min(100, nitroRemaining + 8 * dt);
+        }
+        setIsNitroActive(nitroActive);
+        setNitroRemaining(nitroLeft);
+
+        // Dynamically adjust cameraDepthRef based on Nitro activation (tunnel FOV zoom)
+        cameraDepthRef.current = nitroActive ? Math.max(46, cameraDepthRef.current - 45 * dt) : Math.min(60, cameraDepthRef.current + 35 * dt);
+
+        // 3. Speed & Shift Clutch Dip
+        const gearShiftAge = Date.now() - lastGearShiftTime;
+        const isClutchDisengaged = gearShiftAge < 180;
+
+        const currentMaxSpeed = maxSpeed + (nitroActive ? 35 : 0);
+        const currentAccel = acceleration * getGearAccelMultiplier(gear) * (nitroActive ? 2.2 : 1.0);
+
         const accelerating = keys['arrowup'] || keys['w'];
         const braking = keys['arrowdown'] || keys['s'];
 
-        if (accelerating) {
-          currentSpeed += acceleration * dt;
-          if (currentSpeed > maxSpeed) currentSpeed = maxSpeed;
-          audioSynth.playEngine(currentSpeed / maxSpeed);
+        if (spinOutTime > 0) {
+          currentSpeed -= 150 * dt;
+          if (currentSpeed < 12) currentSpeed = 12;
+        } else if (isClutchDisengaged) {
+          currentSpeed -= 40 * dt;
+          if (currentSpeed < 0) currentSpeed = 0;
+        } else if (accelerating) {
+          currentSpeed += currentAccel * dt;
+          const limitSpeed = gearMode === 'manual' ? Math.min(currentMaxSpeed, gearMax) : currentMaxSpeed;
+          if (currentSpeed > limitSpeed) {
+            currentSpeed = limitSpeed;
+            if (gearMode === 'manual' && currentRpm >= 8150) {
+              currentSpeed -= 3.5; // Redline bouncing stutters
+            }
+          }
+          audioSynth.playEngine(currentSpeed / currentMaxSpeed);
 
-          // Exhaust emission puffs
           const carScreenX = CANVAS_WIDTH / 2;
           const carScreenY = CANVAS_HEIGHT - 65;
           emitExhaustParticle(carScreenX, carScreenY, false);
@@ -573,12 +666,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           if (currentSpeed < 0) currentSpeed = 0;
           emitExhaustParticle(CANVAS_WIDTH / 2, CANVAS_HEIGHT - 65, true);
         } else {
-          // Rolling resistance slowing
           currentSpeed -= 45 * dt;
           if (currentSpeed < 0) currentSpeed = 0;
         }
 
-        // Steer left & right
+        // 4. Steering, Slide & Skidmarks
         let currentX = playerX;
         let steerSpeed = 2.4;
         if (weather === 'rain') steerSpeed *= (0.76 / tractionFactor);
@@ -587,25 +679,43 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const isSteeringLeft = keys['arrowleft'] || keys['a'];
         const isSteeringRight = keys['arrowright'] || keys['d'];
 
-        if (isSteeringLeft) {
-          currentX -= steerSpeed * dt * Math.min(1.0, currentSpeed / 28);
-          if (currentSpeed > 55 && Math.random() > 0.45) emitDriftSmoke(CANVAS_WIDTH / 2 - 25, CANVAS_HEIGHT - 55);
-        }
-        if (isSteeringRight) {
-          currentX += steerSpeed * dt * Math.min(1.0, currentSpeed / 28);
-          if (currentSpeed > 55 && Math.random() > 0.45) emitDriftSmoke(CANVAS_WIDTH / 2 + 25, CANVAS_HEIGHT - 55);
+        if (spinOutTime > 0) {
+          const nextSpin = Math.max(0, spinOutTime - dt);
+          setSpinOutTime(nextSpin);
+          currentX += Math.sin(Date.now() / 80) * 0.09;
+          
+          if (Math.random() > 0.3) {
+            emitDriftSmoke(CANVAS_WIDTH / 2, CANVAS_HEIGHT - 55);
+            skidmarksRef.current.push({ z: trackPosition, laneOffset: playerX });
+            if (skidmarksRef.current.length > 350) skidmarksRef.current.shift();
+          }
+        } else {
+          if (isSteeringLeft) {
+            currentX -= steerSpeed * dt * Math.min(1.0, currentSpeed / 28);
+            if (currentSpeed > 35 && Math.random() > 0.45) {
+              emitDriftSmoke(CANVAS_WIDTH / 2 - 25, CANVAS_HEIGHT - 55);
+              skidmarksRef.current.push({ z: trackPosition, laneOffset: playerX });
+              if (skidmarksRef.current.length > 350) skidmarksRef.current.shift();
+            }
+          }
+          if (isSteeringRight) {
+            currentX += steerSpeed * dt * Math.min(1.0, currentSpeed / 28);
+            if (currentSpeed > 35 && Math.random() > 0.45) {
+              emitDriftSmoke(CANVAS_WIDTH / 2 + 25, CANVAS_HEIGHT - 55);
+              skidmarksRef.current.push({ z: trackPosition, laneOffset: playerX });
+              if (skidmarksRef.current.length > 350) skidmarksRef.current.shift();
+            }
+          }
         }
 
-        // Steering limits
         if (currentX < -2.2) currentX = -2.2;
         if (currentX > 2.2) currentX = 2.2;
 
-        // Apply wind drift forces
         if (weather === 'storm') {
           currentX += (windVector.dx * 0.0022 * stabilityFactor * dt);
         }
 
-        // Offroad grass deceleration
+        // 5. Offroad, Distance & Collision checking (Oil spills and construction cones)
         if (currentX < -1.05 || currentX > 1.05) {
           const offroadLimit = 36;
           if (currentSpeed > offroadLimit) {
@@ -614,7 +724,6 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           }
           if (currentSpeed > 10) {
             audioSynth.playError();
-            // Emit grass/mud chunks spraying
             if (Math.random() > 0.55) {
               particlesRef.current.push({
                 id: Math.random() + Date.now(),
@@ -623,7 +732,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
                 y: CANVAS_HEIGHT - 55,
                 vx: (Math.random() - 0.5) * 45,
                 vy: 20 + Math.random() * 50,
-                color: '#2e7d32', // green grass shreds
+                color: '#2e7d32',
                 size: 2 + Math.random() * 3,
                 alpha: 0.9,
                 life: 0,
@@ -633,7 +742,42 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           }
         }
 
-        // Accumulate distance
+        // Cones collision update
+        conesRef.current.forEach(cone => {
+          if (cone.hit) {
+            cone.rx += cone.vx * dt;
+            cone.ry += cone.vy * dt;
+            cone.vy += 450 * dt;
+          } else {
+            const relZ = cone.z - trackPosition;
+            if (Math.abs(relZ) < 8) {
+              const lanePos = LANE_OFFSETS[cone.lane];
+              if (Math.abs(lanePos - currentX) < 0.38) {
+                cone.hit = true;
+                cone.vx = (currentX - lanePos) * 16 + (Math.random() - 0.5) * 8;
+                cone.vy = -180;
+                audioSynth.playError();
+                currentSpeed = Math.max(10, currentSpeed - 15);
+              }
+            }
+          }
+        });
+
+        // Oil Spill collision check
+        if (spinOutTime <= 0) {
+          oilSpillsRef.current.forEach(spill => {
+            const relZ = spill.z - trackPosition;
+            if (Math.abs(relZ) < 8) {
+              const lanePos = LANE_OFFSETS[spill.lane];
+              if (Math.abs(lanePos - currentX) < 0.32) {
+                audioSynth.playDrift();
+                setSpinOutTime(1.2);
+              }
+            }
+          });
+        }
+
+        // Distance accumulator
         const newTrackPos = trackPosition + currentSpeed * dt;
         const newDistKm = distanceKm + (currentSpeed * dt) / 1000;
 
@@ -642,39 +786,60 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         setTrackPosition(newTrackPos);
         setDistanceKm(newDistKm);
 
-        // Win state reached
         if (newDistKm >= 2.00) {
           triggerGameOver(true);
         }
 
-        // Update Traffic positioning & collision borders
+        // 6. Traffic positioning & lane switching
         trafficRef.current.forEach(car => {
           car.z -= (currentSpeed - car.speed) * dt;
-          car.wobble = Math.sin(now / 800 + car.id) * 0.05; // slight weave behavior
+          car.wobble = Math.sin(now / 800 + car.id) * 0.05;
+
+          // Random lane switching decisions
+          if (!car.isChangingLane && Math.random() < 0.005) {
+            const possibleLanes = [0, 1, 2].filter(l => l !== car.lane);
+            const nextLane = possibleLanes[Math.floor(Math.random() * possibleLanes.length)];
+            car.isChangingLane = true;
+            car.laneTarget = nextLane;
+            car.laneChangeProgress = 0;
+            car.blinkSignal = nextLane > car.lane ? 'right' : 'left';
+          }
+
+          if (car.isChangingLane) {
+            car.laneChangeProgress = Math.min(1.0, car.laneChangeProgress + dt * 0.8);
+            if (car.laneChangeProgress >= 1.0) {
+              car.lane = car.laneTarget;
+              car.isChangingLane = false;
+              car.blinkSignal = null;
+            }
+          }
 
           // Respawn traffic loop
           if (car.z <= 0.8) {
-            const lanePos = LANE_OFFSETS[car.lane] + car.wobble;
+            const currentLaneOffsetVal = car.isChangingLane ? (LANE_OFFSETS[car.lane] + (LANE_OFFSETS[car.laneTarget] - LANE_OFFSETS[car.lane]) * car.laneChangeProgress) : LANE_OFFSETS[car.lane];
+            const lanePos = currentLaneOffsetVal + car.wobble;
+            
             if (Math.abs(lanePos - currentX) < 0.44) {
-              // Crash impact!
               audioSynth.playError();
               emitCrashBlast(CANVAS_WIDTH / 2, CANVAS_HEIGHT - 65);
               currentSpeed = Math.max(8, currentSpeed * 0.22);
               setSpeed(currentSpeed);
               car.z = 320 + Math.random() * 160;
               car.lane = Math.floor(Math.random() * 3);
+              car.isChangingLane = false;
+              car.blinkSignal = null;
             } else {
-              // Overtake success!
               setOvertakesCount(prev => prev + 1);
               setScore(prev => prev + 100);
               audioSynth.playCoin();
               
-              // Emit speed trails VFX
               triggerOvertakeTrails();
               
               car.z = 320 + Math.random() * 160;
               car.lane = Math.floor(Math.random() * 3);
               car.color = TRAFFIC_COLORS[Math.floor(Math.random() * TRAFFIC_COLORS.length)];
+              car.isChangingLane = false;
+              car.blinkSignal = null;
             }
           }
         });
