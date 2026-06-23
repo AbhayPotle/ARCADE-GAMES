@@ -803,7 +803,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
       </div>
 
       {/* COCKPIT HUD SCREEN: Main Typing Text Terminal with CRT screen scanline */}
-      <div className="flex-1 my-2 glass-panel rounded-2xl p-6 font-mono text-base tracking-wide leading-relaxed border border-amber-500/20 relative overflow-hidden bg-[#070e0e] min-h-[120px] select-none flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]">
+      <div className="flex-1 my-2 glass-panel rounded-2xl py-4 px-6 border border-amber-500/20 relative overflow-hidden bg-[#070e0e] min-h-[220px] select-none flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]">
         
         {/* Interactive 3D glass reflection glare */}
         <div 
@@ -821,11 +821,11 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
         <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-amber-500/50" />
         <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-amber-500/50" />
         <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-amber-500/50" />
-
+ 
         {/* Keystroke stardust particles canvas overlay */}
         <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-10 w-full h-full" />
-
-        <p className="text-[#e0e5ff]/60 font-sans z-20 text-center relative leading-loose">
+ 
+        <p className="text-[#e0e5ff]/80 font-mono text-2xl tracking-wide z-20 text-center relative leading-relaxed">
           <span className="text-[#00ff66] font-bold bg-[#00ff66]/5 border-b-2 border-[#00ff66] glow-text-mint font-mono transition-all duration-100">
             {textToType.substring(0, currentIndex)}
           </span>
