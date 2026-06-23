@@ -1078,9 +1078,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         ctx.fillRect(dotX, y1 - 2.5, dotW, 2.5);
       }
 
-      // 8K Glowing Neon Shoulder Line Stripes (Cyan on left, Magenta on right)
-      const leftShoulderColor = '#00f0ff';
-      const rightShoulderColor = '#ff007f';
+      // 8K Realistic Highway Shoulder Line Paint (Solid white on curbs)
+      const leftShoulderColor = '#ffffff';
+      const rightShoulderColor = '#e2e8f0';
       const stripeW1 = w1 * 0.014;
       const stripeW2 = w2 * 0.014;
 
@@ -1186,22 +1186,40 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         ctx.stroke();
       }
 
-      // Dashed lane dividers
+      // 8K Solid Double Yellow Centerline separating Lane 0 and Lane 1
+      const dy1 = w1 * 0.007;
+      const dy2 = w2 * 0.007;
+      const gap1 = w1 * 0.006;
+      const gap2 = w2 * 0.006;
+      const centerOffsetX1 = -w1 / 6;
+      const centerOffsetX2 = -w2 / 6;
+
+      ctx.fillStyle = '#eab308'; // Realistic yellow paint
+
+      // Left yellow line
+      ctx.beginPath();
+      ctx.moveTo(x1 + centerOffsetX1 - gap1 / 2 - dy1, y1);
+      ctx.lineTo(x2 + centerOffsetX2 - gap2 / 2 - dy2, y2);
+      ctx.lineTo(x2 + centerOffsetX2 - gap2 / 2, y2);
+      ctx.lineTo(x1 + centerOffsetX1 - gap1 / 2, y1);
+      ctx.closePath();
+      ctx.fill();
+
+      // Right yellow line
+      ctx.beginPath();
+      ctx.moveTo(x1 + centerOffsetX1 + gap1 / 2, y1);
+      ctx.lineTo(x2 + centerOffsetX2 + gap2 / 2, y2);
+      ctx.lineTo(x2 + centerOffsetX2 + gap2 / 2 + dy2, y2);
+      ctx.lineTo(x1 + centerOffsetX1 + gap1 / 2 + dy1, y1);
+      ctx.closePath();
+      ctx.fill();
+
+      // Dashed lane divider between Lane 1 and Lane 2
       if (segment.color.lane) {
-        ctx.fillStyle = segment.color.lane;
-        const d1 = w1 * 0.015;
-        const d2 = w2 * 0.015;
+        ctx.fillStyle = '#ffffff';
+        const d1 = w1 * 0.012;
+        const d2 = w2 * 0.012;
 
-        // Lane 0-1 separator
-        ctx.beginPath();
-        ctx.moveTo(x1 - w1 / 6 - d1 / 2, y1);
-        ctx.lineTo(x2 - w2 / 6 - d2 / 2, y2);
-        ctx.lineTo(x2 - w2 / 6 + d2 / 2, y2);
-        ctx.lineTo(x1 - w1 / 6 + d1 / 2, y1);
-        ctx.closePath();
-        ctx.fill();
-
-        // Lane 1-2 separator
         ctx.beginPath();
         ctx.moveTo(x1 + w1 / 6 - d1 / 2, y1);
         ctx.lineTo(x2 + w2 / 6 - d2 / 2, y2);
@@ -1538,11 +1556,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   // Background drawing helper
   const drawScrollingBackground = (ctx: CanvasRenderingContext2D) => {
-    // Sky gradient
+    // Sky gradient (realistic twilight dusk transition)
     const skyGrad = ctx.createLinearGradient(0, 0, 0, HORIZON);
-    skyGrad.addColorStop(0, '#0c0728'); // Deep space blue
-    skyGrad.addColorStop(0.5, '#450a3f'); // Purple
-    skyGrad.addColorStop(1, '#ff5e00'); // Orange sunset
+    skyGrad.addColorStop(0, '#0c122c');   // Deep twilight navy blue
+    skyGrad.addColorStop(0.45, '#261c47'); // Soft twilight indigo
+    skyGrad.addColorStop(0.8, '#c2410c');  // Sunset orange/crimson
+    skyGrad.addColorStop(1, '#ea580c');    // Amber horizon glow
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, CANVAS_WIDTH, HORIZON);
 
@@ -1582,12 +1601,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
     ctx.restore();
 
-    // 8K Parallax Drifting Neon Clouds
+    // 8K Parallax Drifting Realistic Clouds
     ctx.save();
     const cloudColors = [
-      'rgba(255, 0, 127, 0.08)', // Magenta sunset cloud
-      'rgba(0, 240, 255, 0.06)', // Cyan mist cloud
-      'rgba(147, 51, 234, 0.07)' // Purple deep cloud
+      'rgba(217, 119, 6, 0.12)',  // Warm amber reflection cloud
+      'rgba(71, 85, 105, 0.15)',   // Slate grey cloud
+      'rgba(30, 41, 59, 0.18)'     // Deep twilight grey cloud
     ];
     for (let c = 0; c < 3; c++) {
       const cloudW = 160 + c * 40;
@@ -1617,23 +1636,23 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
     ctx.restore();
 
-    // Sun (huge glowing sun at the center)
+    // Sun (huge glowing warm sunset sun at the center)
     ctx.save();
     const sunX = CANVAS_WIDTH / 2 - playerX * 12; // slight parallax shift
     const sunY = HORIZON - 5;
     const sunGrad = ctx.createRadialGradient(sunX, sunY, 5, sunX, sunY, 40);
     sunGrad.addColorStop(0, '#ffffff');
-    sunGrad.addColorStop(0.2, '#ffea00');
-    sunGrad.addColorStop(0.6, '#ff007f');
-    sunGrad.addColorStop(1, 'rgba(255,0,127,0)');
+    sunGrad.addColorStop(0.2, '#fef08a');   // Soft warm light yellow
+    sunGrad.addColorStop(0.65, '#f97316');  // Warm sun orange
+    sunGrad.addColorStop(1, 'rgba(249, 115, 22, 0)'); // Fade to transparent
     ctx.fillStyle = sunGrad;
     ctx.beginPath();
     ctx.arc(sunX, sunY, 40, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // Neon Cyberpunk City Skyline Parallax
-    ctx.fillStyle = '#130c2c';
+    // Realistic City Skyline Parallax (steel-blue/grey silhouettes)
+    ctx.fillStyle = '#0f172a';
     const cityX = (CANVAS_WIDTH / 2 - playerX * 4) * 0.4;
     for (let i = 0; i < 15; i++) {
       const w = 45 + (i * 7) % 30;
@@ -1642,8 +1661,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       
       ctx.fillRect(cx, HORIZON - h, w, h);
 
-      // Window dots
-      ctx.fillStyle = i % 2 === 0 ? '#00f0ff' : '#ff007f';
+      // Warm office window lights (soft amber and white instead of neon)
+      ctx.fillStyle = i % 2 === 0 ? '#fef08a' : '#f8fafc';
       for (let wx = cx + 5; wx < cx + w - 5; wx += 10) {
         for (let wy = HORIZON - h + 8; wy < HORIZON - 5; wy += 12) {
           if ((wx + wy) % 3 === 0) {
@@ -1792,17 +1811,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       drawLeafCluster(-8, -80, 20, '#81c784');
       drawLeafCluster(8, -80, 20, '#81c784');
 
-      // Tiny cybernetic glowing blossom buds
-      const blink = Math.floor(Date.now() / 350) % 2 === 0;
-      ctx.fillStyle = blink ? '#ff007f' : '#00f0ff';
-      ctx.shadowColor = ctx.fillStyle;
-      ctx.shadowBlur = 8;
-      ctx.fillRect(-15, -78, 2.5, 2.5);
-      ctx.fillRect(15, -72, 2.5, 2.5);
-      ctx.fillRect(0, -92, 2.5, 2.5);
-      ctx.fillRect(-6, -58, 2.5, 2.5);
-      ctx.fillRect(8, -62, 2.5, 2.5);
-      ctx.shadowBlur = 0;
+      // Detailed natural highlight leaves (non-glowing, forest green tips)
+      ctx.fillStyle = '#a5d6a7';
+      ctx.beginPath();
+      ctx.arc(-5, -84, 3, 0, Math.PI * 2);
+      ctx.arc(10, -78, 3, 0, Math.PI * 2);
+      ctx.arc(-14, -62, 2.5, 0, Math.PI * 2);
+      ctx.fill();
     } else {
       // Shrub bush with dense foliage
       const drawShrubBall = (cx: number, cy: number, r: number, color: string) => {
@@ -1826,16 +1841,14 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       drawShrubBall(-8, -24, 16, '#4caf50');
       drawShrubBall(8, -24, 16, '#4caf50');
 
-      // Glowing berries
-      ctx.fillStyle = '#ffd700';
-      ctx.shadowColor = '#ffd700';
-      ctx.shadowBlur = 6;
+      // Detailed natural shrub leafy outlines
+      ctx.strokeStyle = '#81c784';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(-10, -18, 2, 0, Math.PI * 2);
-      ctx.arc(10, -20, 2, 0, Math.PI * 2);
-      ctx.arc(0, -26, 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
+      ctx.arc(-16, -16, 18, 0, Math.PI * 2);
+      ctx.arc(16, -16, 18, 0, Math.PI * 2);
+      ctx.arc(0, -28, 22, 0, Math.PI * 2);
+      ctx.stroke();
     }
 
     ctx.restore();
@@ -1875,180 +1888,111 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.fillStyle = '#9ca3af';
     ctx.fillRect(-10, -10, 20, 10);
 
-    // 2. Billboard screen border
-    ctx.fillStyle = '#0a0518';
-    
-    // Animated neon border color swapping
-    const isNeonFlash = Math.floor(Date.now() / 180) % 2 === 0;
-    const activeBorderColor = isNeonFlash ? bill.color : '#ffffff';
-    ctx.strokeStyle = activeBorderColor;
-    ctx.lineWidth = 3.5;
+    // 2. Billboard screen border & fill (realistic slate finish with no glowing neon shadow)
+    ctx.fillStyle = '#0f172a'; // Deep slate background
+    ctx.strokeStyle = '#334155'; // Slate grey frame
+    ctx.lineWidth = 4;
     
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(-w / 2, posY - h, w, h, 8) : ctx.rect(-w / 2, posY - h, w, h);
+    ctx.roundRect ? ctx.roundRect(-w / 2, posY - h, w, h, 6) : ctx.rect(-w / 2, posY - h, w, h);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // High intensity Neon Glow bloom
-    ctx.shadowColor = bill.color;
-    ctx.shadowBlur = isNeonFlash ? 18 : 8;
-    ctx.strokeStyle = bill.color;
-    ctx.stroke();
-
-    // 3. Ad Graphics (Futuristic telemetry details & chevrons)
-    ctx.shadowBlur = 4;
-    
-    // Glowing grid lines in background of the ad
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let gx = -w / 2 + 10; gx < w / 2; gx += 15) {
-      ctx.moveTo(gx, posY - h);
-      ctx.lineTo(gx, posY);
-    }
-    ctx.stroke();
-
-    // Yellow chevrons pointing the direction of the curve
-    ctx.fillStyle = 'rgba(255, 215, 0, 0.35)';
-    ctx.font = 'bold 10px monospace';
-    const chevText = bill.side > 0 ? '>>>' : '<<<';
-    ctx.fillText(chevText, -w / 2 + 16, posY - h / 2);
-    ctx.fillText(chevText, w / 2 - 16, posY - h / 2);
-
-    // 4. Draw Animated Neon Vector Icon
+    // 3. Ad Graphics (Highway signs, Caution markers, Speed limits)
     if (bill.text === 'ARCADE') {
-      ctx.save();
-      ctx.translate(0, posY - h / 2 - 8);
-      
-      // Stick
-      ctx.strokeStyle = '#9ca3af';
-      ctx.lineWidth = 2.5;
-      const angle = Math.sin(Date.now() / 300) * 0.35;
-      ctx.beginPath();
-      ctx.moveTo(0, 5);
-      ctx.lineTo(Math.sin(angle) * 12, -8 + Math.cos(angle) * 3);
-      ctx.stroke();
-
-      // Ball top
-      ctx.fillStyle = '#ff0055';
-      ctx.shadowColor = '#ff0055';
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.arc(Math.sin(angle) * 12, -10 + Math.cos(angle) * 3, 5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Base
-      ctx.fillStyle = '#374151';
-      ctx.fillRect(-8, 3, 16, 4);
-      ctx.restore();
-    } else if (bill.text === 'VELOCITY' || bill.text === 'MR RACER') {
-      ctx.save();
-      ctx.translate(0, posY - h / 2 - 8);
-      const hoverY = Math.sin(Date.now() / 250) * 1.5;
-      ctx.translate(0, hoverY);
-
-      // Chassis outline
-      ctx.strokeStyle = '#00ffaa';
-      ctx.shadowColor = '#00ffaa';
-      ctx.shadowBlur = 8;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(-16, 2);
-      ctx.lineTo(-12, -4);
-      ctx.lineTo(2, -4);
-      ctx.lineTo(8, 2);
-      ctx.lineTo(16, 2);
-      ctx.lineTo(12, 5);
-      ctx.lineTo(-14, 5);
-      ctx.closePath();
-      ctx.stroke();
-
-      // Wheels
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(-8, 5, 2.5, 0, Math.PI * 2);
-      ctx.arc(8, 5, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    } else if (bill.text === 'NOS BOOST') {
-      ctx.save();
-      ctx.translate(0, posY - h / 2 - 8);
-      const pulse = 0.85 + 0.15 * Math.abs(Math.sin(Date.now() / 180));
-      ctx.scale(pulse, pulse);
-
-      ctx.strokeStyle = '#ffaa00';
-      ctx.shadowColor = '#ffaa00';
-      ctx.shadowBlur = 10;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(3, -12);
-      ctx.lineTo(-6, -2);
-      ctx.lineTo(-1, -2);
-      ctx.lineTo(-4, 10);
-      ctx.lineTo(6, 0);
-      ctx.lineTo(1, 0);
-      ctx.closePath();
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(255, 170, 0, 0.25)';
-      ctx.fill();
-      ctx.restore();
-    } else if (bill.text === 'NEON' || bill.text === '8K ULTRA') {
+      // Speed Limit Sign
       ctx.save();
       ctx.translate(0, posY - h / 2 - 4);
-      
-      // Sun half-circle background
-      ctx.fillStyle = '#ff8f00';
-      ctx.shadowColor = '#ff8f00';
-      ctx.shadowBlur = 8;
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#dc2626'; // Red circular border
+      ctx.lineWidth = 2.8;
       ctx.beginPath();
-      ctx.arc(0, 0, 10, Math.PI, 0);
+      ctx.arc(0, 0, 13, 0, Math.PI * 2);
       ctx.fill();
-
-      // Mountains
-      ctx.strokeStyle = '#ff007f';
-      ctx.shadowColor = '#ff007f';
-      ctx.shadowBlur = 6;
-      ctx.lineWidth = 1.5;
+      ctx.stroke();
       
-      ctx.beginPath();
-      ctx.moveTo(-16, 4);
-      ctx.lineTo(-6, -6);
-      ctx.lineTo(2, 4);
-      ctx.moveTo(-4, 4);
-      ctx.lineTo(6, -8);
-      ctx.lineTo(16, 4);
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 11px font-sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText("80", 0, 0);
+      ctx.restore();
+    } else if (bill.text === 'VELOCITY' || bill.text === 'MR RACER') {
+      // Highway curve warning chevrons
+      ctx.save();
+      ctx.fillStyle = '#eab308'; // Warning yellow backplate
+      ctx.fillRect(-w / 2 + 3, posY - h + 3, w - 6, h - 6);
+      
+      ctx.fillStyle = '#000000';
+      ctx.font = 'black 22px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const chevText = bill.side > 0 ? '>>>' : '<<<';
+      ctx.fillText(chevText, 0, posY - h / 2);
+      ctx.restore();
+    } else if (bill.text === 'NOS BOOST') {
+      // Work Zone warning sign (Exclamation Point)
+      ctx.save();
+      ctx.fillStyle = '#ea580c'; // Construction orange backplate
+      ctx.fillRect(-w / 2 + 3, posY - h + 3, w - 6, h - 6);
+      
+      // Diamond hazard border
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1.8;
+      ctx.save();
+      ctx.translate(0, posY - h / 2);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = '#ea580c';
+      ctx.fillRect(-10, -10, 20, 20);
       ctx.stroke();
       ctx.restore();
-    } else {
+      
+      // Exclamation mark
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 15px font-sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText("!", 0, posY - h / 2);
+      ctx.restore();
+    } else if (bill.text === 'NEON' || bill.text === '8K ULTRA') {
+      // Corporate clean silver/black sign
       ctx.save();
-      ctx.translate(0, posY - h / 2 - 8);
-      const rot = Date.now() / 500;
-      ctx.rotate(rot);
-
-      ctx.strokeStyle = '#00f0ff';
-      ctx.shadowColor = '#00f0ff';
-      ctx.shadowBlur = 10;
+      ctx.strokeStyle = '#64748b';
       ctx.lineWidth = 1.5;
-
-      ctx.beginPath();
-      for (let i = 0; i < 4; i++) {
-        const ang = (i * Math.PI / 2);
-        ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(ang) * 11, Math.sin(ang) * 11);
-        ctx.lineTo(Math.cos(ang + Math.PI / 4) * 4, Math.sin(ang + Math.PI / 4) * 4);
+      ctx.strokeRect(-w / 2 + 8, posY - h + 8, w - 16, h - 16);
+      
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 11px font-sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(bill.text, 0, posY - h / 2 - 3);
+      ctx.restore();
+    } else {
+      // Construction striped chevron barrier
+      ctx.save();
+      ctx.rect(-w / 2 + 3, posY - h + 3, w - 6, h - 6);
+      ctx.clip();
+      ctx.fillStyle = '#eab308'; // Yellow base
+      ctx.fillRect(-w / 2, posY - h, w, h);
+      
+      ctx.strokeStyle = '#000000'; // Black stripes
+      ctx.lineWidth = 5.5;
+      for (let sx = -w; sx < w; sx += 18) {
+        ctx.beginPath();
+        ctx.moveTo(sx, posY - h);
+        ctx.lineTo(sx + 26, posY);
+        ctx.stroke();
       }
-      ctx.closePath();
-      ctx.stroke();
       ctx.restore();
     }
 
-    // 5. Main Ad Text
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 9px monospace';
+    // 5. Main Ad Label (bottom aligned, clean slate-blue highway print)
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 7px font-mono, monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(bill.text, 0, posY - 9);
+    ctx.fillText(bill.text + " // SC_HWY_0" + (bill.side > 0 ? "2" : "1"), 0, posY - 7);
 
     ctx.restore();
   };
