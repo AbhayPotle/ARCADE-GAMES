@@ -1128,6 +1128,35 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           ctx.fillRect(leftHeadX, y2, w1 * 0.08, y1 - y2);
           ctx.fillRect(rightHeadX, y2, w1 * 0.08, y1 - y2);
         }
+
+        // Dynamic water puddles & rain ripples on road shoulders
+        if (segment.index % 12 === 0) {
+          const side = (segment.index % 24 === 0) ? 0.9 : -0.9;
+          const puddleX = x1 + (side * w1 / 2);
+          
+          ctx.fillStyle = 'rgba(0, 180, 255, 0.12)';
+          ctx.beginPath();
+          ctx.ellipse(puddleX, y1, w1 * 0.18, 5 * p1.scale, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Puddle shine highlight
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.ellipse(puddleX, y1, w1 * 0.18, 5 * p1.scale, 0, 0.1 * Math.PI, 0.9 * Math.PI);
+          ctx.stroke();
+
+          // Expanding rain ripple
+          const rippleTime = (Date.now() / 650 + segment.index * 0.43) % 1.0;
+          const rippleRadius = (w1 * 0.18) * rippleTime;
+          const rippleAlpha = 0.4 * (1.0 - rippleTime);
+
+          ctx.strokeStyle = `rgba(224, 247, 250, ${rippleAlpha})`;
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.ellipse(puddleX, y1, rippleRadius, rippleRadius * (5 * p1.scale / (w1 * 0.18)), 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
       }
 
       // Draw skidmarks if active on this segment
@@ -1553,6 +1582,41 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
     ctx.restore();
 
+    // 8K Parallax Drifting Neon Clouds
+    ctx.save();
+    const cloudColors = [
+      'rgba(255, 0, 127, 0.08)', // Magenta sunset cloud
+      'rgba(0, 240, 255, 0.06)', // Cyan mist cloud
+      'rgba(147, 51, 234, 0.07)' // Purple deep cloud
+    ];
+    for (let c = 0; c < 3; c++) {
+      const cloudW = 160 + c * 40;
+      const cloudH = 22 + c * 5;
+      const speed = 120 + c * 80;
+      // Scroll horizontally, with parallax response to player steering
+      const cx = ((Date.now() / speed - playerX * (6 + c * 2)) % (CANVAS_WIDTH + cloudW + 100)) - 100;
+      const cy = HORIZON - 75 + c * 18;
+
+      const cloudGrad = ctx.createLinearGradient(cx, cy, cx + cloudW, cy);
+      cloudGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      cloudGrad.addColorStop(0.3, cloudColors[c % cloudColors.length]);
+      cloudGrad.addColorStop(0.7, cloudColors[(c + 1) % cloudColors.length]);
+      cloudGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+      ctx.fillStyle = cloudGrad;
+      ctx.beginPath();
+      // Draw horizontal layered capsule shape
+      ctx.roundRect ? ctx.roundRect(cx, cy, cloudW, cloudH, cloudH / 2) : ctx.rect(cx, cy, cloudW, cloudH);
+      ctx.fill();
+
+      // Soft highlight puff on top
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
+      ctx.beginPath();
+      ctx.ellipse(cx + cloudW / 2, cy, cloudW / 3, cloudH / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
     // Sun (huge glowing sun at the center)
     ctx.save();
     const sunX = CANVAS_WIDTH / 2 - playerX * 12; // slight parallax shift
@@ -1621,6 +1685,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.translate(proj.x, proj.y);
     ctx.scale(proj.scale * tree.scale, proj.scale * tree.scale);
 
+    // Dynamic wind sway based on elapsed time and Z position to randomize phase offsets
+    const sway = Math.sin(Date.now() / 850 + tree.z * 0.022) * 0.038;
+    ctx.rotate(sway);
+
     // Shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
     ctx.beginPath();
@@ -1633,45 +1701,141 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     // Foliage variations
     if (tree.assetIndex === 0) {
-      // Pineneedle style
-      ctx.fillStyle = '#1b5e20';
+      // Bark texture detail on trunk
+      ctx.fillStyle = '#3a2515';
+      ctx.fillRect(-3, -45, 2, 45);
+      ctx.fillRect(2, -45, 1.5, 45);
+
+      // Stacked overlapping pine branches
+      // Bottom Layer
+      const gradBottom = ctx.createLinearGradient(0, -90, 0, -45);
+      gradBottom.addColorStop(0, '#1b5e20');
+      gradBottom.addColorStop(1, '#0e3a14');
+      ctx.fillStyle = gradBottom;
       ctx.beginPath();
-      ctx.moveTo(0, -110);
-      ctx.lineTo(-35, -70);
-      ctx.lineTo(35, -70);
+      ctx.moveTo(0, -90);
+      ctx.lineTo(-48, -45);
+      ctx.lineTo(48, -45);
       ctx.closePath();
       ctx.fill();
 
+      // Middle Layer
+      const gradMid = ctx.createLinearGradient(0, -115, 0, -70);
+      gradMid.addColorStop(0, '#2e7d32');
+      gradMid.addColorStop(1, '#1b5e20');
+      ctx.fillStyle = gradMid;
       ctx.beginPath();
-      ctx.moveTo(0, -85);
-      ctx.lineTo(-45, -45);
-      ctx.lineTo(45, -45);
+      ctx.moveTo(0, -115);
+      ctx.lineTo(-38, -70);
+      ctx.lineTo(38, -70);
       ctx.closePath();
       ctx.fill();
+
+      // Top Layer
+      const gradTop = ctx.createLinearGradient(0, -140, 0, -95);
+      gradTop.addColorStop(0, '#4caf50');
+      gradTop.addColorStop(1, '#2e7d32');
+      ctx.fillStyle = gradTop;
+      ctx.beginPath();
+      ctx.moveTo(0, -140);
+      ctx.lineTo(-28, -95);
+      ctx.lineTo(28, -95);
+      ctx.closePath();
+      ctx.fill();
+
+      // Evergreen tips highlight
+      ctx.strokeStyle = 'rgba(165, 214, 167, 0.4)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-48, -45); ctx.lineTo(0, -90); ctx.lineTo(48, -45);
+      ctx.moveTo(-38, -70); ctx.lineTo(0, -115); ctx.lineTo(38, -70);
+      ctx.moveTo(-28, -95); ctx.lineTo(0, -140); ctx.lineTo(28, -95);
+      ctx.stroke();
     } else if (tree.assetIndex === 1) {
-      // Deciduous round tree
-      ctx.fillStyle = '#2e7d32';
+      // Wood branch offsets
+      ctx.strokeStyle = '#5c3a21';
+      ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(0, -65, 38, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(-3, -30);
+      ctx.lineTo(-18, -50);
+      ctx.moveTo(3, -25);
+      ctx.lineTo(18, -45);
+      ctx.stroke();
 
-      ctx.fillStyle = '#4caf50';
-      ctx.beginPath();
-      ctx.arc(-14, -75, 26, 0, Math.PI * 2);
-      ctx.arc(14, -75, 26, 0, Math.PI * 2);
-      ctx.fill();
+      // Layered leafy foliage crown
+      const drawLeafCluster = (cx: number, cy: number, r: number, fill: string) => {
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        // Inner depth highlight
+        const radGrad = ctx.createRadialGradient(cx - r/3, cy - r/3, 1, cx, cy, r);
+        radGrad.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+        radGrad.addColorStop(1, 'rgba(0, 0, 0, 0.22)');
+        ctx.fillStyle = radGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+      };
+
+      // Background dark foliage
+      drawLeafCluster(-20, -60, 26, '#1b5e20');
+      drawLeafCluster(20, -60, 26, '#1b5e20');
+      drawLeafCluster(0, -85, 28, '#0e3a14');
+
+      // Midground standard foliage
+      drawLeafCluster(-12, -72, 24, '#2e7d32');
+      drawLeafCluster(12, -72, 24, '#2e7d32');
+
+      // Foreground bright foliage
+      drawLeafCluster(0, -65, 30, '#4caf50');
+      drawLeafCluster(-8, -80, 20, '#81c784');
+      drawLeafCluster(8, -80, 20, '#81c784');
+
+      // Tiny cybernetic glowing blossom buds
+      const blink = Math.floor(Date.now() / 350) % 2 === 0;
+      ctx.fillStyle = blink ? '#ff007f' : '#00f0ff';
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = 8;
+      ctx.fillRect(-15, -78, 2.5, 2.5);
+      ctx.fillRect(15, -72, 2.5, 2.5);
+      ctx.fillRect(0, -92, 2.5, 2.5);
+      ctx.fillRect(-6, -58, 2.5, 2.5);
+      ctx.fillRect(8, -62, 2.5, 2.5);
+      ctx.shadowBlur = 0;
     } else {
-      // Small shrub bush
-      ctx.fillStyle = '#1b5e20';
+      // Shrub bush with dense foliage
+      const drawShrubBall = (cx: number, cy: number, r: number, color: string) => {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        const rad = ctx.createRadialGradient(cx - r/3, cy - r/3, 1, cx, cy, r);
+        rad.addColorStop(0, 'rgba(255,255,255,0.12)');
+        rad.addColorStop(1, 'rgba(0,0,0,0.25)');
+        ctx.fillStyle = rad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+      };
+
+      // Layered bush clusters
+      drawShrubBall(-16, -16, 18, '#1b5e20');
+      drawShrubBall(16, -16, 18, '#1b5e20');
+      drawShrubBall(0, -28, 22, '#2e7d32');
+      drawShrubBall(-8, -24, 16, '#4caf50');
+      drawShrubBall(8, -24, 16, '#4caf50');
+
+      // Glowing berries
+      ctx.fillStyle = '#ffd700';
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 6;
       ctx.beginPath();
-      ctx.arc(0, -20, 24, 0, Math.PI * 2);
+      ctx.arc(-10, -18, 2, 0, Math.PI * 2);
+      ctx.arc(10, -20, 2, 0, Math.PI * 2);
+      ctx.arc(0, -26, 2, 0, Math.PI * 2);
       ctx.fill();
-      
-      ctx.fillStyle = '#388e3c';
-      ctx.beginPath();
-      ctx.arc(-10, -25, 16, 0, Math.PI * 2);
-      ctx.arc(10, -25, 16, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.shadowBlur = 0;
     }
 
     ctx.restore();
@@ -1752,12 +1916,139 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.fillText(chevText, -w / 2 + 16, posY - h / 2);
     ctx.fillText(chevText, w / 2 - 16, posY - h / 2);
 
-    // 4. Main Ad Text
+    // 4. Draw Animated Neon Vector Icon
+    if (bill.text === 'ARCADE') {
+      ctx.save();
+      ctx.translate(0, posY - h / 2 - 8);
+      
+      // Stick
+      ctx.strokeStyle = '#9ca3af';
+      ctx.lineWidth = 2.5;
+      const angle = Math.sin(Date.now() / 300) * 0.35;
+      ctx.beginPath();
+      ctx.moveTo(0, 5);
+      ctx.lineTo(Math.sin(angle) * 12, -8 + Math.cos(angle) * 3);
+      ctx.stroke();
+
+      // Ball top
+      ctx.fillStyle = '#ff0055';
+      ctx.shadowColor = '#ff0055';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(Math.sin(angle) * 12, -10 + Math.cos(angle) * 3, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Base
+      ctx.fillStyle = '#374151';
+      ctx.fillRect(-8, 3, 16, 4);
+      ctx.restore();
+    } else if (bill.text === 'VELOCITY' || bill.text === 'MR RACER') {
+      ctx.save();
+      ctx.translate(0, posY - h / 2 - 8);
+      const hoverY = Math.sin(Date.now() / 250) * 1.5;
+      ctx.translate(0, hoverY);
+
+      // Chassis outline
+      ctx.strokeStyle = '#00ffaa';
+      ctx.shadowColor = '#00ffaa';
+      ctx.shadowBlur = 8;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-16, 2);
+      ctx.lineTo(-12, -4);
+      ctx.lineTo(2, -4);
+      ctx.lineTo(8, 2);
+      ctx.lineTo(16, 2);
+      ctx.lineTo(12, 5);
+      ctx.lineTo(-14, 5);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Wheels
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-8, 5, 2.5, 0, Math.PI * 2);
+      ctx.arc(8, 5, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (bill.text === 'NOS BOOST') {
+      ctx.save();
+      ctx.translate(0, posY - h / 2 - 8);
+      const pulse = 0.85 + 0.15 * Math.abs(Math.sin(Date.now() / 180));
+      ctx.scale(pulse, pulse);
+
+      ctx.strokeStyle = '#ffaa00';
+      ctx.shadowColor = '#ffaa00';
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(3, -12);
+      ctx.lineTo(-6, -2);
+      ctx.lineTo(-1, -2);
+      ctx.lineTo(-4, 10);
+      ctx.lineTo(6, 0);
+      ctx.lineTo(1, 0);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 170, 0, 0.25)';
+      ctx.fill();
+      ctx.restore();
+    } else if (bill.text === 'NEON' || bill.text === '8K ULTRA') {
+      ctx.save();
+      ctx.translate(0, posY - h / 2 - 4);
+      
+      // Sun half-circle background
+      ctx.fillStyle = '#ff8f00';
+      ctx.shadowColor = '#ff8f00';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(0, 0, 10, Math.PI, 0);
+      ctx.fill();
+
+      // Mountains
+      ctx.strokeStyle = '#ff007f';
+      ctx.shadowColor = '#ff007f';
+      ctx.shadowBlur = 6;
+      ctx.lineWidth = 1.5;
+      
+      ctx.beginPath();
+      ctx.moveTo(-16, 4);
+      ctx.lineTo(-6, -6);
+      ctx.lineTo(2, 4);
+      ctx.moveTo(-4, 4);
+      ctx.lineTo(6, -8);
+      ctx.lineTo(16, 4);
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.translate(0, posY - h / 2 - 8);
+      const rot = Date.now() / 500;
+      ctx.rotate(rot);
+
+      ctx.strokeStyle = '#00f0ff';
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 1.5;
+
+      ctx.beginPath();
+      for (let i = 0; i < 4; i++) {
+        const ang = (i * Math.PI / 2);
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(ang) * 11, Math.sin(ang) * 11);
+        ctx.lineTo(Math.cos(ang + Math.PI / 4) * 4, Math.sin(ang + Math.PI / 4) * 4);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 5. Main Ad Text
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'black 11px monospace';
+    ctx.font = 'bold 9px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(bill.text, 0, posY - h / 2);
+    ctx.fillText(bill.text, 0, posY - 9);
 
     ctx.restore();
   };
