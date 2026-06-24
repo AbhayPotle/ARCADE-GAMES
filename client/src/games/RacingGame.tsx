@@ -1100,6 +1100,50 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         ctx.fillRect(dotX, y1 - 2.5, dotW, 2.5);
       }
 
+      // 8K Asphalt Wear Tracks & Heavy Traffic Rubber Deposits
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.09)'; // Dark tire tracks
+      const laneCenters = [-0.65, 0.0, 0.65];
+      laneCenters.forEach(lc => {
+        const laneX1 = x1 + (lc * w1 / 2);
+        const laneX2 = x2 + (lc * w2 / 2);
+        const trackDist1 = w1 * 0.07;
+        const trackDist2 = w2 * 0.07;
+        const trackWidth1 = w1 * 0.045;
+        const trackWidth2 = w2 * 0.045;
+
+        // Left wheel wear track
+        ctx.beginPath();
+        ctx.moveTo(laneX1 - trackDist1 - trackWidth1 / 2, y1);
+        ctx.lineTo(laneX2 - trackDist2 - trackWidth2 / 2, y2);
+        ctx.lineTo(laneX2 - trackDist2 + trackWidth2 / 2, y2);
+        ctx.lineTo(laneX1 - trackDist1 + trackWidth1 / 2, y1);
+        ctx.closePath();
+        ctx.fill();
+
+        // Right wheel wear track
+        ctx.beginPath();
+        ctx.moveTo(laneX1 + trackDist1 - trackWidth1 / 2, y1);
+        ctx.lineTo(laneX2 + trackDist2 - trackWidth2 / 2, y2);
+        ctx.lineTo(laneX2 + trackDist2 + trackWidth2 / 2, y2);
+        ctx.lineTo(laneX1 + trackDist1 + trackWidth1 / 2, y1);
+        ctx.closePath();
+        ctx.fill();
+      });
+
+      // 8K Random Asphalt Micro-Cracks & Seal Patches (procedural)
+      if (segment.index % 23 === 0) {
+        ctx.strokeStyle = 'rgba(10, 10, 10, 0.55)';
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        const crackX1 = x1 + ((segment.index * 13) % 40 - 20) * 0.01 * w1;
+        const crackY1 = y1;
+        const crackX2 = x2 + ((segment.index * 13) % 40 - 18) * 0.01 * w2;
+        const crackY2 = y2;
+        ctx.moveTo(crackX1, crackY1);
+        ctx.lineTo(crackX2, crackY2);
+        ctx.stroke();
+      }
+
       // 8K Realistic Highway Shoulder Line Paint (Solid white on curbs)
       const leftShoulderColor = '#ffffff';
       const rightShoulderColor = '#e2e8f0';
@@ -1450,10 +1494,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     ctx.save();
 
-    // 1. Draw outer border with futuristic neon cyan glow
-    ctx.strokeStyle = '#00f0ff';
-    ctx.lineWidth = 2.5;
-    ctx.fillStyle = 'rgba(6, 12, 22, 0.9)';
+    // 1. Draw outer border with realistic titanium / brushed steel bezel (Non-neon)
+    ctx.strokeStyle = '#334155'; // Dark steel outer
+    ctx.lineWidth = 4.0;
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)'; // Obsidian/carbon black backing
     
     // Sleek chamfered bezel shape
     ctx.beginPath();
@@ -1465,29 +1509,34 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.fill();
     ctx.stroke();
 
-    // Mirror center horizon/grid line
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.18)';
+    // Inner chrome bezel detail highlight
+    ctx.strokeStyle = '#64748b'; // Polished titanium inner highlight
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Mirror center horizon/grid line (neutral white)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(mirrorX, mirrorY + mirrorH / 2);
     ctx.lineTo(mirrorX + mirrorW, mirrorY + mirrorH / 2);
     ctx.stroke();
 
-    // Subtle horizontal scanlines
-    ctx.fillStyle = 'rgba(0, 240, 255, 0.04)';
+    // Subtle neutral scanlines
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
     for (let sy = mirrorY + 2; sy < mirrorY + mirrorH; sy += 3) {
       ctx.fillRect(mirrorX, sy, mirrorW, 1.2);
     }
 
-    // Mirror HUD labels
-    ctx.fillStyle = '#00f0ff';
+    // Mirror HUD labels (warm amber / steel white for industrial look)
+    ctx.fillStyle = '#fbbf24'; // Warm amber text
     ctx.font = 'bold 8px font-mono, monospace';
     ctx.textAlign = 'center';
     ctx.fillText("REAR SCANNER", CANVAS_WIDTH / 2, mirrorY + 11);
 
     // Side warnings
     ctx.font = '5px font-mono, monospace';
-    ctx.fillStyle = 'rgba(0, 240, 255, 0.6)';
+    ctx.fillStyle = 'rgba(251, 191, 36, 0.6)';
     ctx.textAlign = 'left';
     ctx.fillText("L_CAM_01", mirrorX + 8, mirrorY + 11);
     ctx.textAlign = 'right';
@@ -1672,6 +1721,30 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.fill();
     ctx.restore();
 
+    // 8K Volumetric Sunset God Rays
+    ctx.save();
+    const rayCount = 5;
+    const timeFactor = Date.now() / 4000;
+    for (let r = 0; r < rayCount; r++) {
+      const baseAngle = (r * Math.PI / 6) + Math.PI + Math.sin(timeFactor + r * 2.3) * 0.08;
+      const rayWidth = 0.12 + Math.sin(timeFactor * 0.5 + r) * 0.03;
+      const length = 180;
+      
+      const rayGrad = ctx.createLinearGradient(sunX, sunY, sunX + Math.cos(baseAngle) * length, sunY + Math.sin(baseAngle) * length);
+      rayGrad.addColorStop(0, 'rgba(254, 240, 138, 0.08)'); // Warm gold-yellow
+      rayGrad.addColorStop(0.6, 'rgba(249, 115, 22, 0.03)'); // Warm orange fading
+      rayGrad.addColorStop(1, 'rgba(249, 115, 22, 0.0)');
+      
+      ctx.fillStyle = rayGrad;
+      ctx.beginPath();
+      ctx.moveTo(sunX, sunY);
+      ctx.lineTo(sunX + Math.cos(baseAngle - rayWidth) * length, sunY + Math.sin(baseAngle - rayWidth) * length);
+      ctx.lineTo(sunX + Math.cos(baseAngle + rayWidth) * length, sunY + Math.sin(baseAngle + rayWidth) * length);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
     // Realistic City Skyline Parallax (steel-blue/grey silhouettes)
     ctx.fillStyle = '#0f172a';
     const cityX = (CANVAS_WIDTH / 2 - playerX * 4) * 0.4;
@@ -1693,15 +1766,33 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
     }
 
-    // Horizon Neon Fog
-    const horizonFog = ctx.createLinearGradient(0, HORIZON - 30, 0, HORIZON);
-    horizonFog.addColorStop(0, 'rgba(255, 0, 127, 0)');
-    horizonFog.addColorStop(1, 'rgba(0, 240, 255, 0.15)');
+    // 8K Realistic Sunset Atmospheric Mist (replaces Neon Fog)
+    const horizonFog = ctx.createLinearGradient(0, HORIZON - 40, 0, HORIZON);
+    horizonFog.addColorStop(0, 'rgba(234, 88, 12, 0)');     // Sunset orange transparent
+    horizonFog.addColorStop(0.5, 'rgba(249, 115, 22, 0.08)'); // Very soft amber
+    horizonFog.addColorStop(1, 'rgba(253, 224, 71, 0.22)');   // Warm horizon yellow mist
     ctx.fillStyle = horizonFog;
-    ctx.fillRect(0, HORIZON - 30, CANVAS_WIDTH, 30);
+    ctx.fillRect(0, HORIZON - 40, CANVAS_WIDTH, 40);
 
-    // Mountains (two layers)
-    ctx.fillStyle = '#0f051c'; // Dark mountain front
+    // Mountains (two layers with sunset rim lighting)
+    ctx.save();
+    
+    // Layer 1: Farthest Mountains (slow parallax shift)
+    ctx.fillStyle = '#090314';
+    ctx.beginPath();
+    ctx.moveTo(0, HORIZON);
+    ctx.lineTo(0, HORIZON - 30);
+    ctx.lineTo(80 - playerX * 6, HORIZON - 60);
+    ctx.lineTo(200 - playerX * 6, HORIZON - 25);
+    ctx.lineTo(340 - playerX * 6, HORIZON - 70);
+    ctx.lineTo(460 - playerX * 6, HORIZON - 40);
+    ctx.lineTo(CANVAS_WIDTH, HORIZON - 65);
+    ctx.lineTo(CANVAS_WIDTH, HORIZON);
+    ctx.closePath();
+    ctx.fill();
+
+    // Layer 2: Closer Mountains (standard parallax shift)
+    ctx.fillStyle = '#120926';
     ctx.beginPath();
     ctx.moveTo(0, HORIZON);
     ctx.lineTo(0, HORIZON - 20);
@@ -1713,6 +1804,20 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.lineTo(CANVAS_WIDTH, HORIZON);
     ctx.closePath();
     ctx.fill();
+
+    // Draw Sunset geological rim light catching the peaks of Layer 2
+    ctx.strokeStyle = '#f97316'; // Sunset orange highlights
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, HORIZON - 20);
+    ctx.lineTo(100 - playerX * 10, HORIZON - 45);
+    ctx.lineTo(250 - playerX * 10, HORIZON - 15);
+    ctx.lineTo(380 - playerX * 10, HORIZON - 55);
+    ctx.lineTo(520 - playerX * 10, HORIZON - 30);
+    ctx.lineTo(CANVAS_WIDTH, HORIZON - 50);
+    ctx.stroke();
+
+    ctx.restore();
   };
 
   // Scenery tree drawing
@@ -2145,13 +2250,24 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.translate(proj.x, proj.y);
     ctx.scale(proj.scale, proj.scale);
     
-    // Draw leaf triangle
+    // Add wind-flutter and orientation rotation
+    const windFlutter = Math.sin(Date.now() / 300 + leaf.z) * 0.12;
+    const rotation = (leaf.z * 0.083) + windFlutter;
+    ctx.rotate(rotation);
+    
+    // Draw high-fidelity organic leaf shape with a central vein
     ctx.beginPath();
-    ctx.moveTo(0, -leaf.size/2);
-    ctx.lineTo(-leaf.size/2, leaf.size/2);
-    ctx.lineTo(leaf.size/2, leaf.size/2);
-    ctx.closePath();
+    ctx.ellipse(0, 0, leaf.size * 0.6, leaf.size * 0.35, 0, 0, Math.PI * 2);
     ctx.fill();
+    
+    // Draw leaf central stem/vein
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.lineWidth = 0.55;
+    ctx.beginPath();
+    ctx.moveTo(-leaf.size * 0.6, 0);
+    ctx.lineTo(leaf.size * 0.6, 0);
+    ctx.stroke();
+
     ctx.restore();
   };
 
