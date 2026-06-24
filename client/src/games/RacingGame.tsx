@@ -244,6 +244,22 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     });
   };
 
+  const emitWaterSplash = (x: number, y: number) => {
+    particlesRef.current.push({
+      id: Math.random() + Date.now(),
+      type: 'splash',
+      x: x + (Math.random() - 0.5) * 16,
+      y: y + 10,
+      vx: (Math.random() - 0.5) * 35,
+      vy: 10 + Math.random() * 40,
+      color: 'rgba(174, 219, 242, 0.45)', // Soft blue/white splash
+      size: 3 + Math.random() * 5,
+      alpha: 0.8,
+      life: 0,
+      maxLife: 12 + Math.floor(Math.random() * 8)
+    });
+  };
+
   const emitGearShiftShockwave = () => {
     particlesRef.current.push({
       id: Math.random() + Date.now(),
@@ -709,6 +725,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         } else {
           currentSpeed -= 45 * dt;
           if (currentSpeed < 0) currentSpeed = 0;
+        }
+
+        // Rain/Storm Tyre Water Splash VFX
+        if (currentSpeed > 20 && weather !== 'clear' && Math.random() > 0.35) {
+          emitWaterSplash(CANVAS_WIDTH / 2 - 25, CANVAS_HEIGHT - 55);
+          emitWaterSplash(CANVAS_WIDTH / 2 + 25, CANVAS_HEIGHT - 55);
         }
 
         // 4. Steering, Slide & Skidmarks
@@ -1533,10 +1555,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         ctx.fillStyle = '#dc2626';
         ctx.fillRect(drawX - size, drawY - size / 2, size * 2, size);
 
-        // Neon green bot underglow in mirror!
-        ctx.strokeStyle = 'rgba(0, 255, 66, 0.6)';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(drawX - size - 1, drawY - size / 2 - 1, size * 2 + 2, size + 2);
+        // Dark drop shadow under chassis in mirror (Non-neon)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(drawX - size, drawY + size / 2 - 1, size * 2, 2);
 
         // Headlights
         ctx.fillStyle = '#ffffff';
@@ -2145,27 +2166,56 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.rotate(coin.rotation);
     ctx.scale(proj.scale, proj.scale);
 
-    ctx.shadowColor = '#ffd700';
-    ctx.shadowBlur = 12;
-    ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
+    // Realistic gold coin metallic gradient
+    const goldGrad = ctx.createLinearGradient(-13, -13, 13, 13);
+    goldGrad.addColorStop(0, '#fef08a'); // Bright gold
+    goldGrad.addColorStop(0.3, '#d97706'); // Warm gold-orange
+    goldGrad.addColorStop(0.65, '#f59e0b'); // Amber gold
+    goldGrad.addColorStop(1, '#78350f'); // Dark gold-brown
+    ctx.fillStyle = goldGrad;
 
-    // Hexagon coin shape
+    // Outer coin circle (minted edge)
     ctx.beginPath();
-    for (let s = 0; s < 6; s++) {
-      const rad = (s * Math.PI) / 3;
-      const hx = Math.cos(rad) * 12;
-      const hy = Math.sin(rad) * 12;
-      if (s === 0) ctx.moveTo(hx, hy);
-      else ctx.lineTo(hx, hy);
+    ctx.arc(0, 0, 13, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Steel gold border outline
+    ctx.strokeStyle = '#eab308';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, 0, 12, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner gold border circle
+    ctx.beginPath();
+    ctx.arc(0, 0, 9, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Detailed engraved inner star symbol (emblem)
+    ctx.fillStyle = '#fef08a';
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+      const x = Math.cos(angle) * 5;
+      const y = Math.sin(angle) * 5;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+      
+      const innerAngle = angle + Math.PI / 5;
+      const ix = Math.cos(innerAngle) * 2;
+      const iy = Math.sin(innerAngle) * 2;
+      ctx.lineTo(ix, iy);
     }
     ctx.closePath();
     ctx.fill();
 
-    // White core specular highlight
-    ctx.fillStyle = '#ffffff';
+    // Realistic diagonal white specular glint line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.72)';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(0, 0, 4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(-11, -5);
+    ctx.lineTo(11, 5);
+    ctx.stroke();
 
     ctx.restore();
   };
@@ -2191,30 +2241,21 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const model = car.model !== undefined ? car.model : (car.id % 3);
     const isBlinkingOn = Math.floor(Date.now() / 200) % 2 === 0;
 
-    // 1. Dynamic ground shadow under the car
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    // 1. Double-layered ambient occlusion ground shadow under the car (Non-neon)
+    const shadowW = model === 2 ? 42 : 36;
+    const shadowH = 8;
+    
+    // Outer soft ambient occlusion shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
     ctx.beginPath();
-    ctx.ellipse(0, 12, model === 2 ? 40 : 34, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 12, shadowW + 6, shadowH + 3, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 2. Soft Neon Underglow for Supercars & Sedans
-    if (model === 1) { // Supercar: vibrant neon magenta underglow
-      const glowGrad = ctx.createRadialGradient(0, 12, 1, 0, 12, 35);
-      glowGrad.addColorStop(0, 'rgba(255, 0, 127, 0.6)');
-      glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = glowGrad;
-      ctx.beginPath();
-      ctx.ellipse(0, 12, 40, 11, 0, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (model === 0) { // Sedan: cyan underglow
-      const glowGrad = ctx.createRadialGradient(0, 12, 1, 0, 12, 32);
-      glowGrad.addColorStop(0, 'rgba(0, 240, 255, 0.5)');
-      glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = glowGrad;
-      ctx.beginPath();
-      ctx.ellipse(0, 12, 36, 10, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // Inner tight core ground shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.beginPath();
+    ctx.ellipse(0, 12, shadowW, shadowH, 0, 0, Math.PI * 2);
+    ctx.fill();
 
     // 3. Project forward headlights in wet/storm weather
     if (weather !== 'clear') {
@@ -2428,17 +2469,15 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     ctx.translate(proj.x, proj.y);
     ctx.scale(proj.scale, proj.scale);
 
-    // 1. Neon Green Rival underglow
-    const glowGrad = ctx.createRadialGradient(0, 15, 2, 0, 15, 38);
-    glowGrad.addColorStop(0, 'rgba(0, 255, 66, 0.75)');
-    glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = glowGrad;
+    // 1. Double-layered ambient occlusion ground shadow under bot car (Non-neon)
+    // Outer soft ambient occlusion shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
     ctx.beginPath();
-    ctx.ellipse(0, 15, 45, 12, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 13, 40, 10, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 2. Dynamic ground shadow under bot car
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    // Inner tight core ground shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
     ctx.beginPath();
     ctx.ellipse(0, 12, 34, 8, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -2549,6 +2588,22 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         ctx.moveTo(p.x, p.y);
         ctx.lineTo(p.x + p.vx * 0.1, p.y + p.vy * 0.1);
         ctx.stroke();
+      } else if (p.type === 'spark') {
+        // High velocity friction sparks drawn as bright linear streaks
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = p.size * 0.7;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - p.vx * 0.05, p.y - p.vy * 0.05);
+        ctx.stroke();
+      } else if (p.type === 'splash') {
+        // Realistic rain tyre spray splash droplets
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = p.size * 0.55;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - p.vx * 0.04, p.y - p.vy * 0.04);
+        ctx.stroke();
       } else if (p.type === 'shockwave') {
         // Expanding shift shockwave ring
         const currentSize = p.size + (p.life / p.maxLife) * 60;
@@ -2558,7 +2613,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         ctx.arc(p.x, p.y, currentSize, 0, Math.PI * 2);
         ctx.stroke();
       } else {
-        // Exhaust smoke or spark dots
+        // Exhaust smoke or dirt dots
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
@@ -2611,19 +2666,27 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       ctx.restore();
     }
 
-    // 2. Underglow Neon Glow
-    const glowColor = isNitroActive ? 'rgba(0, 240, 255, 0.75)' : 'rgba(245, 158, 11, 0.55)';
-    const glowGrad = ctx.createRadialGradient(0, 15, 2, 0, 15, 42);
-    glowGrad.addColorStop(0, glowColor);
-    glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = glowGrad;
-    ctx.beginPath();
-    ctx.ellipse(0, 15, 45, 12, 0, 0, Math.PI * 2);
-    ctx.fill();
+    // 2. Double-layered ambient occlusion ground shadow (and Nitro thrust glow)
+    if (isNitroActive) {
+      // cyan underglow as active nitro thrust emission
+      const glowGrad = ctx.createRadialGradient(0, 15, 2, 0, 15, 42);
+      glowGrad.addColorStop(0, 'rgba(0, 240, 255, 0.85)');
+      glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glowGrad;
+      ctx.beginPath();
+      ctx.ellipse(0, 15, 45, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Outer soft ambient occlusion shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+      ctx.beginPath();
+      ctx.ellipse(0, 16, 45, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
-    // 3. Shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.fillRect(-28, 22, 56, 12);
+    // 3. Inner tight core ground shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.68)';
+    ctx.fillRect(-28, 22, 56, 10);
 
     // 4. Black tires with Chrome Hubcaps
     ctx.fillStyle = '#111111';
