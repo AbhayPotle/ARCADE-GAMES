@@ -306,18 +306,18 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
         <div className="flex space-x-2">
           <button
             onClick={() => { audioSynth.playClick(); setShowShopModal(true); }}
-            className="text-xs font-orbitron text-neon-yellow px-4 py-2 rounded-lg bg-neon-yellow/10 border border-neon-yellow/40 shadow-[0_4px_0_0_rgba(255,251,0,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(255,251,0,0.5),0_0_12px_rgba(255,251,0,0.2)] active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer flex items-center"
+            className="group text-xs font-orbitron text-neon-yellow px-4 py-2 rounded-lg bg-neon-yellow/10 border border-neon-yellow/40 shadow-[0_4px_0_0_rgba(255,251,0,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(255,251,0,0.5),0_0_12px_rgba(255,251,0,0.2)] hover:bg-neon-yellow hover:text-black active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer flex items-center"
           >
-            <span className="bg-neon-yellow mr-2 animate-pulse w-1.5 h-1.5 rounded-full shadow-[0_0_6px_#fffb00] inline-block" />
+            <span className="bg-neon-yellow group-hover:bg-black mr-2 animate-pulse w-1.5 h-1.5 rounded-full shadow-[0_0_6px_#fffb00] group-hover:shadow-none inline-block" />
             <span>🛒 TUNING_SHOP</span>
           </button>
           <button
             onClick={() => { audioSynth.playClick(); onLogout(); }}
-            className="text-xs font-orbitron text-red-400 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/40 shadow-[0_4px_0_0_rgba(239,68,68,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(239,68,68,0.5),0_0_12px_rgba(239,68,68,0.2)] active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer flex items-center"
+            className="group text-xs font-orbitron text-red-400 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/40 shadow-[0_4px_0_0_rgba(239,68,68,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(239,68,68,0.5),0_0_12px_rgba(239,68,68,0.2)] hover:bg-red-500 hover:text-black active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer flex items-center"
           >
             <span className="relative flex mr-2 w-1.5 h-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 group-hover:bg-black"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500 group-hover:bg-black"></span>
             </span>
             <span>⏻ DISCONNECT</span>
           </button>
@@ -511,9 +511,9 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
             {dailyClaimMsg && <p className="text-xs text-neon-yellow font-mono">{dailyClaimMsg}</p>}
             <button
               onClick={handleClaimDaily}
-              className="w-full py-2.5 bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan font-orbitron text-xs font-extrabold uppercase rounded-lg shadow-[0_4px_0_0_rgba(0,240,255,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(0,240,255,0.5),0_0_15px_rgba(0,240,255,0.25)] hover:bg-neon-cyan hover:text-black active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer flex items-center justify-center"
+              className="group w-full py-2.5 bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan font-orbitron text-xs font-extrabold uppercase rounded-lg shadow-[0_4px_0_0_rgba(0,240,255,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(0,240,255,0.5),0_0_15px_rgba(0,240,255,0.25)] hover:bg-neon-cyan hover:text-black active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer flex items-center justify-center"
             >
-              <span className="bg-neon-cyan shadow-[0_0_8px_#00f0ff] animate-pulse w-2 h-2 rounded-full mr-2 inline-block" />
+              <span className="bg-neon-cyan group-hover:bg-black shadow-[0_0_8px_#00f0ff] group-hover:shadow-none animate-pulse w-2 h-2 rounded-full mr-2 inline-block" />
               <span>CLAIM DATA PACKET »</span>
             </button>
           </div>
