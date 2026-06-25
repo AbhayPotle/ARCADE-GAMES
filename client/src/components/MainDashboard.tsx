@@ -25,6 +25,8 @@ const ACCENT_CLASSES: Record<string, {
   hoverBorder: string;
   hoverShadow: string;
   hoverText: string;
+  button3D: string;
+  dotColor: string;
 }> = {
   'neon-cyan': {
     text: 'text-neon-cyan',
@@ -43,6 +45,8 @@ const ACCENT_CLASSES: Record<string, {
     hoverBorder: 'hover:border-neon-cyan/40',
     hoverShadow: 'hover:shadow-[0_0_15px_rgba(0,240,255,0.1)]',
     hoverText: 'group-hover:text-neon-cyan',
+    button3D: 'shadow-[0_4px_0_0_rgba(0,240,255,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(0,240,255,0.5),0_0_12px_rgba(0,240,255,0.25)] active:translate-y-[4px] active:shadow-none transition-all duration-100',
+    dotColor: 'bg-neon-cyan',
   },
   'neon-magenta': {
     text: 'text-neon-magenta',
@@ -61,6 +65,8 @@ const ACCENT_CLASSES: Record<string, {
     hoverBorder: 'hover:border-neon-magenta/40',
     hoverShadow: 'hover:shadow-[0_0_15px_rgba(255,0,127,0.1)]',
     hoverText: 'group-hover:text-neon-magenta',
+    button3D: 'shadow-[0_4px_0_0_rgba(255,0,127,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(255,0,127,0.5),0_0_12px_rgba(255,0,127,0.25)] active:translate-y-[4px] active:shadow-none transition-all duration-100',
+    dotColor: 'bg-neon-magenta',
   },
   'neon-green': {
     text: 'text-neon-green',
@@ -79,6 +85,8 @@ const ACCENT_CLASSES: Record<string, {
     hoverBorder: 'hover:border-neon-green/40',
     hoverShadow: 'hover:shadow-[0_0_15px_rgba(0,255,102,0.1)]',
     hoverText: 'group-hover:text-neon-green',
+    button3D: 'shadow-[0_4px_0_0_rgba(0,255,102,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(0,255,102,0.5),0_0_12px_rgba(0,255,102,0.25)] active:translate-y-[4px] active:shadow-none transition-all duration-100',
+    dotColor: 'bg-neon-green',
   },
   'neon-yellow': {
     text: 'text-neon-yellow',
@@ -97,6 +105,8 @@ const ACCENT_CLASSES: Record<string, {
     hoverBorder: 'hover:border-neon-yellow/40',
     hoverShadow: 'hover:shadow-[0_0_15px_rgba(255,251,0,0.1)]',
     hoverText: 'group-hover:text-neon-yellow',
+    button3D: 'shadow-[0_4px_0_0_rgba(255,251,0,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(255,251,0,0.5),0_0_12px_rgba(255,251,0,0.25)] active:translate-y-[4px] active:shadow-none transition-all duration-100',
+    dotColor: 'bg-neon-yellow',
   },
   'neon-orange': {
     text: 'text-neon-orange',
@@ -115,6 +125,8 @@ const ACCENT_CLASSES: Record<string, {
     hoverBorder: 'hover:border-neon-orange/40',
     hoverShadow: 'hover:shadow-[0_0_15px_rgba(255,94,0,0.1)]',
     hoverText: 'group-hover:text-neon-orange',
+    button3D: 'shadow-[0_4px_0_0_rgba(255,94,0,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(255,94,0,0.5),0_0_12px_rgba(255,94,0,0.25)] active:translate-y-[4px] active:shadow-none transition-all duration-100',
+    dotColor: 'bg-neon-orange',
   },
 };
 
@@ -294,15 +306,20 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
         <div className="flex space-x-2">
           <button
             onClick={() => { audioSynth.playClick(); setShowShopModal(true); }}
-            className="text-xs font-orbitron text-neon-yellow px-4 py-2 rounded-lg bg-neon-yellow/10 border border-neon-yellow/40 shadow-[0_4px_0_0_rgba(255,251,0,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(255,251,0,0.5),0_0_12px_rgba(255,251,0,0.2)] active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer"
+            className="text-xs font-orbitron text-neon-yellow px-4 py-2 rounded-lg bg-neon-yellow/10 border border-neon-yellow/40 shadow-[0_4px_0_0_rgba(255,251,0,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(255,251,0,0.5),0_0_12px_rgba(255,251,0,0.2)] active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer flex items-center"
           >
-            🛒 TUNING_SHOP
+            <span className="bg-neon-yellow mr-2 animate-pulse w-1.5 h-1.5 rounded-full shadow-[0_0_6px_#fffb00] inline-block" />
+            <span>🛒 TUNING_SHOP</span>
           </button>
           <button
             onClick={() => { audioSynth.playClick(); onLogout(); }}
-            className="text-xs font-orbitron text-red-400 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/40 shadow-[0_4px_0_0_rgba(239,68,68,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(239,68,68,0.5),0_0_12px_rgba(239,68,68,0.2)] active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer"
+            className="text-xs font-orbitron text-red-400 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/40 shadow-[0_4px_0_0_rgba(239,68,68,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(239,68,68,0.5),0_0_12px_rgba(239,68,68,0.2)] active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer flex items-center"
           >
-            // DISCONNECT
+            <span className="relative flex mr-2 w-1.5 h-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+            </span>
+            <span>⏻ DISCONNECT</span>
           </button>
         </div>
       </header>
@@ -350,15 +367,17 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
               <div className="mt-6 flex flex-wrap gap-3">
                 <button
                   onClick={() => { audioSynth.playClick(); onSelectGame(featuredGame.id); }}
-                  className={`px-5 py-2.5 ${accent.buttonBg} ${accent.buttonText} ${accent.buttonHoverBg} font-orbitron font-bold text-xs uppercase tracking-wider rounded cursor-pointer ${accent.buttonGlow} transition-all duration-300`}
+                  className={`px-5 py-2.5 ${accent.buttonBg} ${accent.buttonText} ${accent.buttonHoverBg} font-orbitron font-bold text-xs uppercase tracking-wider rounded cursor-pointer ${accent.button3D} flex items-center justify-center`}
                 >
-                  LAUNCH SIMULATOR
+                  <span className={`w-1.5 h-1.5 rounded-full mr-2 animate-pulse ${accent.dotColor}`} style={{ boxShadow: '0 0 8px currentColor' }} />
+                  <span>LAUNCH SIMULATOR ▶</span>
                 </button>
                 <button
-                  onClick={() => setCarouselIndex(prev => (prev + 1) % featuredGames.length)}
-                  className="px-4 py-2.5 bg-transparent border border-white/20 text-white hover:border-white/50 hover:bg-white/5 font-orbitron font-bold text-xs uppercase tracking-wider rounded transition-all"
+                  onClick={() => { audioSynth.playClick(); setCarouselIndex(prev => (prev + 1) % featuredGames.length); }}
+                  className="px-4 py-2.5 bg-cyber-purple/20 border border-white/20 text-white font-orbitron font-bold text-xs uppercase tracking-wider rounded shadow-[0_4px_0_0_rgba(255,255,255,0.15)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(255,255,255,0.25),0_0_12px_rgba(255,255,255,0.05)] active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer flex items-center justify-center"
                 >
-                  NEXT PREVIEW &gt;
+                  <span className="w-1.5 h-1.5 rounded-full mr-2 bg-white/70 animate-pulse shadow-[0_0_6px_rgba(255,255,255,0.5)]" />
+                  <span>NEXT PREVIEW »</span>
                 </button>
               </div>
             </div>
@@ -492,9 +511,10 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
             {dailyClaimMsg && <p className="text-xs text-neon-yellow font-mono">{dailyClaimMsg}</p>}
             <button
               onClick={handleClaimDaily}
-              className="w-full py-2.5 bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan font-orbitron text-xs font-extrabold uppercase rounded-lg shadow-[0_4px_0_0_rgba(0,240,255,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(0,240,255,0.5),0_0_15px_rgba(0,240,255,0.25)] hover:bg-neon-cyan hover:text-black active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer"
+              className="w-full py-2.5 bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan font-orbitron text-xs font-extrabold uppercase rounded-lg shadow-[0_4px_0_0_rgba(0,240,255,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(0,240,255,0.5),0_0_15px_rgba(0,240,255,0.25)] hover:bg-neon-cyan hover:text-black active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer flex items-center justify-center"
             >
-              CLAIM DATA PACKET
+              <span className="bg-neon-cyan shadow-[0_0_8px_#00f0ff] animate-pulse w-2 h-2 rounded-full mr-2 inline-block" />
+              <span>CLAIM DATA PACKET »</span>
             </button>
           </div>
 
