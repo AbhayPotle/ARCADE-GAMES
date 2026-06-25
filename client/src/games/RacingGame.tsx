@@ -139,6 +139,46 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   const [shakeIntensity, setShakeIntensity] = useState(0);
   const [spinOutTime, setSpinOutTime] = useState(0); // slide control
 
+  const propsRef = useRef({ matchData, currentUser, onComplete });
+  useEffect(() => {
+    propsRef.current = { matchData, currentUser, onComplete };
+  });
+
+  const stateRef = useRef({
+    playerX: 0.0,
+    speed: 0.0,
+    trackPosition: 0.0,
+    distanceKm: 0.0,
+    botDistanceKm: 0.0,
+    botX: 0.0,
+    keys: {} as Record<string, boolean>,
+    isNitroActive: false,
+    nitroRemaining: 100,
+    rpm: 1000,
+    gear: 1,
+    gearMode: 'auto' as 'auto' | 'manual',
+    lastGearShiftTime: 0,
+    spinOutTime: 0,
+    score: 0,
+    overtakesCount: 0,
+    coinsCollected: 0,
+    weather: 'clear' as 'clear' | 'rain' | 'storm',
+    windVector: { dx: 0 },
+    gameOver: false,
+  });
+
+  useEffect(() => {
+    stateRef.current.weather = weather;
+  }, [weather]);
+
+  useEffect(() => {
+    stateRef.current.windVector = windVector;
+  }, [windVector]);
+
+  useEffect(() => {
+    stateRef.current.gameOver = gameOver;
+  }, [gameOver]);
+
   // Refs for static objects and high-frequency updates
   const billboardsRef = useRef<{ side: number; z: number; text: string; color: string }[]>([]);
   const streetlightsRef = useRef<{ side: number; z: number }[]>([]);
@@ -433,10 +473,15 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const wTypes: ('clear' | 'rain' | 'storm')[] = ['clear', 'rain', 'storm'];
       const nextW = wTypes[Math.floor(Math.random() * wTypes.length)];
       setWeather(nextW);
+      stateRef.current.weather = nextW;
       if (nextW === 'storm') {
-        setWindVector({ dx: (Math.random() - 0.5) * 55 });
+        const wind = { dx: (Math.random() - 0.5) * 55 };
+        setWindVector(wind);
+        stateRef.current.windVector = wind;
       } else {
-        setWindVector({ dx: 0 });
+        const wind = { dx: 0 };
+        setWindVector(wind);
+        stateRef.current.windVector = wind;
       }
     }, 12000);
 
@@ -444,31 +489,45 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     socketService.on('racing_competitor_sync', (data: { userId: string; x: number; y: number }) => {
       setBotDistanceKm(data.y);
       setBotX(data.x);
+      stateRef.current.botDistanceKm = data.y;
+      stateRef.current.botX = data.x;
     });
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
-      setKeys(prev => ({ ...prev, [k]: true }));
+      setKeys(prev => {
+        const next = { ...prev, [k]: true };
+        stateRef.current.keys = next;
+        return next;
+      });
 
       // Manual Gear shift controls
       if (k === 'e') {
         setGearMode('manual');
+        stateRef.current.gearMode = 'manual';
         setGear(prev => {
           if (prev < 6) {
             audioSynth.playGearShift();
-            setLastGearShiftTime(Date.now());
+            const now = Date.now();
+            setLastGearShiftTime(now);
+            stateRef.current.lastGearShiftTime = now;
             emitGearShiftShockwave();
+            stateRef.current.gear = prev + 1;
             return prev + 1;
           }
           return prev;
         });
       } else if (k === 'q') {
         setGearMode('manual');
+        stateRef.current.gearMode = 'manual';
         setGear(prev => {
           if (prev > 1) {
             audioSynth.playGearShift();
-            setLastGearShiftTime(Date.now());
+            const now = Date.now();
+            setLastGearShiftTime(now);
+            stateRef.current.lastGearShiftTime = now;
             emitGearShiftShockwave();
+            stateRef.current.gear = prev - 1;
             return prev - 1;
           }
           return prev;
@@ -476,6 +535,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       } else if (k === 'm') {
         setGearMode(prev => {
           const next = prev === 'auto' ? 'manual' : 'auto';
+          stateRef.current.gearMode = next;
           audioSynth.playClick();
           return next;
         });
@@ -484,7 +544,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
-      setKeys(prev => ({ ...prev, [k]: false }));
+      setKeys(prev => {
+        const next = { ...prev, [k]: false };
+        stateRef.current.keys = next;
+        return next;
+      });
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -567,6 +631,28 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
 
+      // Destructure current values from stateRef to prevent stale closures
+      const {
+        weather,
+        windVector,
+        gameOver,
+        speed,
+        gearMode,
+        gear,
+        keys,
+        nitroRemaining,
+        trackPosition,
+        lastGearShiftTime,
+        spinOutTime,
+        playerX,
+        distanceKm,
+        botDistanceKm,
+        botX,
+        score,
+        overtakesCount,
+        coinsCollected,
+      } = stateRef.current;
+
       // Update Rain particles
       if (weather !== 'clear') {
         rainDropsRef.current.forEach(d => {
@@ -600,8 +686,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
         // 1. Dynamic Auto Shifting / Gear & RPM systems
         const speedKphVal = Math.round(currentSpeed * 1.6);
+        let nextGear = gear;
         if (gearMode === 'auto') {
-          let nextGear = gear;
           if (speedKphVal > 25 && gear === 1) nextGear = 2;
           else if (speedKphVal > 55 && gear === 2) nextGear = 3;
           else if (speedKphVal > 90 && gear === 3) nextGear = 4;
@@ -615,8 +701,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           
           if (nextGear !== gear) {
             audioSynth.playGearShift();
-            setLastGearShiftTime(Date.now());
+            const nowTime = Date.now();
+            setLastGearShiftTime(nowTime);
+            stateRef.current.lastGearShiftTime = nowTime;
             setGear(nextGear);
+            stateRef.current.gear = nextGear;
             emitGearShiftShockwave();
           }
         }
@@ -624,8 +713,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const getGearMaxSpeed = (g: number, totalMaxSpeed: number) => totalMaxSpeed * [0.15, 0.32, 0.52, 0.72, 0.88, 1.0][g - 1];
         const getGearAccelMultiplier = (g: number) => [1.8, 1.4, 1.1, 0.85, 0.65, 0.45][g - 1];
 
-        const gearMax = getGearMaxSpeed(gear, maxSpeed);
-        const gearMin = gear === 1 ? 0 : getGearMaxSpeed(gear - 1, maxSpeed);
+        const gearMax = getGearMaxSpeed(nextGear, maxSpeed);
+        const gearMin = nextGear === 1 ? 0 : getGearMaxSpeed(nextGear - 1, maxSpeed);
 
         let currentRpm = 1000;
         if (currentSpeed <= 0.1) {
@@ -637,7 +726,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           if (currentRpm > 8200) currentRpm = 8200;
         }
         setRpm(currentRpm);
-        setShowShiftPrompt(currentRpm > 7200 && gear < 6);
+        stateRef.current.rpm = currentRpm;
+        setShowShiftPrompt(currentRpm > 7200 && nextGear < 6);
 
         // 2. Nitro NOS Boost
         const isNosPressed = (keys[' '] || keys['shift']) && !gameOver;
@@ -668,7 +758,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           nitroLeft = Math.min(100, nitroRemaining + 8 * dt);
         }
         setIsNitroActive(nitroActive);
+        stateRef.current.isNitroActive = nitroActive;
         setNitroRemaining(nitroLeft);
+        stateRef.current.nitroRemaining = nitroLeft;
 
         // Spawn warp rings
         if (nitroActive) {
@@ -693,7 +785,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const isClutchDisengaged = gearShiftAge < 180;
 
         const currentMaxSpeed = maxSpeed + (nitroActive ? 35 : 0);
-        const currentAccel = acceleration * getGearAccelMultiplier(gear) * (nitroActive ? 2.2 : 1.0);
+        const currentAccel = acceleration * getGearAccelMultiplier(nextGear) * (nitroActive ? 2.2 : 1.0);
 
         const accelerating = keys['arrowup'] || keys['w'];
         const braking = keys['arrowdown'] || keys['s'];
@@ -742,9 +834,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const isSteeringLeft = keys['arrowleft'] || keys['a'];
         const isSteeringRight = keys['arrowright'] || keys['d'];
 
+        let nextSpinOut = spinOutTime;
         if (spinOutTime > 0) {
-          const nextSpin = Math.max(0, spinOutTime - dt);
-          setSpinOutTime(nextSpin);
+          nextSpinOut = Math.max(0, spinOutTime - dt);
+          setSpinOutTime(nextSpinOut);
+          stateRef.current.spinOutTime = nextSpinOut;
           currentX += Math.sin(Date.now() / 80) * 0.09;
           
           if (Math.random() > 0.3) {
@@ -853,7 +947,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         });
 
         // Oil Spill collision check
-        if (spinOutTime <= 0) {
+        if (nextSpinOut <= 0) {
           oilSpillsRef.current.forEach(spill => {
             const relZ = spill.z - trackPosition;
             if (Math.abs(relZ) < 8) {
@@ -861,6 +955,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
               if (Math.abs(lanePos - currentX) < 0.32) {
                 audioSynth.playDrift();
                 setSpinOutTime(1.2);
+                stateRef.current.spinOutTime = 1.2;
               }
             }
           });
@@ -869,6 +964,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         // Distance accumulator
         const newTrackPos = trackPosition + currentSpeed * dt;
         const newDistKm = distanceKm + (currentSpeed * dt) / 1000;
+
+        // Save updated values to stateRef
+        stateRef.current.speed = currentSpeed;
+        stateRef.current.playerX = currentX;
+        stateRef.current.trackPosition = newTrackPos;
+        stateRef.current.distanceKm = newDistKm;
 
         setSpeed(currentSpeed);
         setPlayerX(currentX);
@@ -914,14 +1015,22 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
               audioSynth.playError();
               emitCrashBlast(CANVAS_WIDTH / 2, CANVAS_HEIGHT - 65);
               currentSpeed = Math.max(8, currentSpeed * 0.22);
+              
+              stateRef.current.speed = currentSpeed;
               setSpeed(currentSpeed);
+              
               car.z = 320 + Math.random() * 160;
               car.lane = Math.floor(Math.random() * 3);
               car.isChangingLane = false;
               car.blinkSignal = null;
             } else {
-              setOvertakesCount(prev => prev + 1);
-              setScore(prev => prev + 100);
+              const nextOvertakes = overtakesCount + 1;
+              const nextScore = score + 100;
+              stateRef.current.overtakesCount = nextOvertakes;
+              stateRef.current.score = nextScore;
+              
+              setOvertakesCount(nextOvertakes);
+              setScore(nextScore);
               audioSynth.playCoin();
               
               triggerOvertakeTrails();
@@ -944,8 +1053,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
             const lanePos = LANE_OFFSETS[coin.lane];
             if (Math.abs(lanePos - currentX) < 0.35 && !coin.collected) {
               coin.collected = true;
-              setCoinsCollected(prev => prev + 1);
-              setScore(prev => prev + 50);
+              const nextCoins = coinsCollected + 1;
+              const nextScore = score + 50;
+              stateRef.current.coinsCollected = nextCoins;
+              stateRef.current.score = nextScore;
+              
+              setCoinsCollected(nextCoins);
+              setScore(nextScore);
               audioSynth.playCoin();
             }
           }
@@ -961,6 +1075,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const botSpeed = 40.0;
         const nextBotDist = botDistanceKm + (botSpeed * dt) / 1000;
         const nextBotX = Math.sin(now / 1600) * 0.42;
+        
+        stateRef.current.botDistanceKm = nextBotDist;
+        stateRef.current.botX = nextBotX;
         setBotDistanceKm(nextBotDist);
         setBotX(nextBotX);
 
@@ -969,7 +1086,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         }
 
         socketService.emit('racing_position_update', {
-          roomId: matchData.roomId,
+          roomId: propsRef.current.matchData.roomId,
           x: currentX,
           y: newDistKm
         });
@@ -984,7 +1101,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     return () => {
       cancelAnimationFrame(animId);
     };
-  }, [keys, speed, playerX, trackPosition, distanceKm, overtakesCount, coinsCollected, weather, windVector, gameOver, roadSegments]);
+  }, [roadSegments]);
 
   const triggerOvertakeTrails = () => {
     // Generate sweeping wind line trails
@@ -1006,6 +1123,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   };
 
   const drawScene = (ctx: CanvasRenderingContext2D) => {
+    const { isNitroActive, trackPosition, playerX, weather, windVector, botDistanceKm, distanceKm, gameOver } = stateRef.current;
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.save();
 
@@ -1487,6 +1605,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   };
 
   const drawDigitalRearViewMirror = (ctx: CanvasRenderingContext2D) => {
+    const { playerX, trackPosition, botX, botDistanceKm } = stateRef.current;
     const mirrorW = 220;
     const mirrorH = 50;
     const mirrorX = CANVAS_WIDTH / 2 - mirrorW / 2;
@@ -1626,6 +1745,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   // Background drawing helper
   const drawScrollingBackground = (ctx: CanvasRenderingContext2D) => {
+    const { playerX } = stateRef.current;
     // Sky gradient (realistic twilight dusk transition)
     const skyGrad = ctx.createLinearGradient(0, 0, 0, HORIZON);
     skyGrad.addColorStop(0, '#0c122c');   // Deep twilight navy blue
@@ -1822,6 +1942,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   // Scenery tree drawing
   const drawPerspectiveTree = (ctx: CanvasRenderingContext2D, tree: any, z: number) => {
+    const { trackPosition, playerX } = stateRef.current;
     const targetZ = trackPosition + z;
     const proj = project3D(tree.lane, targetZ, 0, trackPosition, playerX, roadSegments);
     if (!proj || proj.scale < 0.01) return;
@@ -1982,6 +2103,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
 
   const drawPerspectiveBillboard = (ctx: CanvasRenderingContext2D, bill: any, z: number) => {
+    const { trackPosition, playerX } = stateRef.current;
     const targetZ = trackPosition + z;
     const proj = project3D(bill.side, targetZ, 0, trackPosition, playerX, roadSegments);
     if (!proj || proj.scale < 0.01) return;
@@ -2125,6 +2247,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   // Streetlight drawing in perspective
   const drawPerspectiveStreetlight = (ctx: CanvasRenderingContext2D, light: any, z: number) => {
+    const { trackPosition, playerX, weather } = stateRef.current;
     const targetZ = trackPosition + z;
     const proj = project3D(light.side, targetZ, 0, trackPosition, playerX, roadSegments);
     if (!proj || proj.scale < 0.01) return;
@@ -2195,6 +2318,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   // Construction cone drawing in perspective
   const drawPerspectiveCone = (ctx: CanvasRenderingContext2D, cone: any, z: number) => {
+    const { trackPosition, playerX } = stateRef.current;
     const targetZ = trackPosition + z;
     let projOffset = LANE_OFFSETS[cone.lane];
     if (cone.hit) {
@@ -2241,6 +2365,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   // Leaves drawing
   const drawPerspectiveLeaf = (ctx: CanvasRenderingContext2D, leaf: any, z: number) => {
+    const { trackPosition, playerX } = stateRef.current;
     const targetZ = trackPosition + z;
     const proj = project3D(leaf.lane, targetZ, 0, trackPosition, playerX, roadSegments);
     if (!proj || proj.scale < 0.02) return;
@@ -2273,6 +2398,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   // Coin drawing
   const drawPerspectiveCoin = (ctx: CanvasRenderingContext2D, coin: any, z: number) => {
+    const { trackPosition, playerX } = stateRef.current;
     const targetZ = trackPosition + z;
     const proj = project3D(LANE_OFFSETS[coin.lane], targetZ, 0, trackPosition, playerX, roadSegments);
     if (!proj || proj.scale < 0.015) return;
@@ -2338,6 +2464,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   // Scenery traffic drawing
   const drawPerspectiveTraffic = (ctx: CanvasRenderingContext2D, car: any, z: number) => {
+    const { trackPosition, playerX, weather } = stateRef.current;
     const targetZ = trackPosition + z;
     // Handle lane change animation interpolation
     let currentLaneOffset = LANE_OFFSETS[car.lane];
@@ -2577,6 +2704,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   // Bot Car drawing
   const drawPerspectiveBot = (ctx: CanvasRenderingContext2D, z: number) => {
+    const { botX, trackPosition, playerX, weather } = stateRef.current;
     const targetZ = trackPosition + z;
     const proj = project3D(botX, targetZ, 0, trackPosition, playerX, roadSegments);
     if (!proj || proj.scale < 0.01) return;
@@ -2739,6 +2867,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   };
 
   const drawPlayerCarSprite = () => {
+    const { weather, keys, isNitroActive, lastGearShiftTime } = stateRef.current;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
