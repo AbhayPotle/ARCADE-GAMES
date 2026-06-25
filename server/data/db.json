@@ -5,9 +5,9 @@
       "username": "Abhay14",
       "passwordHash": "$2a$10$3yO1L3GJF8z4.oUmx2jHGOAo9shkJbCv8rqM4v7njghWkhwUZ0FCm",
       "avatar": "avatar_1",
-      "xp": 125,
+      "xp": 525,
       "level": 6,
-      "coins": 740,
+      "coins": 900,
       "ranking": "Silver",
       "achievements": [],
       "friendsList": [],
@@ -64,6 +64,28 @@
         "thruster": 1
       },
       "createdAt": "2026-06-22T15:25:53.197Z"
+    },
+    {
+      "id": "efcb2ba6-ff9b-4322-ab86-819362288e9f",
+      "username": "sweety",
+      "passwordHash": "$2a$10$ZEha8tZJ98JHzANOuhHFI.PD.VEQcDNWLei9sGVP6f31lHyzC4Gye",
+      "avatar": "avatar_5",
+      "xp": 50,
+      "level": 2,
+      "coins": 160,
+      "ranking": "Bronze IV",
+      "achievements": [],
+      "friendsList": [],
+      "favoriteGames": [],
+      "purchasedItems": [],
+      "lastClaimedDaily": null,
+      "upgrades": {
+        "engine": 1,
+        "tires": 1,
+        "stability": 1,
+        "thruster": 1
+      },
+      "createdAt": "2026-06-25T03:27:07.865Z"
     }
   ],
   "matches": [],
@@ -137,6 +159,18 @@
       "username": "sumit14",
       "score": 8000,
       "updatedAt": "2026-06-22T15:27:55.183Z"
+    },
+    {
+      "gameId": "typing_warriors",
+      "username": "sweety",
+      "score": 36,
+      "updatedAt": "2026-06-25T03:29:25.688Z"
+    },
+    {
+      "gameId": "velocity_x",
+      "username": "sweety",
+      "score": 8000,
+      "updatedAt": "2026-06-25T03:32:47.974Z"
     }
   ]
 }
