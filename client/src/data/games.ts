@@ -32,7 +32,7 @@ export const GAMES: GameCatalogItem[] = [
     players: '2 Players',
     difficulty: 'Medium',
     status: 'playable',
-    icon: '🎯',
+    icon: '🥏',
     bannerGradient: 'from-purple-600 to-indigo-900',
     accentColor: 'neon-magenta',
   },

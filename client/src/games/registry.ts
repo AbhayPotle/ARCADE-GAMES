@@ -39,7 +39,7 @@ export const GAME_REGISTRY: Record<string, GameRegistryItem> = {
     category: 'Board Games',
     players: '2 Players',
     difficulty: 'Medium',
-    icon: '🎯',
+    icon: '🥏',
     bannerGradient: 'from-purple-600 to-indigo-900',
     bannerImage: '/carrom_banner.png',
     accentColor: 'neon-magenta',
