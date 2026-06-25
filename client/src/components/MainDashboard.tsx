@@ -318,9 +318,16 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
             transition={{ duration: 0.5 }}
             className="absolute inset-0 flex flex-col justify-center p-8 md:p-12"
           >
-            {/* Background gradient container */}
-            <div className={`absolute inset-0 bg-gradient-to-r ${featuredGame.bannerGradient} opacity-60 z-0`} />
-            <div className="absolute inset-0 bg-gradient-to-t from-cyber-black via-cyber-dark/40 to-transparent opacity-90 z-0" />
+            {/* Background image / gradient container */}
+            {featuredGame.bannerImage ? (
+              <div
+                className="absolute inset-0 bg-cover bg-center opacity-45 z-0"
+                style={{ backgroundImage: `url(${featuredGame.bannerImage})` }}
+              />
+            ) : (
+              <div className={`absolute inset-0 bg-gradient-to-r ${featuredGame.bannerGradient} opacity-60 z-0`} />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-cyber-black via-cyber-dark/45 to-transparent opacity-95 z-0" />
             
             {/* Floating Game Emoji */}
             <div className="absolute right-4 md:right-16 top-0 bottom-0 flex items-center justify-center pointer-events-none select-none z-0">
@@ -401,11 +408,24 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
                     }}
                     className={`group glass-panel rounded-lg overflow-hidden border border-white/5 ${cardAccent.hoverBorder} transition-all duration-300 relative cursor-pointer hover:scale-[1.02] ${cardAccent.hoverShadow}`}
                   >
-                    <div className={`h-24 bg-gradient-to-r ${game.bannerGradient} flex items-center justify-between p-4 relative`}>
-                      <span className="text-4xl filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-300">
+                    <div className="h-24 flex items-center justify-between p-4 relative overflow-hidden">
+                      {/* Realistic banner image template background */}
+                      {game.bannerImage ? (
+                        <div
+                          className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-500 ease-out"
+                          style={{ backgroundImage: `url(${game.bannerImage})` }}
+                        />
+                      ) : (
+                        <div className={`absolute inset-0 bg-gradient-to-r ${game.bannerGradient}`} />
+                      )}
+                      
+                      {/* Gradient cyber mask overlay to blend image into card background and keep text readable */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-cyber-black/90 via-cyber-black/35 to-transparent z-0" />
+                      
+                      <span className="text-4xl filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] group-hover:scale-115 transition-transform duration-300 relative z-10">
                         {game.icon}
                       </span>
-                      <span className={`text-[9px] font-orbitron px-2 py-0.5 border ${cardAccent.glowBorder} bg-cyber-black ${cardAccent.text} rounded-md`}>
+                      <span className={`text-[9px] font-orbitron px-2 py-0.5 border ${cardAccent.glowBorder} bg-cyber-black ${cardAccent.text} rounded-md relative z-10 shadow-[0_0_8px_rgba(0,0,0,0.5)]`}>
                         PLAY NOW
                       </span>
                     </div>

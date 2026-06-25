@@ -13,6 +13,7 @@ export interface GameRegistryItem {
   difficulty: 'Easy' | 'Medium' | 'Hard';
   icon: string;
   bannerGradient: string;
+  bannerImage?: string;
   accentColor: string;
   component: React.ComponentType<any>;
 }
@@ -27,6 +28,7 @@ export const GAME_REGISTRY: Record<string, GameRegistryItem> = {
     difficulty: 'Hard',
     icon: '👑',
     bannerGradient: 'from-blue-600 to-indigo-950',
+    bannerImage: '/chess_banner.png',
     accentColor: 'neon-cyan',
     component: ChessLegends
   },
@@ -39,6 +41,7 @@ export const GAME_REGISTRY: Record<string, GameRegistryItem> = {
     difficulty: 'Medium',
     icon: '🎯',
     bannerGradient: 'from-purple-600 to-indigo-900',
+    bannerImage: '/carrom_banner.png',
     accentColor: 'neon-magenta',
     component: CarromMasters
   },
@@ -51,6 +54,7 @@ export const GAME_REGISTRY: Record<string, GameRegistryItem> = {
     difficulty: 'Medium',
     icon: '🏎️',
     bannerGradient: 'from-emerald-500 to-teal-950',
+    bannerImage: '/velocity_x_banner.png',
     accentColor: 'neon-green',
     component: VelocityX
   },
@@ -63,6 +67,7 @@ export const GAME_REGISTRY: Record<string, GameRegistryItem> = {
     difficulty: 'Hard',
     icon: '⌨️',
     bannerGradient: 'from-violet-600 to-purple-950',
+    bannerImage: '/typing_banner.png',
     accentColor: 'neon-cyan',
     component: TypingWarriors
   }
