@@ -101,6 +101,14 @@ body {
   text-shadow: 0 0 8px rgba(255, 251, 0, 0.6), 0 0 15px rgba(255, 251, 0, 0.2);
 }
 
+.glow-text-green {
+  text-shadow: 0 0 8px rgba(0, 255, 102, 0.6), 0 0 15px rgba(0, 255, 102, 0.2);
+}
+
+.glow-text-orange {
+  text-shadow: 0 0 8px rgba(255, 94, 0, 0.6), 0 0 15px rgba(255, 94, 0, 0.2);
+}
+
 .glass-panel {
   background: rgba(7, 4, 20, 0.6);
   backdrop-filter: blur(12px);

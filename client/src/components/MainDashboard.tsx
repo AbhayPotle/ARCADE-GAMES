@@ -8,6 +8,116 @@ import { api } from '../services/api';
 import { audioSynth } from '../services/audio';
 import { getAvatarEmoji } from './RightSidebar';
 
+const ACCENT_CLASSES: Record<string, {
+  text: string;
+  glowText: string;
+  badgeBg: string;
+  badgeBorder: string;
+  badgeText: string;
+  buttonBg: string;
+  buttonText: string;
+  buttonHoverBg: string;
+  buttonGlow: string;
+  border: string;
+  borderHover: string;
+  glowBorder: string;
+  shadow: string;
+  hoverBorder: string;
+  hoverShadow: string;
+  hoverText: string;
+}> = {
+  'neon-cyan': {
+    text: 'text-neon-cyan',
+    glowText: 'glow-text-cyan',
+    badgeBg: 'bg-neon-cyan/5',
+    badgeBorder: 'border-neon-cyan/30',
+    badgeText: 'text-neon-cyan',
+    buttonBg: 'bg-neon-cyan',
+    buttonText: 'text-black',
+    buttonHoverBg: 'hover:bg-neon-cyan/85',
+    buttonGlow: 'shadow-[0_0_15px_rgba(0,240,255,0.4)]',
+    border: 'border-neon-cyan/15',
+    borderHover: 'hover:border-neon-cyan/30',
+    glowBorder: 'border-neon-cyan',
+    shadow: 'shadow-[0_0_15px_rgba(0,240,255,0.15)]',
+    hoverBorder: 'hover:border-neon-cyan/40',
+    hoverShadow: 'hover:shadow-[0_0_15px_rgba(0,240,255,0.1)]',
+    hoverText: 'group-hover:text-neon-cyan',
+  },
+  'neon-magenta': {
+    text: 'text-neon-magenta',
+    glowText: 'glow-text-magenta',
+    badgeBg: 'bg-neon-magenta/5',
+    badgeBorder: 'border-neon-magenta/30',
+    badgeText: 'text-neon-magenta',
+    buttonBg: 'bg-neon-magenta',
+    buttonText: 'text-black',
+    buttonHoverBg: 'hover:bg-neon-magenta/85',
+    buttonGlow: 'shadow-[0_0_15px_rgba(255,0,127,0.4)]',
+    border: 'border-neon-magenta/15',
+    borderHover: 'hover:border-neon-magenta/30',
+    glowBorder: 'border-neon-magenta',
+    shadow: 'shadow-[0_0_15px_rgba(255,0,127,0.15)]',
+    hoverBorder: 'hover:border-neon-magenta/40',
+    hoverShadow: 'hover:shadow-[0_0_15px_rgba(255,0,127,0.1)]',
+    hoverText: 'group-hover:text-neon-magenta',
+  },
+  'neon-green': {
+    text: 'text-neon-green',
+    glowText: 'glow-text-green',
+    badgeBg: 'bg-neon-green/5',
+    badgeBorder: 'border-neon-green/30',
+    badgeText: 'text-neon-green',
+    buttonBg: 'bg-neon-green',
+    buttonText: 'text-black',
+    buttonHoverBg: 'hover:bg-neon-green/85',
+    buttonGlow: 'shadow-[0_0_15px_rgba(0,255,102,0.4)]',
+    border: 'border-neon-green/15',
+    borderHover: 'hover:border-neon-green/30',
+    glowBorder: 'border-neon-green',
+    shadow: 'shadow-[0_0_15px_rgba(0,255,102,0.15)]',
+    hoverBorder: 'hover:border-neon-green/40',
+    hoverShadow: 'hover:shadow-[0_0_15px_rgba(0,255,102,0.1)]',
+    hoverText: 'group-hover:text-neon-green',
+  },
+  'neon-yellow': {
+    text: 'text-neon-yellow',
+    glowText: 'glow-text-yellow',
+    badgeBg: 'bg-neon-yellow/5',
+    badgeBorder: 'border-neon-yellow/30',
+    badgeText: 'text-neon-yellow',
+    buttonBg: 'bg-neon-yellow',
+    buttonText: 'text-black',
+    buttonHoverBg: 'hover:bg-neon-yellow/85',
+    buttonGlow: 'shadow-[0_0_15px_rgba(255,251,0,0.4)]',
+    border: 'border-neon-yellow/15',
+    borderHover: 'hover:border-neon-yellow/30',
+    glowBorder: 'border-neon-yellow',
+    shadow: 'shadow-[0_0_15px_rgba(255,251,0,0.15)]',
+    hoverBorder: 'hover:border-neon-yellow/40',
+    hoverShadow: 'hover:shadow-[0_0_15px_rgba(255,251,0,0.1)]',
+    hoverText: 'group-hover:text-neon-yellow',
+  },
+  'neon-orange': {
+    text: 'text-neon-orange',
+    glowText: 'glow-text-orange',
+    badgeBg: 'bg-neon-orange/5',
+    badgeBorder: 'border-neon-orange/30',
+    badgeText: 'text-neon-orange',
+    buttonBg: 'bg-neon-orange',
+    buttonText: 'text-black',
+    buttonHoverBg: 'hover:bg-neon-orange/85',
+    buttonGlow: 'shadow-[0_0_15px_rgba(255,94,0,0.4)]',
+    border: 'border-neon-orange/15',
+    borderHover: 'hover:border-neon-orange/30',
+    glowBorder: 'border-neon-orange',
+    shadow: 'shadow-[0_0_15px_rgba(255,94,0,0.15)]',
+    hoverBorder: 'hover:border-neon-orange/40',
+    hoverShadow: 'hover:shadow-[0_0_15px_rgba(255,94,0,0.1)]',
+    hoverText: 'group-hover:text-neon-orange',
+  },
+};
+
 interface MainDashboardProps {
   currentUser: any;
   onSelectGame: (gameId: string) => void;
@@ -30,6 +140,8 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
 
   const categories = ['All', 'Board Games', 'Racing', 'Educational Games', 'Puzzle Games', 'Sports', 'Strategy', 'Multiplayer Battle Games'];
   const featuredGames = GAMES.slice(0, 4); // First 4 are featured
+  const featuredGame = featuredGames[carouselIndex] || GAMES[0];
+  const accent = ACCENT_CLASSES[featuredGame?.accentColor || 'neon-cyan'] || ACCENT_CLASSES['neon-cyan'];
 
   useEffect(() => {
     loadDashboardStats();
@@ -196,36 +308,52 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
       </header>
 
       {/* Featured Games Carousel (Next-Gen visual effects) */}
-      <section className="relative overflow-hidden rounded-xl h-64 md:h-80 bg-gradient-to-r from-indigo-950 via-cyber-dark to-purple-950 border border-neon-cyan/15 flex flex-col justify-center p-8 md:p-12">
+      <section className={`relative overflow-hidden rounded-xl h-64 md:h-80 flex flex-col justify-center border ${accent.border} transition-all duration-500`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={carouselIndex}
-            initial={{ opacity: 0, x: 50 }}
+            initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.6 }}
-            className="space-y-3"
+            exit={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0 flex flex-col justify-center p-8 md:p-12"
           >
-            <span className="text-xs uppercase font-orbitron text-neon-cyan tracking-widest block">// FEATURED HERO RELEASE</span>
-            <h1 className="text-3xl md:text-5xl font-black font-orbitron tracking-wider text-white glow-text-cyan max-w-2xl leading-none">
-              {featuredGames[carouselIndex].title.toUpperCase()}
-            </h1>
-            <p className="text-xs md:text-sm text-gray-400 mt-3 max-w-md font-sans">
-              {featuredGames[carouselIndex].description}
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                onClick={() => { audioSynth.playClick(); onSelectGame(featuredGames[carouselIndex].id); }}
-                className="px-5 py-2.5 bg-neon-cyan text-black hover:bg-neon-cyan/85 font-orbitron font-bold text-xs uppercase tracking-wider rounded cursor-pointer shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all"
-              >
-                LAUNCH SIMULATOR
-              </button>
-              <button
-                onClick={() => setCarouselIndex(prev => (prev + 1) % featuredGames.length)}
-                className="px-4 py-2.5 bg-transparent border border-white/20 text-white hover:border-white/50 hover:bg-white/5 font-orbitron font-bold text-xs uppercase tracking-wider rounded transition-all"
-              >
-                NEXT PREVIEW &gt;
-              </button>
+            {/* Background gradient container */}
+            <div className={`absolute inset-0 bg-gradient-to-r ${featuredGame.bannerGradient} opacity-60 z-0`} />
+            <div className="absolute inset-0 bg-gradient-to-t from-cyber-black via-cyber-dark/40 to-transparent opacity-90 z-0" />
+            
+            {/* Floating Game Emoji */}
+            <div className="absolute right-4 md:right-16 top-0 bottom-0 flex items-center justify-center pointer-events-none select-none z-0">
+              <span className="text-[140px] md:text-[240px] opacity-15 md:opacity-20 filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.8)] animate-float block">
+                {featuredGame.icon}
+              </span>
+            </div>
+
+            {/* Content container */}
+            <div className="relative z-10 space-y-3">
+              <span className={`text-xs uppercase font-orbitron tracking-widest block ${accent.text}`}>
+                // FEATURED HERO RELEASE
+              </span>
+              <h1 className={`text-3xl md:text-5xl font-black font-orbitron tracking-wider text-white ${accent.glowText} max-w-2xl leading-none`}>
+                {featuredGame.title.toUpperCase()}
+              </h1>
+              <p className="text-xs md:text-sm text-gray-200 mt-3 max-w-md font-sans">
+                {featuredGame.description}
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button
+                  onClick={() => { audioSynth.playClick(); onSelectGame(featuredGame.id); }}
+                  className={`px-5 py-2.5 ${accent.buttonBg} ${accent.buttonText} ${accent.buttonHoverBg} font-orbitron font-bold text-xs uppercase tracking-wider rounded cursor-pointer ${accent.buttonGlow} transition-all duration-300`}
+                >
+                  LAUNCH SIMULATOR
+                </button>
+                <button
+                  onClick={() => setCarouselIndex(prev => (prev + 1) % featuredGames.length)}
+                  className="px-4 py-2.5 bg-transparent border border-white/20 text-white hover:border-white/50 hover:bg-white/5 font-orbitron font-bold text-xs uppercase tracking-wider rounded transition-all"
+                >
+                  NEXT PREVIEW &gt;
+                </button>
+              </div>
             </div>
           </motion.div>
         </AnimatePresence>
@@ -262,44 +390,47 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredGames.map((game) => (
-                <div
-                  key={game.id}
-                  onClick={() => {
-                    audioSynth.playClick();
-                    onSelectGame(game.id);
-                  }}
-                  className="group glass-panel rounded-lg overflow-hidden border border-white/5 hover:border-neon-cyan/30 transition-all duration-300 relative cursor-pointer hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(0,240,255,0.05)]"
-                >
-                  <div className={`h-24 bg-gradient-to-r ${game.bannerGradient} flex items-center justify-between p-4 relative`}>
-                    <span className="text-4xl filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-300">
-                      {game.icon}
-                    </span>
-                    <span className="text-[9px] font-orbitron px-2 py-0.5 border border-neon-cyan bg-cyber-black text-neon-cyan rounded-md">
-                      PLAY NOW
-                    </span>
-                  </div>
-                  <div className="p-4 bg-cyber-dark/80 relative">
-                    <h4 className="text-sm font-extrabold font-orbitron text-white group-hover:text-neon-cyan transition-colors">
-                      {game.title}
-                    </h4>
-                    <p className="text-xs text-gray-400 mt-1 line-clamp-2 min-h-8">
-                      {game.description}
-                    </p>
-                    <div className="flex items-center justify-between mt-4 border-t border-white/5 pt-3 text-[10px] font-mono text-gray-400">
-                      <span>{game.category}</span>
-                      <div className="flex space-x-2">
-                        <span className="px-1.5 py-0.5 bg-black/40 border border-white/5 rounded">
-                          {game.players}
-                        </span>
-                        <span className="px-1.5 py-0.5 bg-black/40 border border-white/5 rounded">
-                          {game.difficulty}
-                        </span>
+              {filteredGames.map((game) => {
+                const cardAccent = ACCENT_CLASSES[game.accentColor || 'neon-cyan'] || ACCENT_CLASSES['neon-cyan'];
+                return (
+                  <div
+                    key={game.id}
+                    onClick={() => {
+                      audioSynth.playClick();
+                      onSelectGame(game.id);
+                    }}
+                    className={`group glass-panel rounded-lg overflow-hidden border border-white/5 ${cardAccent.hoverBorder} transition-all duration-300 relative cursor-pointer hover:scale-[1.02] ${cardAccent.hoverShadow}`}
+                  >
+                    <div className={`h-24 bg-gradient-to-r ${game.bannerGradient} flex items-center justify-between p-4 relative`}>
+                      <span className="text-4xl filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-300">
+                        {game.icon}
+                      </span>
+                      <span className={`text-[9px] font-orbitron px-2 py-0.5 border ${cardAccent.glowBorder} bg-cyber-black ${cardAccent.text} rounded-md`}>
+                        PLAY NOW
+                      </span>
+                    </div>
+                    <div className="p-4 bg-cyber-dark/80 relative">
+                      <h4 className={`text-sm font-extrabold font-orbitron text-white ${cardAccent.hoverText} transition-colors`}>
+                        {game.title}
+                      </h4>
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-2 min-h-8">
+                        {game.description}
+                      </p>
+                      <div className="flex items-center justify-between mt-4 border-t border-white/5 pt-3 text-[10px] font-mono text-gray-400">
+                        <span>{game.category}</span>
+                        <div className="flex space-x-2">
+                          <span className="px-1.5 py-0.5 bg-black/40 border border-white/5 rounded">
+                            {game.players}
+                          </span>
+                          <span className="px-1.5 py-0.5 bg-black/40 border border-white/5 rounded">
+                            {game.difficulty}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
