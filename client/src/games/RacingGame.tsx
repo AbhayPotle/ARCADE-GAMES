@@ -601,13 +601,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   // 3D HUD mouse hover parallax coordinates
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const card = e.currentTarget;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const xc = rect.width / 2;
-    const yc = rect.height / 2;
-    setTilt({ rx: -(y - yc) / 25, ry: (x - xc) / 25 });
+    // Disable board tilt during active gameplay to ensure layout stability
+    setTilt({ rx: 0, ry: 0 });
   };
 
   const handleMouseLeave = () => {

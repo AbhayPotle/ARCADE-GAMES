@@ -279,6 +279,10 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
 
   // Mouse tilt calculation
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (gameState !== 'setup') {
+      setTilt({ rx: 0, ry: 0 });
+      return;
+    }
     const card = e.currentTarget;
     const rect = card.getBoundingClientRect();
     const x = e.clientX - rect.left;
