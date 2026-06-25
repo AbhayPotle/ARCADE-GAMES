@@ -79,8 +79,17 @@ export default function AuthGate({ onAuthSuccess }: AuthGateProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-4 relative z-10">
-      <div className="w-full max-w-md glass-panel p-8 rounded-xl border border-neon-cyan/20 shadow-[0_0_50px_rgba(0,240,255,0.05)] relative overflow-hidden">
+    <div className="flex-1 flex flex-col items-center justify-center p-4 relative z-10 w-full h-full min-h-screen">
+      {/* Immersive 8K Login Background Overlay */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-65 z-0 filter brightness-35 contrast-125"
+        style={{ backgroundImage: "url('/cyber_lobby_bg.png')" }}
+      />
+      {/* Neon glowing radial gradient overlays */}
+      <div className="absolute inset-0 bg-gradient-to-t from-cyber-black via-cyber-dark/40 to-transparent opacity-95 z-0" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-neon-cyan/10 via-transparent to-transparent opacity-60 z-0 pointer-events-none" />
+
+      <div className="w-full max-w-md glass-panel p-8 rounded-xl border border-neon-cyan/30 shadow-[0_0_60px_rgba(0,240,255,0.15)] relative overflow-hidden z-10 backdrop-blur-md">
         {/* Hologram top stripe */}
         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-neon-cyan to-transparent animate-pulse" />
         

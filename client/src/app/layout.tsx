@@ -29,6 +29,12 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className="h-screen w-screen overflow-hidden flex flex-col bg-cyber-black text-gray-100 antialiased relative selection:bg-neon-cyan selection:text-black">
+        {/* 8K Cyber Lobby Main Background Overlay */}
+        <div
+          className="fixed inset-0 bg-cover bg-center opacity-30 -z-30 pointer-events-none filter brightness-50 contrast-125"
+          style={{ backgroundImage: "url('/cyber_lobby_bg.png')" }}
+        />
+
         {/* Background Grids */}
         <div className="fixed inset-0 cyber-grid -z-20 pointer-events-none" />
         <div className="fixed inset-0 cyber-grid-radial -z-10 pointer-events-none" />
