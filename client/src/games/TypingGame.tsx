@@ -541,10 +541,10 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
                     <button
                       key={diff}
                       onClick={() => { audioSynth.playClick(); setDifficulty(diff); }}
-                      className={`py-2.5 px-3 rounded-xl border text-[10px] font-orbitron font-extrabold uppercase transition-all cursor-pointer ${
+                      className={`py-2.5 px-3 rounded-xl border text-[10px] font-orbitron font-extrabold uppercase transition-all duration-200 cursor-pointer hover:scale-[1.03] active:scale-[0.97] ${
                         difficulty === diff
-                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.4)]'
-                          : 'bg-black/60 text-gray-400 border-white/10 hover:border-amber-400/40 hover:text-white'
+                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.4)] font-black'
+                          : 'bg-black/60 text-gray-400 border-white/10 hover:border-amber-400/50 hover:text-amber-400 hover:shadow-[0_0_10px_rgba(245,158,11,0.15)]'
                       }`}
                     >
                       {diff}
@@ -554,7 +554,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
                 })}
               </div>
             </div>
-
+ 
             {/* Duration Timer Selector */}
             <div className="space-y-2 text-left">
               <label className="text-[9px] font-orbitron text-gray-400 font-bold uppercase tracking-widest block">
@@ -565,10 +565,10 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
                   <button
                     key={sec}
                     onClick={() => { audioSynth.playClick(); setDuration(sec); }}
-                    className={`py-2.5 px-3 rounded-xl border text-[10px] font-orbitron font-extrabold uppercase transition-all cursor-pointer ${
+                    className={`py-2.5 px-3 rounded-xl border text-[10px] font-orbitron font-extrabold uppercase transition-all duration-200 cursor-pointer hover:scale-[1.03] active:scale-[0.97] ${
                       duration === sec
-                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-black border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
-                        : 'bg-black/60 text-gray-400 border-white/10 hover:border-emerald-400/40 hover:text-white'
+                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-black border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)] font-black'
+                        : 'bg-black/60 text-gray-400 border-white/10 hover:border-emerald-400/50 hover:text-emerald-400 hover:shadow-[0_0_10px_rgba(16,185,129,0.15)]'
                     }`}
                   >
                     {sec} SEC
@@ -577,10 +577,10 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
               </div>
             </div>
           </div>
-
+ 
           <button
             onClick={handleStartGame}
-            className="w-full py-3.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-emerald-500 text-black hover:text-white font-orbitron font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.25)] hover:shadow-[0_0_35px_rgba(0,255,102,0.45)] cursor-pointer"
+            className="w-full py-3.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-emerald-500 text-black hover:text-white font-orbitron font-black text-xs uppercase tracking-widest rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.25)] hover:shadow-[0_0_35px_rgba(0,255,102,0.45)] hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
           >
             ENGAGE WARP GRID
           </button>
@@ -867,16 +867,16 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
         {/* Live typing stats summary widgets */}
         <div className="grid grid-cols-3 gap-3 font-orbitron text-[9px] text-center border-t border-white/5 pt-4 text-gray-500">
           <div className="bg-white/5 border border-white/5 p-2 rounded-xl">
-            <p className="tracking-widest uppercase">// STAGE_COM</p>
-            <p className="text-amber-400 font-black text-sm mt-0.5">{sentencesCompleted} <span className="text-[9px] font-normal">LAPS</span></p>
+            <p className="tracking-widest uppercase">// TRANS_COM</p>
+            <p className="text-amber-400 font-black text-sm mt-0.5">{sentencesCompleted} <span className="text-[9px] font-normal">CYCLES</span></p>
           </div>
           <div className="bg-white/5 border border-white/5 p-2 rounded-xl">
             <p className="tracking-widest uppercase">// MISFIRES</p>
-            <p className="text-red-500 font-black text-sm mt-0.5">{typosCount} <span className="text-[9px] font-normal">ERRS</span></p>
+            <p className="text-red-500 font-black text-sm mt-0.5">{typosCount} <span className="text-[9px] font-normal">GLITCHES</span></p>
           </div>
           <div className="bg-white/5 border border-white/5 p-2 rounded-xl">
-            <p className="tracking-widest uppercase">// WARP_ENG</p>
-            <p className="text-emerald-400 font-black text-sm mt-0.5">{progress}% <span className="text-[9px] font-normal">LOCK</span></p>
+            <p className="tracking-widest uppercase">// SYNC_RATE</p>
+            <p className="text-emerald-400 font-black text-sm mt-0.5">{progress}% <span className="text-[9px] font-normal">SYNC</span></p>
           </div>
         </div>
       </div>

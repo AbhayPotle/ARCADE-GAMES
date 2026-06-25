@@ -133,7 +133,7 @@ export default function GameArea({ gameId, currentUser, onBackToDashboard }: Gam
               </div>
               <button
                 onClick={handleForfeit}
-                className="text-[10px] text-red-400 hover:text-red-300 font-orbitron uppercase border border-red-500/20 px-2 py-0.5 rounded bg-red-950/20"
+                className="text-[10px] text-red-400 hover:text-black font-orbitron uppercase border border-red-500/30 hover:border-red-500 hover:bg-red-500 px-3 py-1 rounded bg-red-950/20 transition-all duration-300 shadow-[0_0_8px_rgba(239,68,68,0.15)] hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] hover:scale-[1.03] active:scale-[0.97] cursor-pointer"
               >
                 EXIT MATCH
               </button>
@@ -202,7 +202,7 @@ export default function GameArea({ gameId, currentUser, onBackToDashboard }: Gam
 
             <button
               onClick={() => { audioSynth.playClick(); onBackToDashboard(); }}
-              className="px-6 py-2.5 bg-neon-cyan text-black hover:bg-neon-cyan/85 font-orbitron font-bold text-xs uppercase tracking-wider rounded cursor-pointer transition-colors shadow-[0_0_15px_rgba(0,240,255,0.15)]"
+              className="px-6 py-2.5 bg-neon-cyan text-black hover:bg-neon-cyan/85 font-orbitron font-bold text-xs uppercase tracking-wider rounded cursor-pointer transition-all duration-300 shadow-[0_0_15px_rgba(0,240,255,0.25)] hover:shadow-[0_0_25px_rgba(0,240,255,0.45)] hover:scale-[1.03] active:scale-[0.97]"
             >
               RETURN TO MAIN GRID
             </button>
