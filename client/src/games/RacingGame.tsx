@@ -1497,8 +1497,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     // Drifting trigger check
     if (steerLeft || steerRight) {
-      if (brakeInput && state.speed > 15) {
+      if (brakeInput && state.speed > 18) {
         state.isDrifting = true;
+      }
+      if (state.speed < 12) {
+        state.isDrifting = false;
       }
     } else {
       state.isDrifting = false;
@@ -1569,7 +1572,18 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     if (state.crashCooldown > 0) {
       state.crashCooldown -= dt;
-      state.speed -= state.speed * dt * 3; // dramatic slowdown
+      state.speed = Math.max(14, state.speed - 22 * dt);
+    } else if (state.isDrifting) {
+      if (accelInput) {
+        state.speed += accelRate * dt * 0.35;
+        state.speed -= 3.5 * dt;
+      } else if (brakeInput) {
+        state.speed -= accelRate * dt * 1.2;
+      } else {
+        state.speed -= 7.5 * dt;
+      }
+      if (state.speed > maxSpeedLimit * 0.85) state.speed = maxSpeedLimit * 0.85;
+      if (state.speed < 0) state.speed = 0;
     } else if (accelInput) {
       state.speed += accelRate * dt;
       if (state.speed > maxSpeedLimit) state.speed = maxSpeedLimit;
@@ -1578,7 +1592,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       if (state.speed < 0) state.speed = 0;
     } else {
       // Passive rolling drag
-      state.speed -= 8.5 * dt;
+      state.speed -= 4.5 * dt;
       if (state.speed < 0) state.speed = 0;
     }
 
@@ -1744,10 +1758,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       // Player to Traffic vehicle collision check
       const distToTc = finalPos.distanceTo(tc.mesh.position);
       if (distToTc < 2.5 && state.crashCooldown <= 0) {
-        state.crashCooldown = 1.6; // crash freeze sequence
+        state.crashCooldown = 0.8; // shorter crash recovery time (0.8s)
         audioSynth.playError(); // crash explosion
         setStuntNotification('COLLISION CRASH! SPEED DISRUPTED');
-        state.speed = 10;
+        state.speed = Math.max(16, state.speed * 0.55); // maintain 55% speed with floor of 16
         
         // Push traffic car away
         tc.dist += 12;
