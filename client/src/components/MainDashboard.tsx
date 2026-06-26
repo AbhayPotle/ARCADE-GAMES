@@ -518,31 +518,7 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
             </button>
           </div>
 
-          {/* Tournaments Grid */}
-          <div className="glass-panel rounded-xl p-4 bg-cyber-dark/70 border border-neon-cyan/15 space-y-4">
-            <h4 className="text-xs font-bold font-orbitron text-neon-magenta tracking-wider uppercase">// TOURNAMENTS</h4>
-            <div className="space-y-3">
-              {tournaments.map((tour) => (
-                <div key={tour.id} className="p-3 bg-black/40 border border-neon-magenta/20 rounded flex flex-col justify-between space-y-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h5 className="font-bold text-xs font-orbitron text-white leading-tight">{tour.title}</h5>
-                      <span className="text-[8px] text-gray-500 font-mono">GAME: {tour.gameId.toUpperCase()}</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center text-[10px] font-mono border-t border-white/5 pt-2">
-                    <span className="text-neon-yellow">Pool: 🪙 {tour.prizePool}</span>
-                    <button
-                      onClick={() => handleJoinTournament(tour.id)}
-                      className="px-2 py-1 bg-neon-magenta/20 border border-neon-magenta text-neon-magenta hover:bg-neon-magenta hover:text-black text-[9px] rounded font-orbitron"
-                    >
-                      JOIN Node
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+
 
           {/* Highest Leaderboards */}
           <div className="glass-panel rounded-xl p-4 bg-cyber-dark/70 border border-neon-cyan/15 space-y-4">
