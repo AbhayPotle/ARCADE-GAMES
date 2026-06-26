@@ -403,10 +403,10 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
                   <button
                     key={cat}
                     onClick={() => { setSelectedCategory(cat); audioSynth.playHover(); }}
-                    className={`px-3 py-1 rounded text-xs font-orbitron transition-all shrink-0 ${
+                    className={`px-3 py-1 rounded text-xs font-orbitron transition-all shrink-0 cursor-pointer ${
                       selectedCategory === cat
-                        ? 'bg-neon-cyan/15 border border-neon-cyan text-neon-cyan shadow-[0_0_8px_rgba(0,240,255,0.2)]'
-                        : 'bg-cyber-dark border border-white/5 text-gray-400 hover:text-gray-200'
+                        ? 'bg-neon-cyan border border-neon-cyan text-black shadow-[0_0_12px_rgba(0,240,255,0.4)] font-bold'
+                        : 'bg-cyber-dark border border-white/5 text-gray-400 hover:bg-neon-cyan hover:text-black hover:border-neon-cyan hover:shadow-[0_0_10px_rgba(0,240,255,0.35)]'
                     }`}
                   >
                     {cat}

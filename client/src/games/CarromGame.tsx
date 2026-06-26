@@ -2199,7 +2199,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
                     className={`px-3 py-1 rounded-lg text-[9px] uppercase font-bold border transition-all cursor-pointer ${
                       difficulty === diff
                         ? 'bg-[#FFD93D] text-black border-[#FFD93D] shadow-[0_0_8px_rgba(255,217,61,0.4)]'
-                        : 'bg-black/40 text-gray-300 border-white/10 hover:border-white/20'
+                        : 'bg-black/40 text-gray-300 border-white/10 hover:bg-[#FFD93D] hover:text-black hover:border-[#FFD93D] hover:shadow-[0_0_8px_rgba(255,217,61,0.3)]'
                     } disabled:opacity-50`}
                   >
                     {diff}

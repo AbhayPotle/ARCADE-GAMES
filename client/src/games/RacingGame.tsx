@@ -134,6 +134,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     crashCooldown: 0,
     gear: 1,
     rpm: 1000,
+    steerAngle: 0,
     gameOver: false
   });
 
@@ -424,6 +425,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       } else {
         clearInterval(interval);
         audioSynth.playStart();
+        audioSynth.startEngine();
         setGamePhase('racing');
         startRacingEngine();
       }
@@ -966,6 +968,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   useEffect(() => {
     return () => {
       cancelAnimationFrame(animIdRef.current);
+      audioSynth.stopEngine();
       if (threeRef.current.renderer) {
         threeRef.current.renderer.dispose();
       }
@@ -1183,6 +1186,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
 
     // E. Animate player car wheels spinning & steering wheel rotation
+    const targetSteerAngle = steerLeft ? 1.4 : (steerRight ? -1.4 : 0);
+    state.steerAngle += (targetSteerAngle - state.steerAngle) * dt * 10;
+
     const spinFactor = state.speed * dt * 1.5;
     for (let i = 0; i < 4; i++) {
       const wheelRot = playerCar.getObjectByName(`wheel_rotator_${i}`);
@@ -1192,13 +1198,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       
       const wheelHub = playerCar.getObjectByName(`wheel_hub_${i}`);
       if (wheelHub && i < 2) {
-        wheelHub.rotation.y = steerLeft ? 0.35 : steerRight ? -0.35 : 0;
+        wheelHub.rotation.y = state.steerAngle * 0.25;
       }
     }
 
     const steerWheel = playerCar.getObjectByName('steering_wheel_group');
     if (steerWheel) {
-      steerWheel.rotation.z = steerLeft ? 1.4 : steerRight ? -1.4 : 0;
+      steerWheel.rotation.z = state.steerAngle;
     }
 
     // F. AI Bot Routing
@@ -1320,6 +1326,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     setHudRpm(calculatedRpm);
     setHudGear(nextGear);
+    audioSynth.updateEngine(calculatedRpm, state.isNosActive);
 
     // Update challenges timer remaining
     state.timer -= dt;
@@ -1349,6 +1356,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   const triggerGameFinished = (playerWon: boolean) => {
     stateRef.current.gameOver = true;
+    audioSynth.stopEngine();
     setGamePhase('ended');
 
     const totalCalculated = hudScore + Math.round(hudTimer * 180);

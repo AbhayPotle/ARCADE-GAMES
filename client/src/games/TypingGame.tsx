@@ -537,14 +537,26 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
               <div className="grid grid-cols-3 gap-2">
                 {(['easy', 'medium', 'hard'] as const).map(diff => {
                   const wpmLabel = diff === 'easy' ? '20' : (diff === 'medium' ? '32' : '45');
+                  
+                  // Define theme colors for each difficulty
+                  const activeStyle = diff === 'easy'
+                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-black border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)] font-black'
+                    : diff === 'medium'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.4)] font-black'
+                    : 'bg-gradient-to-r from-rose-500 to-rose-600 text-black border-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.4)] font-black';
+
+                  const hoverStyle = diff === 'easy'
+                    ? 'hover:bg-gradient-to-r hover:from-emerald-500 hover:to-emerald-600 hover:text-black hover:border-emerald-400 hover:shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                    : diff === 'medium'
+                    ? 'hover:bg-gradient-to-r hover:from-amber-500 hover:to-amber-600 hover:text-black hover:border-amber-400 hover:shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+                    : 'hover:bg-gradient-to-r hover:from-rose-500 hover:to-rose-600 hover:text-black hover:border-rose-400 hover:shadow-[0_0_12px_rgba(244,63,94,0.3)]';
+
                   return (
                     <button
                       key={diff}
                       onClick={() => { audioSynth.playClick(); setDifficulty(diff); }}
                       className={`py-2.5 px-3 rounded-xl border text-[10px] font-orbitron font-extrabold uppercase transition-all duration-200 cursor-pointer hover:scale-[1.03] active:scale-[0.97] ${
-                        difficulty === diff
-                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.4)] font-black'
-                          : 'bg-black/60 text-gray-400 border-white/10 hover:border-amber-400/50 hover:text-amber-400 hover:shadow-[0_0_10px_rgba(245,158,11,0.15)]'
+                        difficulty === diff ? activeStyle : `bg-black/60 text-gray-400 border-white/10 ${hoverStyle}`
                       }`}
                     >
                       {diff}
@@ -568,7 +580,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
                     className={`py-2.5 px-3 rounded-xl border text-[10px] font-orbitron font-extrabold uppercase transition-all duration-200 cursor-pointer hover:scale-[1.03] active:scale-[0.97] ${
                       duration === sec
                         ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-black border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)] font-black'
-                        : 'bg-black/60 text-gray-400 border-white/10 hover:border-emerald-400/50 hover:text-emerald-400 hover:shadow-[0_0_10px_rgba(16,185,129,0.15)]'
+                        : 'bg-black/60 text-gray-400 border-white/10 hover:bg-gradient-to-r hover:from-emerald-500 hover:to-emerald-600 hover:text-black hover:border-emerald-400 hover:shadow-[0_0_12px_rgba(16,185,129,0.3)]'
                     }`}
                   >
                     {sec} SEC

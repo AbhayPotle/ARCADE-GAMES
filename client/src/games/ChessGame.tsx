@@ -504,7 +504,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
                   className={`px-3 py-2 rounded-lg text-xs uppercase font-bold border transition-all text-center cursor-pointer ${
                     difficulty === diff
                       ? 'bg-[#FFD93D] text-black border-[#FFD93D] shadow-[0_0_12px_rgba(255,217,61,0.4)] font-extrabold'
-                      : 'bg-black/40 text-gray-300 border-white/10 hover:border-white/20'
+                      : 'bg-black/40 text-gray-300 border-white/10 hover:bg-[#FFD93D] hover:text-black hover:border-[#FFD93D] hover:shadow-[0_0_10px_rgba(255,217,61,0.3)]'
                   }`}
                 >
                   {diff}
@@ -524,7 +524,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
                   className={`px-3 py-2 rounded-lg text-xs uppercase font-bold border transition-all text-center cursor-pointer ${
                     activeTheme === theme
                       ? 'bg-gradient-to-r from-[#00D4FF] to-[#6C63FF] text-white border-white shadow-[0_0_12px_rgba(0,212,255,0.4)] font-extrabold'
-                      : 'bg-black/40 text-gray-300 border-white/10 hover:border-white/20'
+                      : 'bg-black/40 text-gray-300 border-white/10 hover:bg-gradient-to-r hover:from-[#00D4FF] hover:to-[#6C63FF] hover:text-white hover:border-white hover:shadow-[0_0_10px_rgba(0,212,255,0.3)]'
                   }`}
                 >
                   {theme}
