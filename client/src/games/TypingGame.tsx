@@ -108,8 +108,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
   const [timeLeft, setTimeLeft] = useState<number>(30);
   const [countdownVal, setCountdownVal] = useState<number>(3);
 
-  // Mouse tilt holographic coordinate tracking
-  const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
+
 
   const [textToType, setTextToType] = useState<string>('');
   const [inputVal, setInputVal] = useState<string>('');
@@ -277,26 +276,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
     }
   }, [gameState, timeLeft, finished]);
 
-  // Mouse tilt calculation
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (gameState !== 'setup') {
-      setTilt({ rx: 0, ry: 0 });
-      return;
-    }
-    const card = e.currentTarget;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const xc = rect.width / 2;
-    const yc = rect.height / 2;
-    const rx = -(y - yc) / 22; // subtle tilt limit
-    const ry = (x - xc) / 22;
-    setTilt({ rx, ry });
-  };
 
-  const handleMouseLeave = () => {
-    setTilt({ rx: 0, ry: 0 });
-  };
 
   // Spark drawing logic
   const updateAndDrawSparks = (ctx: CanvasRenderingContext2D) => {
@@ -503,12 +483,6 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
   if (gameState === 'setup') {
     return (
       <div 
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          transform: `perspective(1000px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
-          transition: 'transform 0.1s ease-out'
-        }}
         className="flex-1 flex flex-col p-6 w-full h-full min-h-0 justify-center items-center max-w-2xl bg-gradient-to-br from-[#0c0d1b] via-[#041a1a] to-[#1e0412] rounded-3xl animate-border-rainbow relative overflow-hidden select-none shadow-[0_0_60px_rgba(245,158,11,0.15)]"
       >
         {customStyles}
@@ -637,12 +611,6 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
   // Render 3: Active Gameplay or Ended Screen
   return (
     <div 
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        transform: `perspective(1000px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
-        transition: 'transform 0.1s ease-out'
-      }}
       className="flex-1 flex flex-col p-6 w-full h-full min-h-0 justify-between max-w-2xl bg-gradient-to-br from-[#0c0d1b] via-[#041a1a] to-[#1e0412]/95 rounded-3xl animate-border-rainbow relative overflow-hidden select-none shadow-[0_0_40px_rgba(245,158,11,0.12)]"
     >
       {customStyles}
@@ -822,12 +790,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
       <div className="flex-1 my-2 glass-panel rounded-2xl py-4 px-6 border border-amber-500/20 relative overflow-hidden bg-[#070e0e] min-h-[220px] select-none flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]">
         
         {/* Interactive 3D glass reflection glare */}
-        <div 
-          style={{
-            transform: `translate(${tilt.ry * 3}px, ${-tilt.rx * 3}px)`,
-          }}
-          className="glass-glare" 
-        />
+        <div className="glass-glare" />
         
         {/* CRT Scanline Overlay specifically for the cockpit screen */}
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(7,14,14,0)_50%,rgba(245,158,11,0.018)_50%)] bg-[length:100%_4px] pointer-events-none z-10" />
