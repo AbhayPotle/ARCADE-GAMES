@@ -611,7 +611,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
   // Render 3: Active Gameplay or Ended Screen
   return (
     <div 
-      className="flex-1 flex flex-col p-6 w-full h-full min-h-0 justify-between max-w-2xl bg-gradient-to-br from-[#0c0d1b] via-[#041a1a] to-[#1e0412]/95 rounded-3xl animate-border-rainbow relative overflow-hidden select-none shadow-[0_0_40px_rgba(245,158,11,0.12)]"
+      className="flex-1 flex flex-col py-3 px-4 w-full h-full min-h-0 justify-between max-w-2xl bg-gradient-to-br from-[#0c0d1b] via-[#041a1a] to-[#1e0412]/95 rounded-3xl animate-border-rainbow relative overflow-hidden select-none shadow-[0_0_40px_rgba(245,158,11,0.12)]"
     >
       {customStyles}
       {/* 8K Starfield & gold grid background */}
@@ -625,28 +625,28 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
       )}
 
       {/* TOP GRID PANEL: Speedometer, Timer, and Accuracy instrument clusters */}
-      <div className="flex items-center justify-between gap-4 bg-black/60 border border-amber-500/20 p-4 rounded-2xl backdrop-blur-md relative z-10 shrink-0 shadow-lg">
+      <div className="flex items-center justify-between gap-4 bg-black/60 border border-amber-500/20 py-2 px-3 rounded-2xl backdrop-blur-md relative z-10 shrink-0 shadow-lg">
         
         {/* Speedometer instrument */}
-        <div className="flex flex-col items-center justify-center relative w-24 h-24 shrink-0">
+        <div className="flex flex-col items-center justify-center relative w-20 h-20 shrink-0">
           <svg className="w-full h-full transform -rotate-90">
             <circle
-              cx="48"
-              cy="48"
-              r="38"
+              cx="40"
+              cy="40"
+              r="32"
               fill="transparent"
               stroke="rgba(255,255,255,0.03)"
               strokeWidth="5"
             />
             <circle
-              cx="48"
-              cy="48"
-              r="38"
+              cx="40"
+              cy="40"
+              r="32"
               fill="transparent"
               stroke="url(#wpmGrad)"
               strokeWidth="5"
-              strokeDasharray={238}
-              strokeDashoffset={238 - (238 * Math.min(100, wpm)) / 110}
+              strokeDasharray={201}
+              strokeDashoffset={201 - (201 * Math.min(100, wpm)) / 110}
               strokeLinecap="round"
               className="transition-all duration-300"
             />
@@ -666,25 +666,25 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
         </div>
 
         {/* Circular central Countdown Timer */}
-        <div className="flex flex-col items-center justify-center relative w-20 h-20 shrink-0 font-orbitron text-white">
+        <div className="flex flex-col items-center justify-center relative w-16 h-16 shrink-0 font-orbitron text-white">
           <svg className="w-full h-full transform -rotate-90">
             <circle
-              cx="40"
-              cy="40"
-              r="32"
+              cx="32"
+              cy="32"
+              r="24"
               fill="transparent"
               stroke="rgba(255,255,255,0.03)"
               strokeWidth="5"
             />
             <circle
-              cx="40"
-              cy="40"
-              r="32"
+              cx="32"
+              cy="32"
+              r="24"
               fill="transparent"
               stroke={timeLeft < 6 ? '#ff2a2a' : '#ffaa00'}
               strokeWidth="5"
-              strokeDasharray={201}
-              strokeDashoffset={201 - (201 * timeLeft) / duration}
+              strokeDasharray={150}
+              strokeDashoffset={150 - (150 * timeLeft) / duration}
               strokeLinecap="round"
               className="transition-all duration-1000 animate-pulse"
             />
@@ -698,25 +698,25 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
         </div>
 
         {/* Target Lock Accuracy instrument */}
-        <div className="flex flex-col items-center justify-center relative w-24 h-24 shrink-0">
+        <div className="flex flex-col items-center justify-center relative w-20 h-20 shrink-0">
           <svg className="w-full h-full transform -rotate-90">
             <circle
-              cx="48"
-              cy="48"
-              r="38"
+              cx="40"
+              cy="40"
+              r="32"
               fill="transparent"
               stroke="rgba(255,255,255,0.03)"
               strokeWidth="5"
             />
             <circle
-              cx="48"
-              cy="48"
-              r="38"
+              cx="40"
+              cy="40"
+              r="32"
               fill="transparent"
               stroke="url(#accGrad)"
               strokeWidth="5"
-              strokeDasharray={238}
-              strokeDashoffset={238 - (238 * accuracy) / 100}
+              strokeDasharray={201}
+              strokeDashoffset={201 - (201 * accuracy) / 100}
               strokeLinecap="round"
               className="transition-all duration-300"
             />
@@ -738,7 +738,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
       </div>
 
       {/* MID PANEL: Faction Dogfight Tracks (Flight telemetry HUD) */}
-      <div className="my-4 space-y-4 bg-black/60 border border-amber-500/10 p-4 rounded-2xl backdrop-blur-md relative z-10 shrink-0">
+      <div className="my-2 space-y-2 bg-black/60 border border-amber-500/10 py-2 px-3 rounded-2xl backdrop-blur-md relative z-10 shrink-0">
         <span className="text-[8px] font-orbitron text-amber-400 uppercase tracking-widest block mb-2 leading-none">
           // FLEET FIGHTER GRID TELEMETRY
         </span>
@@ -787,7 +787,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
       </div>
 
       {/* COCKPIT HUD SCREEN: Main Typing Text Terminal with CRT screen scanline */}
-      <div className="flex-1 my-2 glass-panel rounded-2xl py-4 px-6 border border-amber-500/20 relative overflow-hidden bg-[#070e0e] min-h-[220px] select-none flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]">
+      <div className="flex-1 my-2 glass-panel rounded-2xl py-4 px-6 border border-amber-500/20 relative overflow-hidden bg-[#070e0e] min-h-[140px] select-none flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]">
         
         {/* Interactive 3D glass reflection glare */}
         <div className="glass-glare" />
@@ -840,7 +840,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
         />
 
         {/* Live typing stats summary widgets */}
-        <div className="grid grid-cols-3 gap-3 font-orbitron text-[9px] text-center border-t border-white/5 pt-4 text-gray-500">
+        <div className="grid grid-cols-3 gap-3 font-orbitron text-[9px] text-center border-t border-white/5 pt-2 text-gray-500">
           <div className="bg-white/5 border border-white/5 p-2 rounded-xl">
             <p className="tracking-widest uppercase">// TRANS_COM</p>
             <p className="text-amber-400 font-black text-sm mt-0.5">{sentencesCompleted} <span className="text-[9px] font-normal">CYCLES</span></p>

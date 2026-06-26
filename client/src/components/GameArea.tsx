@@ -140,7 +140,7 @@ export default function GameArea({ gameId, currentUser, onBackToDashboard }: Gam
             </div>
 
             {/* Embed Game Engine */}
-            <div className="flex-1 flex flex-col justify-center items-center relative min-h-0 overflow-hidden">
+            <div className="flex-1 flex flex-col justify-start md:justify-center items-center relative min-h-0 overflow-y-auto p-2 md:p-4">
               {(() => {
                 const gameItem = GAME_REGISTRY[gameId];
                 if (!gameItem || !matchData) return <div className="text-white font-orbitron text-xs">LOADING GAME ENGINE...</div>;

@@ -594,10 +594,16 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     container.appendChild(renderer.domElement);
 
     // 2. Global Lights
-    const ambientLight = new THREE.AmbientLight(activeEvent.timeOfDay === 'night' ? 0x222233 : 0xffffff, activeEvent.timeOfDay === 'night' ? 0.35 : 0.65);
+    const ambientLight = new THREE.AmbientLight(
+      activeEvent.timeOfDay === 'sunset' ? 0xffe3c0 : (activeEvent.timeOfDay === 'night' ? 0x2c2c3e : 0xffffff),
+      activeEvent.timeOfDay === 'sunset' ? 0.45 : (activeEvent.timeOfDay === 'night' ? 0.35 : 0.65)
+    );
     scene.add(ambientLight);
 
-    const sun = new THREE.DirectionalLight(activeEvent.timeOfDay === 'sunset' ? 0xff5e00 : 0xffffff, activeEvent.timeOfDay === 'sunset' ? 1.8 : activeEvent.timeOfDay === 'night' ? 0.1 : 1.4);
+    const sun = new THREE.DirectionalLight(
+      activeEvent.timeOfDay === 'sunset' ? 0xff6622 : 0xffffff,
+      activeEvent.timeOfDay === 'sunset' ? 1.2 : activeEvent.timeOfDay === 'night' ? 0.15 : 1.25
+    );
     sun.position.set(100, 160, 50);
     sun.castShadow = true;
     sun.shadow.mapSize.width = 2048; // High-resolution shadows
@@ -655,9 +661,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         y -= dipT * 18;
       }
 
-      // Canyon jumps elevation override
-      if (activeEvent.id === 'canyon_jump' && i >= 6 && i <= 8) {
-        y += 26;
+      // Canyon jumps smooth bell-curve elevation
+      if (activeEvent.id === 'canyon_jump' && i >= 4 && i <= 10) {
+        const tBump = (i - 4) / 6;
+        y += Math.sin(tBump * Math.PI) * 24;
       }
       
       controlPoints.push(new THREE.Vector3(x, y, z));
@@ -1540,7 +1547,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     composer.addPass(new RenderPass(scene, camera));
     
     // Unreal Bloom glow on emitters, lights, and tail flames
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 1.25, 0.45, 0.25);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0.85, 0.4, 0.55);
     composer.addPass(bloomPass);
 
     // Store Three.js Instance References
