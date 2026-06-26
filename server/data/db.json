@@ -5,15 +5,17 @@
       "username": "Abhay14",
       "passwordHash": "$2a$10$3yO1L3GJF8z4.oUmx2jHGOAo9shkJbCv8rqM4v7njghWkhwUZ0FCm",
       "avatar": "avatar_1",
-      "xp": 525,
-      "level": 6,
-      "coins": 900,
+      "xp": 325,
+      "level": 7,
+      "coins": 1275,
       "ranking": "Silver",
-      "achievements": [],
+      "achievements": [
+        "coin_hoarder"
+      ],
       "friendsList": [],
       "favoriteGames": [],
       "createdAt": "2026-06-15T08:48:17.913Z",
-      "lastClaimedDaily": "2026-06-19T06:35:16.050Z",
+      "lastClaimedDaily": "2026-06-26T08:36:06.698Z",
       "upgrades": {
         "engine": 3,
         "tires": 1,
@@ -111,7 +113,9 @@
       "entryFee": 5,
       "prizePool": 50,
       "maxPlayers": 8,
-      "registeredPlayers": [],
+      "registeredPlayers": [
+        "6642185e-4c83-4acf-aa58-4a878fd7bba4"
+      ],
       "status": "upcoming",
       "startDate": "2026-06-17T08:36:36.111Z",
       "winnerId": null
