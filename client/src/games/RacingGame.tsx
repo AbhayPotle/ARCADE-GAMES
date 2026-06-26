@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { socketService } from '../services/socket';
 import { audioSynth } from '../services/audio';
 
@@ -454,6 +455,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     scene.background = new THREE.Color(activeEvent.timeOfDay === 'sunset' ? 0x1a0f2b : activeEvent.timeOfDay === 'night' ? 0x050510 : 0x4f8bb5);
     scene.fog = new THREE.FogExp2(scene.background, 0.005);
 
+    // Dynamic Spherical Equirectangular Reflections using local 8K cyberpunk backdrop
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load('/cyber_lobby_bg.png', (texture) => {
+      texture.mapping = THREE.EquirectangularReflectionMapping;
+      scene.environment = texture;
+    });
+
     const camera = new THREE.PerspectiveCamera(65, width / height, 0.5, 800);
     
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
@@ -776,11 +784,83 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     scene.add(exhaustParticles);
 
     // 10. Place Supercars on track grid
-    const playerCar = createProceduralCar(selectedPaint, true, activeCar.id);
+    const gltfLoader = new GLTFLoader();
+    const carUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/CarConcept/glTF-Binary/CarConcept.glb';
+
+    const playerCar = new THREE.Group();
     scene.add(playerCar);
 
-    const botCar = createProceduralCar('#ff0055', false, 'sentinel'); // Magenta Bot competitor
+    // Initial procedural fallback for immediate response
+    const fallbackCar = createProceduralCar(selectedPaint, true, activeCar.id);
+    playerCar.add(fallbackCar);
+
+    gltfLoader.load(
+      carUrl,
+      (gltf) => {
+        playerCar.remove(fallbackCar);
+        const loadedModel = gltf.scene;
+        loadedModel.scale.setScalar(0.7);
+        loadedModel.rotation.y = Math.PI; // Face forward
+        
+        loadedModel.traverse((node) => {
+          if (node instanceof THREE.Mesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+            if (node.name.toLowerCase().includes('body') || node.name.toLowerCase().includes('paint') || node.name.toLowerCase().includes('exterior')) {
+              node.material = new THREE.MeshPhysicalMaterial({
+                color: new THREE.Color(selectedPaint),
+                metalness: 0.95,
+                roughness: 0.08,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.03
+              });
+            }
+          }
+        });
+        playerCar.add(loadedModel);
+      },
+      undefined,
+      (err) => {
+        console.warn('Failed to load external player supercar, using local fallback:', err);
+      }
+    );
+
+    const botCar = new THREE.Group();
     scene.add(botCar);
+
+    const botFallback = createProceduralCar('#ff0055', false, 'sentinel');
+    botCar.add(botFallback);
+
+    gltfLoader.load(
+      carUrl,
+      (gltf) => {
+        botCar.remove(botFallback);
+        const loadedModel = gltf.scene;
+        loadedModel.scale.setScalar(0.7);
+        loadedModel.rotation.y = Math.PI;
+        
+        loadedModel.traverse((node) => {
+          if (node instanceof THREE.Mesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+            if (node.name.toLowerCase().includes('body') || node.name.toLowerCase().includes('paint') || node.name.toLowerCase().includes('exterior')) {
+              node.material = new THREE.MeshPhysicalMaterial({
+                color: new THREE.Color('#ff0055'),
+                metalness: 0.95,
+                roughness: 0.08,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.03
+              });
+            }
+          }
+        });
+        botCar.add(loadedModel);
+      },
+      undefined,
+      (err) => {
+        console.warn('Failed to load bot supercar, using local fallback:', err);
+      }
+    );
 
     // Attach Spotlight beam components to player car headlights
     const headlightsL = new THREE.SpotLight(0xffffff, 20.0, 55, 0.45, 0.8, 1);
