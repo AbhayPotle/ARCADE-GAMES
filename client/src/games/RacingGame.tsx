@@ -51,6 +51,7 @@ const CAREER_EVENTS: CareerEvent[] = [
 
 export default function VelocityX({ matchData, currentUser, onComplete }: RacingGameProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
+  const minimapCanvasRef = useRef<HTMLCanvasElement | null>(null);
   
   // local storage and progression states
   const [coins, setCoins] = useState<number>(() => {
@@ -138,6 +139,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     botDist: 20,          // AI competitor position
     botLane: 0,
     botSpeed: 40,
+    bot2Dist: 10,
+    bot2Lane: -3.0,
+    bot2Speed: 38,
+    bot3Dist: 0,
+    bot3Lane: 3.0,
+    bot3Speed: 36,
     trafficCars: [] as { mesh: THREE.Group; dist: number; lane: number; speed: number }[],
     cameraMode: 'chase' as 'chase' | 'far' | 'hood' | 'cockpit',
     trackLength: 1500,     // length of spline loop in meters
@@ -164,6 +171,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     trackCurve: THREE.CatmullRomCurve3 | null;
     playerCar: THREE.Group | null;
     botCar: THREE.Group | null;
+    bot2Car: THREE.Group | null;
+    bot3Car: THREE.Group | null;
     exhaustParticles: THREE.Points | null;
     exhaustGeometry: THREE.BufferGeometry | null;
     rainParticles: THREE.Points | null;
@@ -184,6 +193,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     trackCurve: null,
     playerCar: null,
     botCar: null,
+    bot2Car: null,
+    bot3Car: null,
     exhaustParticles: null,
     exhaustGeometry: null,
     rainParticles: null,
@@ -564,6 +575,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     stateRef.current.isDrifting = false;
     stateRef.current.nitro = 100;
     stateRef.current.botDist = 40;
+    stateRef.current.bot2Dist = 20;
+    stateRef.current.bot3Dist = 0;
     stateRef.current.airborne = false;
     stateRef.current.airHeight = 0;
     stateRef.current.crashCooldown = 0;
@@ -1509,6 +1522,72 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
     );
 
+    const bot2Car = new THREE.Group();
+    scene.add(bot2Car);
+    const bot2Fallback = createProceduralCar('#00ccff', false, 'sentinel');
+    bot2Car.add(bot2Fallback);
+
+    gltfLoader.load(
+      carUrl,
+      (gltf) => {
+        bot2Car.remove(bot2Fallback);
+        const loadedModel = gltf.scene.clone();
+        loadedModel.scale.setScalar(0.7);
+        loadedModel.rotation.y = Math.PI;
+        loadedModel.traverse((node) => {
+          if (node instanceof THREE.Mesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+            if (node.name.toLowerCase().includes('body') || node.name.toLowerCase().includes('paint') || node.name.toLowerCase().includes('exterior')) {
+              node.material = new THREE.MeshPhysicalMaterial({
+                color: new THREE.Color('#00ccff'),
+                metalness: 0.95,
+                roughness: 0.08,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.03
+              });
+            }
+          }
+        });
+        bot2Car.add(loadedModel);
+      },
+      undefined,
+      () => {}
+    );
+
+    const bot3Car = new THREE.Group();
+    scene.add(bot3Car);
+    const bot3Fallback = createProceduralCar('#ff00aa', false, 'sentinel');
+    bot3Car.add(bot3Fallback);
+
+    gltfLoader.load(
+      carUrl,
+      (gltf) => {
+        bot3Car.remove(bot3Fallback);
+        const loadedModel = gltf.scene.clone();
+        loadedModel.scale.setScalar(0.7);
+        loadedModel.rotation.y = Math.PI;
+        loadedModel.traverse((node) => {
+          if (node instanceof THREE.Mesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+            if (node.name.toLowerCase().includes('body') || node.name.toLowerCase().includes('paint') || node.name.toLowerCase().includes('exterior')) {
+              node.material = new THREE.MeshPhysicalMaterial({
+                color: new THREE.Color('#ff00aa'),
+                metalness: 0.95,
+                roughness: 0.08,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.03
+              });
+            }
+          }
+        });
+        bot3Car.add(loadedModel);
+      },
+      undefined,
+      () => {}
+    );
+
     // Attach Spotlight beam components to player car headlights
     const headlightsL = new THREE.SpotLight(0xffffff, 20.0, 55, 0.45, 0.8, 1);
     headlightsL.position.set(-0.8, 0.25, 2.2);
@@ -1559,6 +1638,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       trackCurve,
       playerCar,
       botCar,
+      bot2Car,
+      bot3Car,
       exhaustParticles,
       exhaustGeometry: exhaustGeom,
       rainParticles,
@@ -1627,8 +1708,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   // Update Game Variables on every Frame Tick
   const gameLoopTick = (dt: number) => {
-    const { scene, camera, renderer, composer, trackCurve, playerCar, botCar, rainParticles, warpLines } = threeRef.current;
-    if (!scene || !camera || !renderer || !composer || !trackCurve || !playerCar || !botCar) return;
+    const { scene, camera, renderer, composer, trackCurve, playerCar, botCar, bot2Car, bot3Car, rainParticles, warpLines } = threeRef.current;
+    if (!scene || !camera || !renderer || !composer || !trackCurve || !playerCar || !botCar || !bot2Car || !bot3Car) return;
 
     const state = stateRef.current;
     const playerT = state.playerDist / state.trackLength;
@@ -1746,6 +1827,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     if (state.crashCooldown > 0) {
       state.crashCooldown -= dt;
       state.speed = Math.max(14, state.speed - 22 * dt);
+    } else if (Math.abs(state.playerLane) >= 9.6) {
+      // Guardrail friction scraping
+      state.speed = Math.max(12, state.speed - 15 * dt);
+      state.collisionShake = Math.max(0.12, state.collisionShake);
+      if (Math.random() > 0.8) {
+        audioSynth.playNitro(); // screech sound effect proxy
+      }
     } else if (state.isDrifting) {
       if (accelInput) {
         state.speed += accelRate * dt * 0.35;
@@ -1903,24 +1991,21 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
 
     // F. AI Bot Routing
+    // Bot 1
     state.botSpeed = 38 + (activeEvent.difficulty === 'Hard' ? 12 : activeEvent.difficulty === 'Expert' ? 16 : 0) + Math.sin(playerT * 10) * 8;
     state.botDist += state.botSpeed * dt;
     if (state.botDist >= state.trackLength) {
       state.botDist -= state.trackLength;
-      triggerGameFinished(false); // Bot won
+      triggerGameFinished(false); // Bot 1 won
       return;
     }
-
     const botT = state.botDist / state.trackLength;
     const botPt = trackCurve.getPointAt(botT);
     const botTangent = trackCurve.getTangentAt(botT);
-
-    // Curvature-based banking roll for bot
     const botTNext = (botT + 0.002) % 1.0;
     const botTangentNext = trackCurve.getTangentAt(botTNext);
     const botCurvature = botTangent.clone().cross(botTangentNext).y;
     const botBankAngle = Math.max(-0.35, Math.min(0.35, botCurvature * 14.0));
-
     let botBinormal = new THREE.Vector3().crossVectors(botTangent, normal).normalize();
     botBinormal.applyAxisAngle(botTangent, botBankAngle);
     
@@ -1929,11 +2014,71 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     if (distToPlayer < 12) {
       state.botLane += (state.playerLane > 0 ? -4.5 - state.botLane : 4.5 - state.botLane) * dt * 4;
     }
-    
     botCar.position.copy(botPt.clone().add(botBinormal.clone().multiplyScalar(state.botLane)));
     botCar.position.y += 0.35;
     botCar.lookAt(botPt.clone().add(botTangent));
     botCar.rotation.z += botBankAngle;
+
+    // Bot 2
+    state.bot2Speed = 36 + (activeEvent.difficulty === 'Hard' ? 10 : activeEvent.difficulty === 'Expert' ? 14 : 0) + Math.cos(playerT * 8) * 6;
+    state.bot2Dist += state.bot2Speed * dt;
+    if (state.bot2Dist >= state.trackLength) {
+      state.bot2Dist -= state.trackLength;
+      triggerGameFinished(false); // Bot 2 won
+      return;
+    }
+    const bot2T = state.bot2Dist / state.trackLength;
+    const bot2Pt = trackCurve.getPointAt(bot2T);
+    const bot2Tangent = trackCurve.getTangentAt(bot2T);
+    const bot2TNext = (bot2T + 0.002) % 1.0;
+    const bot2TangentNext = trackCurve.getTangentAt(bot2TNext);
+    const bot2Curvature = bot2Tangent.clone().cross(bot2TangentNext).y;
+    const bot2BankAngle = Math.max(-0.35, Math.min(0.35, bot2Curvature * 14.0));
+    let bot2Binormal = new THREE.Vector3().crossVectors(bot2Tangent, normal).normalize();
+    bot2Binormal.applyAxisAngle(bot2Tangent, bot2BankAngle);
+    bot2Car.position.copy(bot2Pt.clone().add(bot2Binormal.clone().multiplyScalar(state.bot2Lane)));
+    bot2Car.position.y += 0.35;
+    bot2Car.lookAt(bot2Pt.clone().add(bot2Tangent));
+    bot2Car.rotation.z += bot2BankAngle;
+
+    // Bot 3
+    state.bot3Speed = 34 + (activeEvent.difficulty === 'Hard' ? 8 : activeEvent.difficulty === 'Expert' ? 12 : 0) + Math.sin(playerT * 6) * 5;
+    state.bot3Dist += state.bot3Speed * dt;
+    if (state.bot3Dist >= state.trackLength) {
+      state.bot3Dist -= state.trackLength;
+      triggerGameFinished(false); // Bot 3 won
+      return;
+    }
+    const bot3T = state.bot3Dist / state.trackLength;
+    const bot3Pt = trackCurve.getPointAt(bot3T);
+    const bot3Tangent = trackCurve.getTangentAt(bot3T);
+    const bot3TNext = (bot3T + 0.002) % 1.0;
+    const bot3TangentNext = trackCurve.getTangentAt(bot3TNext);
+    const bot3Curvature = bot3Tangent.clone().cross(bot3TangentNext).y;
+    const bot3BankAngle = Math.max(-0.35, Math.min(0.35, bot3Curvature * 14.0));
+    let bot3Binormal = new THREE.Vector3().crossVectors(bot3Tangent, normal).normalize();
+    bot3Binormal.applyAxisAngle(bot3Tangent, bot3BankAngle);
+    bot3Car.position.copy(bot3Pt.clone().add(bot3Binormal.clone().multiplyScalar(state.bot3Lane)));
+    bot3Car.position.y += 0.35;
+    bot3Car.lookAt(bot3Pt.clone().add(bot3Tangent));
+    bot3Car.rotation.z += bot3BankAngle;
+
+    // Player to Bot collision checks
+    const botsList = [
+      { mesh: botCar, name: 'RIVAL 1' },
+      { mesh: bot2Car, name: 'RIVAL 2' },
+      { mesh: bot3Car, name: 'RIVAL 3' }
+    ];
+    botsList.forEach((bObj) => {
+      const distToB = finalPos.distanceTo(bObj.mesh.position);
+      if (distToB < 2.5 && state.crashCooldown <= 0) {
+        state.crashCooldown = 0.6;
+        state.collisionShake = 0.32;
+        audioSynth.playError();
+        setStuntNotification(`BUMPED WITH ${bObj.name}!`);
+        state.speed = Math.max(18, state.speed * 0.72);
+      }
+    });
 
     // G. Traffic Cars routing & Collisions
     state.trafficCars.forEach((tc) => {
@@ -1986,6 +2131,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       } else if (state.isDrifting) {
         pMat.color.setHex(0xe0e0e0); // white/grey tire smoke
         pMat.size = 0.85;
+      } else if (Math.abs(state.playerLane) >= 9.6 && state.speed > 8) {
+        pMat.color.setHex(0xffaa00); // orange guardrail scraping sparks
+        pMat.size = 0.7;
       } else {
         pMat.size = 0.01; // hide particles
       }
@@ -2013,6 +2161,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
             posAttr.setXYZ(i, spawnPos.x, spawnPos.y, spawnPos.z);
           } else if (state.isDrifting && state.speed > 10) {
             const offset = new THREE.Vector3(Math.random() > 0.5 ? -0.95 : 0.95, -0.35, -1.2);
+            offset.applyQuaternion(playerCar.quaternion);
+            const spawnPos = playerCar.position.clone().add(offset);
+            posAttr.setXYZ(i, spawnPos.x, spawnPos.y, spawnPos.z);
+          } else if (Math.abs(state.playerLane) >= 9.6 && state.speed > 8) {
+            const sideSign = state.playerLane > 0 ? 1.05 : -1.05;
+            const offset = new THREE.Vector3(sideSign, -0.22, (Math.random() - 0.5) * 1.5 - 1.0);
             offset.applyQuaternion(playerCar.quaternion);
             const spawnPos = playerCar.position.clone().add(offset);
             posAttr.setXYZ(i, spawnPos.x, spawnPos.y, spawnPos.z);
@@ -2108,8 +2262,69 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     setHudSpeed(Math.round(state.speed * 2.8));
     setHudNos(Math.round(state.nitro));
     setHudScore(state.score + state.driftScore + state.stuntScore);
-    setHudPosition(state.playerDist > state.botDist ? 1 : 2);
+    let currentPos = 4;
+    if (state.playerDist > state.botDist) currentPos--;
+    if (state.playerDist > state.bot2Dist) currentPos--;
+    if (state.playerDist > state.bot3Dist) currentPos--;
+    setHudPosition(currentPos);
     setHudProgress(Math.round((state.playerDist / state.trackLength) * 100));
+
+    // Draw HUD Minimap
+    const miniCanvas = minimapCanvasRef.current;
+    if (miniCanvas) {
+      const mCtx = miniCanvas.getContext('2d');
+      if (mCtx) {
+        mCtx.clearRect(0, 0, 110, 110);
+        mCtx.strokeStyle = 'rgba(0, 240, 255, 0.22)';
+        mCtx.lineWidth = 3.0;
+        mCtx.beginPath();
+        
+        const miniScale = 0.13;
+        const miniCenter = 55;
+        for (let s = 0; s <= 30; s++) {
+          const sT = s / 30;
+          const sPt = trackCurve.getPointAt(sT);
+          const mcX = miniCenter + sPt.x * miniScale;
+          const mcY = miniCenter + sPt.z * miniScale;
+          if (s === 0) mCtx.moveTo(mcX, mcY);
+          else mCtx.lineTo(mcX, mcY);
+        }
+        mCtx.stroke();
+
+        // Bot 1 (Green)
+        mCtx.fillStyle = '#00ff66';
+        const bot1Pt = trackCurve.getPointAt(state.botDist / state.trackLength);
+        mCtx.beginPath();
+        mCtx.arc(miniCenter + bot1Pt.x * miniScale, miniCenter + bot1Pt.z * miniScale, 3.5, 0, Math.PI * 2);
+        mCtx.fill();
+
+        // Bot 2 (Blue)
+        mCtx.fillStyle = '#00ccff';
+        const bot2Pt = trackCurve.getPointAt(state.bot2Dist / state.trackLength);
+        mCtx.beginPath();
+        mCtx.arc(miniCenter + bot2Pt.x * miniScale, miniCenter + bot2Pt.z * miniScale, 3.5, 0, Math.PI * 2);
+        mCtx.fill();
+
+        // Bot 3 (Pink)
+        mCtx.fillStyle = '#ff00aa';
+        const bot3Pt = trackCurve.getPointAt(state.bot3Dist / state.trackLength);
+        mCtx.beginPath();
+        mCtx.arc(miniCenter + bot3Pt.x * miniScale, miniCenter + bot3Pt.z * miniScale, 3.5, 0, Math.PI * 2);
+        mCtx.fill();
+
+        // Player (Yellow)
+        const pPt = trackCurve.getPointAt(playerT);
+        mCtx.fillStyle = '#ffea85';
+        mCtx.beginPath();
+        mCtx.arc(miniCenter + pPt.x * miniScale, miniCenter + pPt.z * miniScale, 4.5, 0, Math.PI * 2);
+        mCtx.fill();
+        mCtx.strokeStyle = '#ffffff';
+        mCtx.lineWidth = 1;
+        mCtx.beginPath();
+        mCtx.arc(miniCenter + pPt.x * miniScale, miniCenter + pPt.z * miniScale, 4.5 + Math.sin(Date.now() * 0.01) * 1.5, 0, Math.PI * 2);
+        mCtx.stroke();
+      }
+    }
 
     // Dynamic Gear & RPM calculations
     let calculatedRpm = 1000;
@@ -2415,8 +2630,14 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           <div className="flex justify-between items-start w-full">
             <div className="glass-panel p-3 border-neon-cyan/20 rounded flex flex-col space-y-1">
               <span className="text-neon-cyan font-bold tracking-widest uppercase">// 3D TELEMETRY</span>
-              <span className="text-[16px] text-white font-orbitron font-bold">POS: {hudPosition} / 2</span>
+              <span className="text-[16px] text-white font-orbitron font-bold">POS: {hudPosition} / 4</span>
               <span className="text-gray-400 font-mono">Lap Progress: {hudProgress}%</span>
+              <canvas 
+                ref={minimapCanvasRef} 
+                width="110" 
+                height="110" 
+                className="w-[110px] h-[110px] bg-black/40 border border-neon-cyan/20 rounded mt-2" 
+              />
             </div>
 
             {/* Stunt popups notifier */}

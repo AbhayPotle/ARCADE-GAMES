@@ -133,6 +133,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
   const sparksRef = useRef<TypoSpark[]>([]);
   const botCharactersTypedRef = useRef<number>(0);
   const animationFrameIdRef = useRef<number | null>(null);
+  const lastUpdateRef = useRef<number>(0);
 
   // Initialize Opponent stats list
   useEffect(() => {
@@ -290,15 +291,11 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
       s.life++;
       s.alpha = 1 - (s.life / s.maxLife);
 
-      ctx.save();
+      ctx.beginPath();
       ctx.globalAlpha = s.alpha;
       ctx.fillStyle = s.color;
-      ctx.shadowColor = s.color;
-      ctx.shadowBlur = 12; // increased glow blur from 8
-      ctx.beginPath();
       ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
     });
 
     sparksRef.current = sparks.filter(s => s.life < s.maxLife);
@@ -380,6 +377,11 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
       return;
     }
 
+    const currentSentenceLength = textToType.length || 1;
+    const newProgress = Math.round((val.length / currentSentenceLength) * 100);
+    const elapsedMinutes = (Date.now() - startTime!) / 60000;
+    const currentWpm = elapsedMinutes > 0 ? Math.round(((totalCharsTyped + val.length) / 5) / elapsedMinutes) : 0;
+
     if (typedChar === nextChar) {
       // Correct keystroke: trigger audio synth and particle system
       audioSynth.playType();
@@ -391,13 +393,13 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
       setLaserEffect(true);
       setTimeout(() => setLaserEffect(false), 80);
 
-      const currentSentenceLength = textToType.length || 1;
-      const newProgress = Math.round((val.length / currentSentenceLength) * 100);
-      setProgress(newProgress);
-
-      const elapsedMinutes = (Date.now() - startTime!) / 60000;
-      const currentWpm = elapsedMinutes > 0 ? Math.round(((totalCharsTyped + val.length) / 5) / elapsedMinutes) : 0;
-      setWpm(currentWpm);
+      const now = Date.now();
+      const isCompleted = val.length === textToType.length;
+      if (isCompleted || now - lastUpdateRef.current > 150) {
+        setProgress(newProgress);
+        setWpm(currentWpm);
+        lastUpdateRef.current = now;
+      }
 
       socketService.emit('typing_progress_update', {
         roomId: matchData.roomId,
@@ -407,7 +409,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
       });
 
       // Sentence fully completed
-      if (val.length === textToType.length) {
+      if (isCompleted) {
         audioSynth.playAchievement();
         const nextSentence = generateProceduralSentence();
         setTextToType(nextSentence);
@@ -419,11 +421,17 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
       }
     } else {
       audioSynth.playError();
-      setTyposCount(prev => prev + 1);
+      const newTyposCount = typosCount + 1;
+      setTyposCount(newTyposCount);
 
-      const totalKeys = currentIndex + typosCount + 1;
-      const currentAcc = Math.round(((totalKeys - (typosCount + 1)) / totalKeys) * 100);
-      setAccuracy(currentAcc);
+      const totalKeys = currentIndex + newTyposCount;
+      const currentAcc = Math.round(((totalKeys - newTyposCount) / totalKeys) * 100);
+      
+      const now = Date.now();
+      if (now - lastUpdateRef.current > 150) {
+        setAccuracy(currentAcc);
+        lastUpdateRef.current = now;
+      }
     }
   };
 
