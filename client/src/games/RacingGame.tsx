@@ -2,6 +2,9 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { socketService } from '../services/socket';
 import { audioSynth } from '../services/audio';
 
@@ -22,6 +25,7 @@ interface CarConfig {
   driftGrip: number;    // how much traction is kept in a drift
   cost: number;         // cost in Cyber-Coins
   unlocked: boolean;
+  desc: string;
 }
 
 // Career Race Events configuration
@@ -32,16 +36,16 @@ interface CareerEvent {
   description: string;
   rewardCoins: number;
   rewardXp: number;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
-  weather: 'clear' | 'rain' | 'storm';
+  difficulty: 'Easy' | 'Medium' | 'Hard' | 'Expert';
+  weather: 'clear' | 'rain' | 'storm' | 'fog';
   timeOfDay: 'day' | 'sunset' | 'night';
 }
 
 const CAREER_EVENTS: CareerEvent[] = [
-  { id: 'neon_sprint', name: 'Neon City Sprint', trackName: 'Neo Metropolis Speedway', description: 'Dash through high-speed futuristic highways under twilight skyways.', rewardCoins: 120, rewardXp: 150, difficulty: 'Easy', weather: 'clear', timeOfDay: 'sunset' },
-  { id: 'coastal_slide', name: 'Coastal Slide Cup', trackName: 'Pacific Coast Highway', description: 'Master heavy drifts on wet curves by the rocky ocean cliffs.', rewardCoins: 180, rewardXp: 220, difficulty: 'Medium', weather: 'rain', timeOfDay: 'day' },
-  { id: 'canyon_jump', name: 'Desert Canyon Run', trackName: 'Red Canyon Ramps', description: 'Catch maximum air and perform barrel rolls off natural rock ramps.', rewardCoins: 250, rewardXp: 300, difficulty: 'Medium', weather: 'clear', timeOfDay: 'day' },
-  { id: 'storm_escape', name: 'Electro Storm Challenge', trackName: 'Industrial Airport Arena', description: 'Survive lightning flashes and hydroplaning on dynamic wet asphalt.', rewardCoins: 350, rewardXp: 400, difficulty: 'Hard', weather: 'storm', timeOfDay: 'night' }
+  { id: 'neon_sprint', name: 'Neon Metropolis Sprint', trackName: 'Tokyo Neo Circuit', description: 'Dash through high-speed futuristic highways under towering skyscraper grids.', rewardCoins: 150, rewardXp: 180, difficulty: 'Easy', weather: 'clear', timeOfDay: 'sunset' },
+  { id: 'coastal_slide', name: 'Pacific Coast Slide', trackName: 'California Highway 1', description: 'Master continuous drifts along wet ocean cliffs under coastal fog.', rewardCoins: 220, rewardXp: 280, difficulty: 'Medium', weather: 'fog', timeOfDay: 'day' },
+  { id: 'canyon_jump', name: 'Red Canyon Ramps', trackName: 'Grand Canyon Jump Arena', description: 'Catch maximum air and perform stunts over vertical canyon drops.', rewardCoins: 300, rewardXp: 350, difficulty: 'Hard', weather: 'clear', timeOfDay: 'day' },
+  { id: 'storm_escape', name: 'Electro Storm Challenge', trackName: 'Metropolitan Rain Ring', description: 'Survive lightning strikes, wet reflections, and heavy storms.', rewardCoins: 450, rewardXp: 500, difficulty: 'Expert', weather: 'storm', timeOfDay: 'night' }
 ];
 
 export default function VelocityX({ matchData, currentUser, onComplete }: RacingGameProps) {
@@ -65,9 +69,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   });
 
   const CAR_MODELS: CarConfig[] = [
-    { id: 'sentinel', name: 'Vulcan Sentinel', emoji: '🏎️', maxSpeed: 110, accel: 15, handling: 2.2, driftGrip: 0.85, cost: 0, unlocked: true },
-    { id: 'intercept', name: 'Cyber Interceptor', emoji: '⚡', maxSpeed: 125, accel: 19, handling: 2.5, driftGrip: 0.75, cost: 150, unlocked: unlockedCars.includes('intercept') },
-    { id: 'vortex', name: 'Apex Vortex', emoji: '🌀', maxSpeed: 140, accel: 24, handling: 2.8, driftGrip: 0.65, cost: 400, unlocked: unlockedCars.includes('vortex') }
+    { id: 'sentinel', name: 'Vulcan Sentinel', emoji: '🏎️', maxSpeed: 105, accel: 15, handling: 2.2, driftGrip: 0.85, cost: 0, unlocked: true, desc: 'Balanced handling, perfect for learning curved entries.' },
+    { id: 'intercept', name: 'Cyber Interceptor', emoji: '⚡', maxSpeed: 125, accel: 20, handling: 2.5, driftGrip: 0.72, cost: 200, unlocked: unlockedCars.includes('intercept'), desc: 'Futuristic wedge build with rapid acceleration curves.' },
+    { id: 'vortex', name: 'Apex Vortex', emoji: '🌀', maxSpeed: 145, accel: 25, handling: 2.9, driftGrip: 0.62, cost: 500, unlocked: unlockedCars.includes('vortex'), desc: 'Ultimate hypercar with high-speed stability and massive downforce.' }
   ];
 
   // Upgrades
@@ -137,6 +141,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     scene: THREE.Scene | null;
     camera: THREE.PerspectiveCamera | null;
     renderer: THREE.WebGLRenderer | null;
+    composer: EffectComposer | null;
     trackCurve: THREE.CatmullRomCurve3 | null;
     playerCar: THREE.Group | null;
     botCar: THREE.Group | null;
@@ -156,6 +161,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     scene: null,
     camera: null,
     renderer: null,
+    composer: null,
     trackCurve: null,
     playerCar: null,
     botCar: null,
@@ -168,140 +174,219 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     lights: { sun: null, headlights: null, headlightsRight: null, taillights: null }
   });
 
-  // Procedural 3D Car Mesh Generator using primitive groups
-  const createProceduralCar = (paintColor: string, isPlayer: boolean) => {
+  // HIGH-FIDELITY PROCEDURAL VEHICLE MODEL GENERATOR
+  // Employs extrusions, sub-divided panel groups, calipers, steer wheels, carbon surfaces and clear physical glass
+  const createProceduralCar = (paintColor: string, isPlayer: boolean, modelId: string = 'sentinel') => {
     const carGroup = new THREE.Group();
 
-    // 1. Lower Chassis
-    const bodyGeom = new THREE.BoxGeometry(2.0, 0.4, 4.4);
+    // Setup High-Quality Metallic Paint & Carbon Fiber Shaders
     const bodyMat = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(paintColor),
-      metalness: 0.9,
-      roughness: 0.15,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.1
-    });
-    const bodyMesh = new THREE.Mesh(bodyGeom, bodyMat);
-    bodyMesh.castShadow = true;
-    bodyMesh.receiveShadow = true;
-    carGroup.add(bodyMesh);
-
-    // 2. Cabin Glass Greenhouse
-    const cabinGeom = new THREE.BoxGeometry(1.6, 0.55, 2.2);
-    const cabinMat = new THREE.MeshStandardMaterial({
-      color: 0x111111,
       metalness: 0.95,
-      roughness: 0.05,
-      transparent: true,
-      opacity: 0.85
+      roughness: 0.1,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.05,
+      reflectivity: 0.9,
+      sheen: 0.5,
+      sheenColor: new THREE.Color(0xffffff)
     });
-    const cabinMesh = new THREE.Mesh(cabinGeom, cabinMat);
-    cabinMesh.position.set(0, 0.45, -0.2);
+
+    const carbonMat = new THREE.MeshStandardMaterial({
+      color: 0x181818,
+      metalness: 0.9,
+      roughness: 0.2
+    });
+
+    // 1. Extruded Aerodynamic Chassis Body Shell (Sampling curved shape profiles)
+    const bodyShape = new THREE.Shape();
+    if (modelId === 'intercept') {
+      // Angular Cyber interceptor wedge shape
+      bodyShape.moveTo(-2.2, -0.2);
+      bodyShape.lineTo(-1.8, 0.4);
+      bodyShape.lineTo(0.5, 0.5);
+      bodyShape.lineTo(1.8, 0.1);
+      bodyShape.lineTo(2.2, -0.2);
+    } else if (modelId === 'vortex') {
+      // Extreme hypercar profile
+      bodyShape.moveTo(-2.2, -0.15);
+      bodyShape.quadraticCurveTo(-1.2, 0.6, -0.4, 0.45);
+      bodyShape.quadraticCurveTo(0.6, 0.35, 1.6, 0.1);
+      bodyShape.lineTo(2.2, -0.15);
+    } else {
+      // Vulcan Sentinel sleek profile
+      bodyShape.moveTo(-2.2, -0.2);
+      bodyShape.quadraticCurveTo(-1.4, 0.45, -0.6, 0.35);
+      bodyShape.quadraticCurveTo(0.5, 0.3, 1.7, 0.05);
+      bodyShape.lineTo(2.2, -0.2);
+    }
+    bodyShape.closePath();
+
+    const extrudeSettings = {
+      steps: 2,
+      depth: 1.9,
+      bevelEnabled: true,
+      bevelThickness: 0.12,
+      bevelSize: 0.08,
+      bevelSegments: 4
+    };
+
+    const shellGeometry = new THREE.ExtrudeGeometry(bodyShape, extrudeSettings);
+    shellGeometry.center();
+    shellGeometry.rotateY(Math.PI / 2); // align forward along Z axis
+    const shellMesh = new THREE.Mesh(shellGeometry, bodyMat);
+    shellMesh.castShadow = true;
+    shellMesh.receiveShadow = true;
+    carGroup.add(shellMesh);
+
+    // 2. Transparent Cabin with interior components
+    const cabinShape = new THREE.Shape();
+    cabinShape.moveTo(-1.1, 0);
+    cabinShape.quadraticCurveTo(-0.5, 0.58, 0.4, 0.52);
+    cabinShape.lineTo(1.0, 0);
+    cabinShape.closePath();
+
+    const cabinExtrude = { depth: 1.55, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.05, bevelSegments: 3 };
+    const cabinGeom = new THREE.ExtrudeGeometry(cabinShape, cabinExtrude);
+    cabinGeom.center();
+    cabinGeom.rotateY(Math.PI / 2);
+    
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: 0x112233,
+      transparent: true,
+      opacity: 0.45,
+      roughness: 0.05,
+      metalness: 0.1,
+      transmission: 0.9, // high refraction index transparency
+      thickness: 1.2
+    });
+    const cabinMesh = new THREE.Mesh(cabinGeom, glassMat);
+    cabinMesh.position.set(0, 0.48, -0.15);
     cabinMesh.castShadow = true;
     carGroup.add(cabinMesh);
 
-    // 3. Front Nose Hood slope
-    const noseGeom = new THREE.BoxGeometry(1.9, 0.25, 1.2);
-    const noseMesh = new THREE.Mesh(noseGeom, bodyMat);
-    noseMesh.position.set(0, 0.1, 1.8);
-    noseMesh.rotation.x = -0.15;
-    noseMesh.castShadow = true;
-    carGroup.add(noseMesh);
+    // 3. Interior cockpit: steering wheel torus & seats
+    const steerGroup = new THREE.Group();
+    steerGroup.name = 'steering_wheel_group';
+    steerGroup.position.set(-0.35, 0.25, 0.45);
+    steerGroup.rotation.x = -0.3;
 
-    // 4. Rear Spoiler Wing
-    const spoilerStrutGeom = new THREE.BoxGeometry(0.1, 0.5, 0.1);
-    const spoilerStrutL = new THREE.Mesh(spoilerStrutGeom, bodyMat);
-    spoilerStrutL.position.set(-0.8, 0.45, -2.0);
-    const spoilerStrutR = spoilerStrutL.clone();
-    spoilerStrutR.position.x = 0.8;
-    carGroup.add(spoilerStrutL, spoilerStrutR);
+    const torusGeom = new THREE.TorusGeometry(0.2, 0.04, 8, 24);
+    const torusMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
+    const wheelRing = new THREE.Mesh(torusGeom, torusMat);
+    steerGroup.add(wheelRing);
 
-    const wingGeom = new THREE.BoxGeometry(2.3, 0.08, 0.65);
-    const wingMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.2 });
-    const wingMesh = new THREE.Mesh(wingGeom, wingMat);
-    wingMesh.position.set(0, 0.7, -2.0);
-    wingMesh.rotation.x = 0.08;
+    const spokeGeom = new THREE.CylinderGeometry(0.02, 0.02, 0.4, 6);
+    const spoke = new THREE.Mesh(spokeGeom, torusMat);
+    spoke.rotation.z = Math.PI / 2;
+    steerGroup.add(spoke);
+    carGroup.add(steerGroup);
+
+    // 4. Custom carbon fiber spoiler wing
+    const wingGeom = new THREE.BoxGeometry(2.35, 0.05, 0.65);
+    const wingMesh = new THREE.Mesh(wingGeom, carbonMat);
+    wingMesh.position.set(0, 0.65, -1.95);
     wingMesh.castShadow = true;
-    carGroup.add(wingMesh);
 
-    // 5. Four Custom Alloy Wheels
-    const wheelGeom = new THREE.CylinderGeometry(0.5, 0.5, 0.45, 16);
+    // spoiler wing vertical struts
+    const strutGeom = new THREE.BoxGeometry(0.06, 0.48, 0.1);
+    const strutMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9 });
+    const strutL = new THREE.Mesh(strutGeom, strutMat);
+    strutL.position.set(-0.85, 0.4, -1.95);
+    const strutR = strutL.clone();
+    strutR.position.x = 0.85;
+
+    // apex stabilizer fin
+    if (modelId === 'vortex') {
+      const finGeom = new THREE.BoxGeometry(0.04, 0.65, 1.4);
+      const finMesh = new THREE.Mesh(finGeom, carbonMat);
+      finMesh.position.set(0, 0.65, -1.1);
+      carGroup.add(finMesh);
+    }
+
+    carGroup.add(wingMesh, strutL, strutR);
+
+    // 5. High-detail wheels with metallic brake discs & red calipers
+    const wheelGeom = new THREE.CylinderGeometry(0.5, 0.5, 0.45, 24);
     wheelGeom.rotateZ(Math.PI / 2);
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
-    const rimGeom = new THREE.CylinderGeometry(0.35, 0.35, 0.48, 8);
-    rimGeom.rotateZ(Math.PI / 2);
-    const rimMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9, roughness: 0.1 });
+    const tyreMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.85 });
+
+    const discGeom = new THREE.CylinderGeometry(0.35, 0.35, 0.1, 16);
+    discGeom.rotateZ(Math.PI / 2);
+    const discMat = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, metalness: 0.95, roughness: 0.1 });
+    const caliperGeom = new THREE.BoxGeometry(0.12, 0.22, 0.28);
+    const caliperMat = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.3 }); // Red caliper accent
 
     const wheelOffsets = [
-      { x: -1.05, y: -0.1, z: 1.3 },   // FL
-      { x: 1.05, y: -0.1, z: 1.3 },    // FR
-      { x: -1.05, y: -0.1, z: -1.3 },  // RL
-      { x: 1.05, y: -0.1, z: -1.3 }    // RR
+      { x: -1.05, y: -0.1, z: 1.3, name: 'FL' },   // Front Left
+      { x: 1.05, y: -0.1, z: 1.3, name: 'FR' },    // Front Right
+      { x: -1.05, y: -0.1, z: -1.3, name: 'RL' },   // Rear Left
+      { x: 1.05, y: -0.1, z: -1.3, name: 'RR' }     // Rear Right
     ];
 
     wheelOffsets.forEach((offset, idx) => {
-      const wGroup = new THREE.Group();
-      wGroup.name = `wheel_${idx}`;
-      wGroup.position.set(offset.x, offset.y, offset.z);
+      const wheelHub = new THREE.Group();
+      wheelHub.name = `wheel_hub_${idx}`;
+      wheelHub.position.set(offset.x, offset.y, offset.z);
 
-      const tyre = new THREE.Mesh(wheelGeom, wheelMat);
+      // Rotating components group (tyre + disc)
+      const rotatorGroup = new THREE.Group();
+      rotatorGroup.name = `wheel_rotator_${idx}`;
+
+      const tyre = new THREE.Mesh(wheelGeom, tyreMat);
       tyre.castShadow = true;
-      const rim = new THREE.Mesh(rimGeom, rimMat);
-      
-      wGroup.add(tyre, rim);
-      carGroup.add(wGroup);
+      const disc = new THREE.Mesh(discGeom, discMat);
+
+      rotatorGroup.add(tyre, disc);
+      wheelHub.add(rotatorGroup);
+
+      // Static brake caliper (hugging the disc, doesn't spin forward)
+      const caliper = new THREE.Mesh(caliperGeom, caliperMat);
+      caliper.position.set(offset.x > 0 ? -0.18 : 0.18, 0.18, 0.1);
+      wheelHub.add(caliper);
+
+      // Dynamic suspension spring struts
+      const springGeom = new THREE.CylinderGeometry(0.08, 0.08, 0.7, 8);
+      const springMat = new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.95 });
+      const spring = new THREE.Mesh(springGeom, springMat);
+      spring.name = `suspension_${idx}`;
+      spring.position.set(offset.x > 0 ? -0.22 : 0.22, 0.35, 0);
+      wheelHub.add(spring);
+
+      carGroup.add(wheelHub);
     });
 
-    // 6. Glowing Emissive Headlights
-    const lightGeom = new THREE.BoxGeometry(0.3, 0.1, 0.1);
+    // 6. Embedded headlights & brake lights
+    const lightGeom = new THREE.BoxGeometry(0.3, 0.08, 0.1);
     const lightMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
-    const lightL = new THREE.Mesh(lightGeom, lightMat);
-    lightL.position.set(-0.75, 0.1, 2.3);
-    const lightR = lightL.clone();
-    lightR.position.x = 0.75;
-    carGroup.add(lightL, lightR);
+    const headlightL = new THREE.Mesh(lightGeom, lightMat);
+    headlightL.position.set(-0.78, 0.08, 2.2);
+    const headlightR = headlightL.clone();
+    headlightR.position.x = 0.78;
+    carGroup.add(headlightL, headlightR);
 
-    // 7. Glowing Brake/Tail Lights
-    const tailLightMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
-    const brakeL = new THREE.Mesh(lightGeom, tailLightMat);
-    brakeL.position.set(-0.75, 0.15, -2.15);
-    const brakeR = brakeL.clone();
-    brakeR.position.x = 0.75;
-    carGroup.add(brakeL, brakeR);
+    const brakeMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
+    const brakeLightL = new THREE.Mesh(lightGeom, brakeMat);
+    brakeLightL.position.set(-0.78, 0.15, -2.15);
+    const brakeLightR = brakeLightL.clone();
+    brakeLightR.position.x = 0.78;
+    carGroup.add(brakeLightL, brakeLightR);
 
-    // 8. Underglow Pointlight (for gorgeous twilight ambient glows)
-    if (isPlayer) {
-      const underglow = new THREE.PointLight(0x00f0ff, 1.5, 3.5);
-      underglow.position.set(0, -0.4, 0);
-      carGroup.add(underglow);
-    } else {
-      const underglow = new THREE.PointLight(0xff007f, 1.2, 3.0);
-      underglow.position.set(0, -0.4, 0);
-      carGroup.add(underglow);
-    }
+    // 7. Side mirrors
+    const mirrorBoxGeom = new THREE.BoxGeometry(0.25, 0.12, 0.15);
+    const mirrorL = new THREE.Mesh(mirrorBoxGeom, bodyMat);
+    mirrorL.position.set(-1.08, 0.38, 0.65);
+    const mirrorGlassGeom = new THREE.BoxGeometry(0.02, 0.08, 0.12);
+    const mirrorReflectMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, metalness: 0.95, roughness: 0.05 });
+    const glassL = new THREE.Mesh(mirrorGlassGeom, mirrorReflectMat);
+    glassL.position.set(-0.13, 0, 0);
+    mirrorL.add(glassL);
+
+    const mirrorR = mirrorL.clone();
+    mirrorR.position.x = 1.08;
+    mirrorR.rotation.y = Math.PI;
+    carGroup.add(mirrorL, mirrorR);
 
     return carGroup;
-  };
-
-  // Create roadside signs (chevrons, warnings)
-  const createRoadsideSign = (text: string, colorHex: number) => {
-    const signGroup = new THREE.Group();
-    // Metal pole
-    const poleGeom = new THREE.CylinderGeometry(0.08, 0.08, 3.5, 8);
-    const poleMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8 });
-    const pole = new THREE.Mesh(poleGeom, poleMat);
-    pole.position.y = 1.75;
-    signGroup.add(pole);
-
-    // Sign plate
-    const boardGeom = new THREE.BoxGeometry(1.8, 1.0, 0.08);
-    const boardMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.4 });
-    const board = new THREE.Mesh(boardGeom, boardMat);
-    board.position.y = 3.0;
-    board.castShadow = true;
-    signGroup.add(board);
-
-    return signGroup;
   };
 
   // Buy lock mechanics for secondary supercars
@@ -355,7 +440,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     stateRef.current.playerDist = 0;
     stateRef.current.playerLane = 0;
     stateRef.current.speed = 0;
-    stateRef.current.timer = activeEvent.difficulty === 'Hard' ? 35.00 : 45.00;
+    stateRef.current.timer = activeEvent.difficulty === 'Hard' ? 35.00 : activeEvent.difficulty === 'Expert' ? 30.00 : 45.00;
     stateRef.current.score = 0;
     stateRef.current.isDrifting = false;
     stateRef.current.nitro = 100;
@@ -371,34 +456,55 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     const camera = new THREE.PerspectiveCamera(65, width / height, 0.5, 800);
     
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
     renderer.setSize(width, height);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
     
     // Clear legacy elements
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
     // 2. Global Lights
-    const ambientLight = new THREE.AmbientLight(activeEvent.timeOfDay === 'night' ? 0x222233 : 0xffffff, activeEvent.timeOfDay === 'night' ? 0.3 : 0.6);
+    const ambientLight = new THREE.AmbientLight(activeEvent.timeOfDay === 'night' ? 0x222233 : 0xffffff, activeEvent.timeOfDay === 'night' ? 0.35 : 0.65);
     scene.add(ambientLight);
 
-    const sun = new THREE.DirectionalLight(activeEvent.timeOfDay === 'sunset' ? 0xff5e00 : 0xffffff, activeEvent.timeOfDay === 'sunset' ? 1.5 : activeEvent.timeOfDay === 'night' ? 0.1 : 1.2);
-    sun.position.set(100, 150, 50);
+    const sun = new THREE.DirectionalLight(activeEvent.timeOfDay === 'sunset' ? 0xff5e00 : 0xffffff, activeEvent.timeOfDay === 'sunset' ? 1.8 : activeEvent.timeOfDay === 'night' ? 0.1 : 1.4);
+    sun.position.set(100, 160, 50);
     sun.castShadow = true;
-    sun.shadow.mapSize.width = 1024;
-    sun.shadow.mapSize.height = 1024;
+    sun.shadow.mapSize.width = 2048; // High-resolution shadows
+    sun.shadow.mapSize.height = 2048;
     sun.shadow.camera.near = 10;
     sun.shadow.camera.far = 400;
-    sun.shadow.camera.left = -50;
-    sun.shadow.camera.right = 50;
-    sun.shadow.camera.top = 50;
-    sun.shadow.camera.bottom = -50;
+    sun.shadow.camera.left = -60;
+    sun.shadow.camera.right = 60;
+    sun.shadow.camera.top = 60;
+    sun.shadow.camera.bottom = -60;
     scene.add(sun);
 
-    // 3. Generate 3D CatmullRom Path representing Racetrack Loop
+    // 3. Volumetric Sun Shafts (God Rays radiating from sun direction)
+    const shaftGeom = new THREE.CylinderGeometry(0.1, 45, 180, 8, 1, true);
+    const shaftMat = new THREE.MeshBasicMaterial({
+      color: activeEvent.timeOfDay === 'sunset' ? 0xffbb00 : 0xffffff,
+      transparent: true,
+      opacity: 0.1,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide
+    });
+    const shaftGroup = new THREE.Group();
+    for (let i = 0; i < 4; i++) {
+      const shaft = new THREE.Mesh(shaftGeom, shaftMat);
+      shaft.position.set((Math.random() - 0.5) * 20, 0, (Math.random() - 0.5) * 20);
+      shaft.rotation.z = 0.2 + i * 0.15;
+      shaftGroup.add(shaft);
+    }
+    shaftGroup.position.set(100, 160, 50);
+    shaftGroup.lookAt(0, 0, 0);
+    scene.add(shaftGroup);
+
+    // 4. Generate 3D CatmullRom Path representing Racetrack Loop
     const controlPoints: THREE.Vector3[] = [];
     const numPoints = 24;
     const trackRadius = 240;
@@ -421,7 +527,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const trackCurve = new THREE.CatmullRomCurve3(controlPoints);
     stateRef.current.trackLength = trackCurve.getLength();
 
-    // 4. Procedural Road Mesh Extrusion
+    // 5. Procedural Road Mesh Extrusion
     const roadSegmentsCount = 400;
     const roadWidth = stateRef.current.roadWidth;
     const roadGeometry = new THREE.BufferGeometry();
@@ -469,7 +575,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       roadTextureCanvas.height = 128;
       const tCtx = roadTextureCanvas.getContext('2d');
       if (tCtx) {
-        tCtx.fillStyle = '#222222'; // Dark asphalt base
+        tCtx.fillStyle = '#1c1c1c'; // Dark asphalt base
         tCtx.fillRect(0, 0, 128, 128);
         tCtx.strokeStyle = '#fffb00'; // Double Yellow Center divider lines
         tCtx.lineWidth = 4;
@@ -495,18 +601,42 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     const roadMat = new THREE.MeshStandardMaterial({
       map: roadTexture,
-      roughness: 0.85,
-      metalness: 0.05
+      roughness: activeEvent.weather !== 'clear' ? 0.3 : 0.82, // Shinier wet roads for wet reflections
+      metalness: 0.1
     });
 
     const roadMesh = new THREE.Mesh(roadGeometry, roadMat);
     roadMesh.receiveShadow = true;
     scene.add(roadMesh);
 
-    // 5. Generate Dynamic Environment Scenery (skyscrapers / canyon structures)
-    const sceneryCount = 140;
-    const leavesGeom = new THREE.ConeGeometry(2.0, 4.0, 5);
-    const leavesMat = new THREE.MeshStandardMaterial({ color: activeEvent.id === 'coastal_slide' ? 0x2e7d32 : 0xc75c12, roughness: 0.8 }); // warm orange for canyon, green for coast
+    // 6. Build Continuous Terrain Plane Height Grids (Terrain blending)
+    const terrainGeom = new THREE.PlaneGeometry(800, 800, 32, 32);
+    terrainGeom.rotateX(-Math.PI / 2);
+    // Displace height vertically to simulate mountain peaks
+    const pos = terrainGeom.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const vx = pos.getX(i);
+      const vz = pos.getZ(i);
+      // Sample noise height
+      const height = Math.sin(vx * 0.015) * Math.cos(vz * 0.015) * 16 + Math.sin(vx * 0.04) * 5;
+      pos.setY(i, height - 12);
+    }
+    terrainGeom.computeVertexNormals();
+
+    const terrainMat = new THREE.MeshStandardMaterial({
+      color: activeEvent.id === 'coastal_slide' ? 0x2e6f40 : activeEvent.id === 'canyon_jump' ? 0xcc6633 : 0x111625, // Green valleys, red canyons, dark slate cyber grounds
+      roughness: 0.9,
+      metalness: 0.05
+    });
+    const terrainMesh = new THREE.Mesh(terrainGeom, terrainMat);
+    terrainMesh.position.set(0, 0, 0);
+    terrainMesh.receiveShadow = true;
+    scene.add(terrainMesh);
+
+    // 7. Generate Environment Scenery (High-detail Skyscrapers / Pine trees)
+    const sceneryCount = 150;
+    const leavesGeom = new THREE.ConeGeometry(2.0, 4.0, 6);
+    const leavesMat = new THREE.MeshStandardMaterial({ color: activeEvent.id === 'coastal_slide' ? 0x2e7d32 : 0xc75c12, roughness: 0.85 }); // warm orange for canyon, green for coast
     const trunkGeom = new THREE.CylinderGeometry(0.3, 0.3, 1.2, 6);
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
 
@@ -522,24 +652,34 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const pos = pt.clone().add(offset);
 
       if (activeEvent.id === 'neon_sprint' || activeEvent.id === 'storm_escape') {
-        // Modern skyscraper towers for metropolis theme
+        // Modern high-detail skyscrapers with glowing rectangular window grids
         const h = 25 + Math.random() * 65;
+        const towerGroup = new THREE.Group();
         const towerGeom = new THREE.BoxGeometry(8 + Math.random() * 12, h, 8 + Math.random() * 12);
         
-        // Window rows emission styling
         const towerMat = new THREE.MeshStandardMaterial({
-          color: 0x0a1128,
-          roughness: 0.3,
-          metalness: 0.8,
-          emissive: Math.random() > 0.4 ? 0x00f0ff : 0xff0055,
-          emissiveIntensity: 0.15
+          color: 0x050b1a,
+          roughness: 0.2,
+          metalness: 0.9
         });
         const tower = new THREE.Mesh(towerGeom, towerMat);
-        tower.position.copy(pos);
-        tower.position.y += h / 2 - 4;
         tower.castShadow = true;
         tower.receiveShadow = true;
-        scene.add(tower);
+        towerGroup.add(tower);
+
+        // Window grid lines
+        const windowCount = Math.floor(h / 3);
+        const winGeom = new THREE.BoxGeometry(8.2 + Math.random() * 11.8, 0.2, 8.2 + Math.random() * 11.8);
+        const winMat = new THREE.MeshBasicMaterial({ color: Math.random() > 0.4 ? 0x00f0ff : 0xff0055 });
+        for (let j = 1; j < windowCount - 1; j += 2) {
+          const windowRow = new THREE.Mesh(winGeom, winMat);
+          windowRow.position.y = -h/2 + j * 3;
+          towerGroup.add(windowRow);
+        }
+
+        towerGroup.position.copy(pos);
+        towerGroup.position.y += h / 2 - 4;
+        scene.add(towerGroup);
       } else {
         // Pine trees for scenic routes
         const treeGroup = new THREE.Group();
@@ -558,7 +698,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
     }
 
-    // 6. Build Speed Checkpoint Ramps
+    // 8. Build Speed Checkpoint Ramps
     if (activeEvent.id === 'canyon_jump') {
       const rampPoints = [0.28, 0.58, 0.88];
       rampPoints.forEach((t) => {
@@ -569,7 +709,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         
         // Wedge ramp shape
         const rampGeom = new THREE.BoxGeometry(roadWidth - 2, 2.5, 8.0);
-        const rampMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.7, roughness: 0.2 });
+        const rampMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.1 });
         const ramp = new THREE.Mesh(rampGeom, rampMat);
         
         // Pitch upward
@@ -582,7 +722,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       });
     }
 
-    // 7. Initialize Dynamic Particle Systems (Rain / NOS warp speed lines)
+    // 9. Initialize Dynamic Particle Systems (Rain / NOS warp speed lines)
     // Rain Particles
     const rainCount = 1000;
     const rainGeom = new THREE.BufferGeometry();
@@ -635,11 +775,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const exhaustParticles = new THREE.Points(exhaustGeom, exhaustMat);
     scene.add(exhaustParticles);
 
-    // 8. Place Supercars on track grid
-    const playerCar = createProceduralCar(selectedPaint, true);
+    // 10. Place Supercars on track grid
+    const playerCar = createProceduralCar(selectedPaint, true, activeCar.id);
     scene.add(playerCar);
 
-    const botCar = createProceduralCar('#ff0055', false); // Magenta Bot competitor
+    const botCar = createProceduralCar('#ff0055', false, 'sentinel'); // Magenta Bot competitor
     scene.add(botCar);
 
     // Attach Spotlight beam components to player car headlights
@@ -657,11 +797,38 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     taillightGlow.position.set(0, 0.1, -2.15);
     playerCar.add(taillightGlow);
 
-    // 9. Store Three.js Instance References
+    // 11. Volumetric NOS exhaust flame cylinders
+    const flameGeom = new THREE.ConeGeometry(0.12, 1.2, 8);
+    flameGeom.rotateX(-Math.PI / 2);
+    const flameMatL = new THREE.MeshBasicMaterial({
+      color: 0x00f0ff,
+      transparent: true,
+      opacity: 0
+    });
+    const flameL = new THREE.Mesh(flameGeom, flameMatL);
+    flameL.name = 'exhaust_flame_left';
+    flameL.position.set(-0.6, -0.05, -2.15);
+    playerCar.add(flameL);
+
+    const flameR = flameL.clone();
+    flameR.name = 'exhaust_flame_right';
+    flameR.position.x = 0.6;
+    playerCar.add(flameR);
+
+    // 12. Setup EffectComposer Post-Processing Pipeline
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    
+    // Unreal Bloom glow on emitters, lights, and tail flames
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 1.25, 0.45, 0.25);
+    composer.addPass(bloomPass);
+
+    // Store Three.js Instance References
     threeRef.current = {
       scene,
       camera,
       renderer,
+      composer,
       trackCurve,
       playerCar,
       botCar,
@@ -679,12 +846,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
     };
 
-    // 10. Generate spline-aligned passive Traffic vehicles
+    // 13. Generate spline-aligned passive Traffic vehicles
     stateRef.current.trafficCars = [];
     const trafficCount = 14;
     const trafficColors = ['#f44336', '#2196f3', '#4caf50', '#ffffff', '#e91e63'];
     for (let i = 0; i < trafficCount; i++) {
-      const tc = createProceduralCar(trafficColors[i % trafficColors.length], false);
+      const tc = createProceduralCar(trafficColors[i % trafficColors.length], false, 'sentinel');
       scene.add(tc);
 
       const tcDist = 120 + i * 95;
@@ -727,8 +894,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
   // Update Game Variables on every Frame Tick
   const gameLoopTick = (dt: number) => {
-    const { scene, camera, renderer, trackCurve, playerCar, botCar, rainParticles, warpLines } = threeRef.current;
-    if (!scene || !camera || !renderer || !trackCurve || !playerCar || !botCar) return;
+    const { scene, camera, renderer, composer, trackCurve, playerCar, botCar, rainParticles, warpLines } = threeRef.current;
+    if (!scene || !camera || !renderer || !composer || !trackCurve || !playerCar || !botCar) return;
 
     const state = stateRef.current;
 
@@ -768,6 +935,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     // Nitro speed boost
     let nosSpdMult = 1.0;
+    const flameL = playerCar.getObjectByName('exhaust_flame_left') as THREE.Mesh;
+    const flameR = playerCar.getObjectByName('exhaust_flame_right') as THREE.Mesh;
+    
     if (nosInput && state.nitro > 0 && state.speed > 5) {
       state.isNosActive = true;
       state.nitro = Math.max(0, state.nitro - 22 * dt);
@@ -778,6 +948,15 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const mat = warpLines.material as THREE.LineBasicMaterial;
         mat.opacity = 0.65;
       }
+      
+      // Animate blue/orange exhaust fire cones
+      if (flameL && flameR) {
+        const fMat = flameL.material as THREE.MeshBasicMaterial;
+        fMat.opacity = 0.85;
+        flameL.scale.set(1.0, 1.0, 1.0 + Math.sin(Date.now() * 0.05) * 0.35);
+        flameR.scale.copy(flameL.scale);
+      }
+      
       // Camera NOS shake multiplier
       camera.position.x += (Math.random() - 0.5) * 0.15;
       camera.position.y += (Math.random() - 0.5) * 0.15;
@@ -788,6 +967,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       if (warpLines) {
         const mat = warpLines.material as THREE.LineBasicMaterial;
         mat.opacity = 0;
+      }
+      
+      if (flameL && flameR) {
+        const fMat = flameL.material as THREE.MeshBasicMaterial;
+        fMat.opacity = 0;
       }
     }
 
@@ -875,6 +1059,18 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
     }
 
+    // Dynamic Suspension & landing compression struts
+    for (let i = 0; i < 4; i++) {
+      const susp = playerCar.getObjectByName(`suspension_${i}`);
+      if (susp) {
+        if (state.airborne) {
+          susp.scale.y = 1.35; // fully extended shocks
+        } else {
+          susp.scale.y = 1.0 - Math.min(0.35, state.airHeight * 0.05); // compressed
+        }
+      }
+    }
+
     // Scroll forward player distance
     state.playerDist += state.speed * dt;
     if (state.playerDist >= state.trackLength) {
@@ -906,21 +1102,27 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       playerCar.rotation.z += state.rollAngle;
     }
 
-    // E. Animate player car wheels spinning
+    // E. Animate player car wheels spinning & steering wheel rotation
     const spinFactor = state.speed * dt * 1.5;
     for (let i = 0; i < 4; i++) {
-      const wheel = playerCar.getObjectByName(`wheel_${i}`);
-      if (wheel) {
-        wheel.rotation.x += spinFactor;
-        // Turn front wheels
-        if (i < 2) {
-          wheel.rotation.y = steerLeft ? 0.35 : steerRight ? -0.35 : 0;
-        }
+      const wheelRot = playerCar.getObjectByName(`wheel_rotator_${i}`);
+      if (wheelRot) {
+        wheelRot.rotation.x += spinFactor;
+      }
+      
+      const wheelHub = playerCar.getObjectByName(`wheel_hub_${i}`);
+      if (wheelHub && i < 2) {
+        wheelHub.rotation.y = steerLeft ? 0.35 : steerRight ? -0.35 : 0;
       }
     }
 
+    const steerWheel = playerCar.getObjectByName('steering_wheel_group');
+    if (steerWheel) {
+      steerWheel.rotation.z = steerLeft ? 1.4 : steerRight ? -1.4 : 0;
+    }
+
     // F. AI Bot Routing
-    state.botSpeed = 38 + (activeEvent.difficulty === 'Hard' ? 12 : activeEvent.difficulty === 'Medium' ? 6 : 0) + Math.sin(playerT * 10) * 8;
+    state.botSpeed = 38 + (activeEvent.difficulty === 'Hard' ? 12 : activeEvent.difficulty === 'Expert' ? 16 : 0) + Math.sin(playerT * 10) * 8;
     state.botDist += state.botSpeed * dt;
     if (state.botDist >= state.trackLength) {
       state.botDist -= state.trackLength;
@@ -1001,8 +1203,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       camera.lookAt(lookTarget);
     }
 
-    // Render WebGL frame
-    renderer.render(scene, camera);
+    // Render WebGL frame via EffectComposer Post-Processing Pipeline
+    composer.render();
 
     // Synchronize HUD state properties to DOM
     setHudSpeed(Math.round(state.speed * 2.8));
@@ -1146,7 +1348,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
                         <span className="text-2xl">{car.emoji}</span>
                         <div>
                           <p className="text-xs font-bold font-orbitron">{car.name}</p>
-                          <p className="text-[10px] text-gray-400 font-mono">Max Speed: {car.maxSpeed * 2.8} KPH</p>
+                          <p className="text-[9px] text-gray-500 font-mono mt-0.5">{car.desc}</p>
+                          <p className="text-[10px] text-gray-400 font-mono mt-1">Max Speed: {car.maxSpeed * 2.8} KPH</p>
                         </div>
                       </div>
                       
@@ -1212,7 +1415,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
                         <p className="text-[10px] text-gray-500 font-mono">{evt.trackName}</p>
                       </div>
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                        evt.difficulty === 'Hard' ? 'bg-red-500/20 text-red-400' : evt.difficulty === 'Medium' ? 'bg-orange-500/20 text-orange-400' : 'bg-green-500/20 text-green-400'
+                        evt.difficulty === 'Expert' ? 'bg-red-600/20 text-red-500' : evt.difficulty === 'Hard' ? 'bg-red-500/20 text-red-400' : evt.difficulty === 'Medium' ? 'bg-orange-500/20 text-orange-400' : 'bg-green-500/20 text-green-400'
                       }`}>
                         {evt.difficulty}
                       </span>
