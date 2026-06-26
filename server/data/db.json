@@ -5,9 +5,9 @@
       "username": "Abhay14",
       "passwordHash": "$2a$10$3yO1L3GJF8z4.oUmx2jHGOAo9shkJbCv8rqM4v7njghWkhwUZ0FCm",
       "avatar": "avatar_1",
-      "xp": 325,
+      "xp": 400,
       "level": 7,
-      "coins": 1275,
+      "coins": 1305,
       "ranking": "Silver",
       "achievements": [
         "coin_hoarder"
@@ -155,8 +155,8 @@
     {
       "gameId": "velocity_x",
       "username": "Abhay14",
-      "score": 8000,
-      "updatedAt": "2026-06-21T10:05:06.289Z"
+      "score": 8100,
+      "updatedAt": "2026-06-26T09:16:49.130Z"
     },
     {
       "gameId": "velocity_x",

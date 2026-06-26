@@ -103,6 +103,19 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   const [hudStuntMsg, setHudStuntMsg] = useState<string>('');
   const [hudStuntTimer, setHudStuntTimer] = useState<number>(0);
   
+  const [isPaused, setIsPaused] = useState<boolean>(false);
+  const isPausedRef = useRef<boolean>(false);
+  const togglePause = () => {
+    const nextPause = !isPausedRef.current;
+    isPausedRef.current = nextPause;
+    setIsPaused(nextPause);
+    if (nextPause) {
+      audioSynth.stopEngine();
+    } else {
+      audioSynth.startEngine();
+    }
+  };
+  
   // Game variables references to run 60 FPS loop without React state bottlenecks
   const stateRef = useRef({
     keys: {} as Record<string, boolean>,
@@ -128,7 +141,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     trafficCars: [] as { mesh: THREE.Group; dist: number; lane: number; speed: number }[],
     cameraMode: 'chase' as 'chase' | 'far' | 'hood' | 'cockpit',
     trackLength: 1500,     // length of spline loop in meters
-    roadWidth: 14,
+    roadWidth: 22,
     slipstreamActive: false,
     lastExhaustTime: 0,
     crashCooldown: 0,
@@ -137,6 +150,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     steerAngle: 0,
     steerYaw: 0,
     steerRoll: 0,
+    collisionShake: 0,
+    landingCompression: 0,
     gameOver: false
   });
 
@@ -618,18 +633,33 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // 4. Generate 3D CatmullRom Path representing Racetrack Loop
     const controlPoints: THREE.Vector3[] = [];
     const numPoints = 24;
-    const trackRadius = 240;
     for (let i = 0; i < numPoints; i++) {
       const angle = (i / numPoints) * Math.PI * 2;
-      const x = Math.cos(angle) * trackRadius + Math.sin(angle * 3) * 35;
       
-      // Dynamic hills / drops based on event environments
-      let y = Math.sin(angle * 4) * 15;
-      if (activeEvent.id === 'canyon_jump' && i >= 6 && i <= 8) {
-        y += 24; // Massive canyon jumping ramps elevation
+      // Organic racing track with long straights and winding hairpins
+      let x = Math.cos(angle) * 320 + Math.sin(angle * 2) * 45;
+      let z = Math.sin(angle) * 320 + Math.cos(angle * 3) * 35;
+      
+      // Dynamic height profiles representing bridges, dips, and mountain tunnels
+      let y = Math.sin(angle * 3) * 14;
+      
+      // Bridge span rise
+      if (angle > Math.PI * 0.2 && angle < Math.PI * 0.6) {
+        const peakT = Math.sin((angle - Math.PI * 0.2) / (Math.PI * 0.4) * Math.PI);
+        y += peakT * 22;
       }
       
-      const z = Math.sin(angle) * trackRadius + Math.cos(angle * 2) * 25;
+      // Tunnel descent
+      if (angle > Math.PI * 1.1 && angle < Math.PI * 1.5) {
+        const dipT = Math.sin((angle - Math.PI * 1.1) / (Math.PI * 0.4) * Math.PI);
+        y -= dipT * 18;
+      }
+
+      // Canyon jumps elevation override
+      if (activeEvent.id === 'canyon_jump' && i >= 6 && i <= 8) {
+        y += 26;
+      }
+      
       controlPoints.push(new THREE.Vector3(x, y, z));
     }
     // Close spline loop
@@ -652,9 +682,16 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const pt = trackCurve.getPointAt(t);
       const tangent = trackCurve.getTangentAt(t);
       
+      // Calculate dynamic curvature banking roll
+      const tNext = (i + 1) / roadSegmentsCount;
+      const tangentNext = trackCurve.getTangentAt(tNext % 1.0);
+      const curvature = tangent.clone().cross(tangentNext).y;
+      const bankAngle = Math.max(-0.35, Math.min(0.35, curvature * 14.0)); // up to 20 degrees banking
+
       // Calculate perpendicular road normal vectors
       const normal = new THREE.Vector3(0, 1, 0);
-      const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+      let binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+      binormal.applyAxisAngle(tangent, bankAngle);
 
       // Left edge, center, right edge
       const vL = pt.clone().add(binormal.clone().multiplyScalar(-roadWidth / 2));
@@ -1112,11 +1149,26 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const tangent2 = trackCurve.getTangentAt(t2);
       
       const normal = new THREE.Vector3(0, 1, 0);
-      const binormal1 = new THREE.Vector3().crossVectors(tangent1, normal).normalize();
-      const binormal2 = new THREE.Vector3().crossVectors(tangent2, normal).normalize();
+
+      // Curvature-based banking angles
+      const t1Next = (i + 1) / railSegments;
+      const tangent1Next = trackCurve.getTangentAt(t1Next % 1.0);
+      const curvature1 = tangent1.clone().cross(tangent1Next).y;
+      const bankAngle1 = Math.max(-0.35, Math.min(0.35, curvature1 * 14.0));
+
+      const t2Next = ((i + 1) / railSegments + 0.002) % 1.0;
+      const tangent2Next = trackCurve.getTangentAt(t2Next);
+      const curvature2 = tangent2.clone().cross(tangent2Next).y;
+      const bankAngle2 = Math.max(-0.35, Math.min(0.35, curvature2 * 14.0));
+
+      let binormal1 = new THREE.Vector3().crossVectors(tangent1, normal).normalize();
+      binormal1.applyAxisAngle(tangent1, bankAngle1);
+
+      let binormal2 = new THREE.Vector3().crossVectors(tangent2, normal).normalize();
+      binormal2.applyAxisAngle(tangent2, bankAngle2);
       
       // Shoulder offsets: roadWidth / 2 + offset
-      const shoulderOffset = 7.3;
+      const shoulderOffset = 11.3;
       
       const posLeft1 = pt1.clone().add(binormal1.clone().multiplyScalar(-shoulderOffset));
       const posLeft2 = pt2.clone().add(binormal2.clone().multiplyScalar(-shoulderOffset));
@@ -1217,6 +1269,104 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         lampGroup.lookAt(lampPos.clone().add(tangent1));
         
         scene.add(lampGroup);
+      }
+    }
+
+    // 8.6. Build Bridge Structures and Tunnel Enclosures
+    const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x455a64, roughness: 0.8, metalness: 0.1 });
+    const pillarGeom = new THREE.CylinderGeometry(1.5, 1.8, 45, 8);
+    const crossBeamGeom = new THREE.BoxGeometry(26, 2, 3);
+    const bridgeArchGeom = new THREE.TorusGeometry(14, 0.5, 8, 30, Math.PI); // arch above road
+
+    const tunnelWallMat = new THREE.MeshStandardMaterial({ color: 0x263238, roughness: 0.9, metalness: 0.1 });
+    const tunnelLeftGeom = new THREE.BoxGeometry(1.2, 8.5, 4.2);
+    const tunnelRightGeom = new THREE.BoxGeometry(1.2, 8.5, 4.2);
+    const tunnelCeilingGeom = new THREE.BoxGeometry(25.6, 1.2, 4.2);
+    const tunnelLightGeom = new THREE.BoxGeometry(0.8, 0.15, 3.8);
+    const tunnelLightMat = new THREE.MeshBasicMaterial({ color: 0xffea85 });
+
+    const structureSegments = 400;
+    for (let i = 0; i <= structureSegments; i++) {
+      const t = (i / structureSegments) % 1.0;
+      
+      const isBridge = t >= 0.12 && t <= 0.28;
+      const isTunnel = t >= 0.55 && t <= 0.72;
+      
+      if (!isBridge && !isTunnel) continue;
+
+      const pt = trackCurve.getPointAt(t);
+      const tangent = trackCurve.getTangentAt(t);
+      const normal = new THREE.Vector3(0, 1, 0);
+
+      // Curvature-based banking angle
+      const tNext = (i + 1) / structureSegments;
+      const tangentNext = trackCurve.getTangentAt(tNext % 1.0);
+      const curvature = tangent.clone().cross(tangentNext).y;
+      const bankAngle = Math.max(-0.35, Math.min(0.35, curvature * 14.0));
+
+      let binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+      binormal.applyAxisAngle(tangent, bankAngle);
+
+      if (isBridge) {
+        if (i % 6 === 0) {
+          const bridgeGroup = new THREE.Group();
+
+          const pillarL = new THREE.Mesh(pillarGeom, bridgeMat);
+          pillarL.position.set(-12.5, -22.5, 0);
+          pillarL.castShadow = true;
+          bridgeGroup.add(pillarL);
+
+          const pillarR = new THREE.Mesh(pillarGeom, bridgeMat);
+          pillarR.position.set(12.5, -22.5, 0);
+          pillarR.castShadow = true;
+          bridgeGroup.add(pillarR);
+
+          const beam = new THREE.Mesh(crossBeamGeom, bridgeMat);
+          beam.position.set(0, -1.2, 0);
+          beam.castShadow = true;
+          bridgeGroup.add(beam);
+
+          const arch = new THREE.Mesh(bridgeArchGeom, bridgeMat);
+          arch.position.set(0, 0, 0);
+          arch.rotation.y = Math.PI / 2;
+          bridgeGroup.add(arch);
+
+          bridgeGroup.position.copy(pt);
+          bridgeGroup.lookAt(pt.clone().add(tangent));
+          bridgeGroup.rotation.z += bankAngle;
+
+          scene.add(bridgeGroup);
+        }
+      } else if (isTunnel) {
+        const tunnelGroup = new THREE.Group();
+
+        const wallL = new THREE.Mesh(tunnelLeftGeom, tunnelWallMat);
+        wallL.position.set(-11.8, 3.85, 0);
+        wallL.castShadow = true;
+        wallL.receiveShadow = true;
+        tunnelGroup.add(wallL);
+
+        const wallR = new THREE.Mesh(tunnelRightGeom, tunnelWallMat);
+        wallR.position.set(11.8, 3.85, 0);
+        wallR.castShadow = true;
+        wallR.receiveShadow = true;
+        tunnelGroup.add(wallR);
+
+        const ceiling = new THREE.Mesh(tunnelCeilingGeom, tunnelWallMat);
+        ceiling.position.set(0, 8.0, 0);
+        ceiling.castShadow = true;
+        ceiling.receiveShadow = true;
+        tunnelGroup.add(ceiling);
+
+        const light = new THREE.Mesh(tunnelLightGeom, tunnelLightMat);
+        light.position.set(0, 7.35, 0);
+        tunnelGroup.add(light);
+
+        tunnelGroup.position.copy(pt);
+        tunnelGroup.lookAt(pt.clone().add(tangent));
+        tunnelGroup.rotation.z += bankAngle;
+
+        scene.add(tunnelGroup);
       }
     }
 
@@ -1438,6 +1588,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     let lastFrameTime = Date.now();
     const frameLoop = () => {
       if (stateRef.current.gameOver) return;
+      if (isPausedRef.current) {
+        lastFrameTime = Date.now();
+        animIdRef.current = requestAnimationFrame(frameLoop);
+        return;
+      }
       
       const frameNow = Date.now();
       const dt = Math.min(0.05, (frameNow - lastFrameTime) / 1000);
@@ -1469,17 +1624,25 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     if (!scene || !camera || !renderer || !composer || !trackCurve || !playerCar || !botCar) return;
 
     const state = stateRef.current;
+    const playerT = state.playerDist / state.trackLength;
 
     // A. Dynamic Weather/Rain Updates
-    if (rainParticles && activeEvent.weather !== 'clear') {
-      const posAttr = rainParticles.geometry.attributes.position as THREE.BufferAttribute;
-      for (let i = 1; i < posAttr.count * 3; i += 3) {
-        posAttr.array[i] -= dt * 65; // fall speed
-        if (posAttr.array[i] < -2) {
-          posAttr.array[i] = 75; // reset height
+    const isPlayerInTunnel = playerT >= 0.55 && playerT <= 0.72;
+    if (rainParticles) {
+      const rMat = rainParticles.material as THREE.PointsMaterial;
+      if (activeEvent.weather !== 'clear' && !isPlayerInTunnel) {
+        rMat.opacity = activeEvent.weather === 'storm' ? 0.85 : 0.6;
+        const posAttr = rainParticles.geometry.attributes.position as THREE.BufferAttribute;
+        for (let i = 1; i < posAttr.count * 3; i += 3) {
+          posAttr.array[i] -= dt * 65; // fall speed
+          if (posAttr.array[i] < -2) {
+            posAttr.array[i] = 75; // reset height
+          }
         }
+        posAttr.needsUpdate = true;
+      } else {
+        rMat.opacity = 0.0;
       }
-      posAttr.needsUpdate = true;
     }
 
     // B. Player Movement Mechanics (KeyboardWASD & Touch Controls)
@@ -1487,17 +1650,19 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     let brakeInput = false;
     let steerLeft = false;
     let steerRight = false;
+    let driftInput = false;
     let nosInput = false;
 
     if (state.keys['w'] || state.keys['arrowup']) accelInput = true;
     if (state.keys['s'] || state.keys['arrowdown']) brakeInput = true;
     if (state.keys['a'] || state.keys['arrowleft']) steerLeft = true;
     if (state.keys['d'] || state.keys['arrowright']) steerRight = true;
-    if (state.keys[' '] || state.keys['shift']) nosInput = true;
+    if (state.keys[' ']) driftInput = true;
+    if (state.keys['shift']) nosInput = true;
 
-    // Drifting trigger check
+    // Drifting trigger check (Only active when Space bar is pressed while steering)
     if (steerLeft || steerRight) {
-      if (brakeInput && state.speed > 18) {
+      if (driftInput && state.speed > 18) {
         state.isDrifting = true;
       }
       if (state.speed < 12) {
@@ -1568,7 +1733,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // Acceleration & Speed
     const maxSpeedLimit = activeCar.maxSpeed * nosSpdMult + (engineLvl - 1) * 6;
     const accelRate = activeCar.accel * (state.isNosActive ? 2.0 : 1.0);
-    const handlingRate = activeCar.handling * (state.isDrifting ? activeCar.driftGrip : 1.0) * (1.0 + (tiresLvl - 1) * 0.12);
+    const speedSensitiveFactor = Math.max(0.32, 1.0 - state.speed / 130);
+    const handlingRate = activeCar.handling * speedSensitiveFactor * (state.isDrifting ? activeCar.driftGrip : 1.0) * (1.0 + (tiresLvl - 1) * 0.12);
 
     if (state.crashCooldown > 0) {
       state.crashCooldown -= dt;
@@ -1597,7 +1763,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
 
     // Lane Steering bounds
-    const maxLaneOffset = 6.8; // half of roadWidth
+    const maxLaneOffset = 10.0; // half of roadWidth (22)
     if (steerLeft) {
       state.playerLane = Math.max(-maxLaneOffset, state.playerLane - handlingRate * dt * (state.speed * 0.15));
     }
@@ -1639,19 +1805,24 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         state.airborne = false;
         state.spinAngle = 0;
         state.rollAngle = 0;
-        // Landing shake
+        state.landingCompression = 0.45; // 45% landing compression strut scale
         audioSynth.playStart(); // landing thud proxy
       }
     }
 
     // Dynamic Suspension & landing compression struts
+    if (state.landingCompression > 0) {
+      state.landingCompression -= dt * 3.5;
+      if (state.landingCompression < 0) state.landingCompression = 0;
+    }
+
     for (let i = 0; i < 4; i++) {
       const susp = playerCar.getObjectByName(`suspension_${i}`);
       if (susp) {
         if (state.airborne) {
           susp.scale.y = 1.35; // fully extended shocks
         } else {
-          susp.scale.y = 1.0 - Math.min(0.35, state.airHeight * 0.05); // compressed
+          susp.scale.y = 1.0 - state.landingCompression - Math.min(0.2, state.airHeight * 0.05); // compressed
         }
       }
     }
@@ -1660,17 +1831,24 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     state.playerDist += state.speed * dt;
     if (state.playerDist >= state.trackLength) {
       // Loop track finish line
-      state.playerDist -= state.trackLength;
+      state.playerDist -= trackCurve.getLength(); // use accurate track length
       triggerGameFinished(true);
       return;
     }
 
     // D. Position player supercar mesh relative to Spline track coordinates
-    const playerT = state.playerDist / state.trackLength;
     const pt = trackCurve.getPointAt(playerT);
     const tangent = trackCurve.getTangentAt(playerT);
+
+    // Dynamic curvature-based banking roll
+    const tNext = (playerT + 0.002) % 1.0;
+    const tangentNext = trackCurve.getTangentAt(tNext);
+    const curvature = tangent.clone().cross(tangentNext).y;
+    const bankAngle = Math.max(-0.35, Math.min(0.35, curvature * 14.0));
+
     const normal = new THREE.Vector3(0, 1, 0);
-    const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+    let binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+    binormal.applyAxisAngle(tangent, bankAngle);
 
     // Set position incorporating lane displacement & airborne elevation
     const finalPos = pt.clone().add(binormal.clone().multiplyScalar(state.playerLane));
@@ -1687,7 +1865,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     state.steerRoll += (targetRoll - state.steerRoll) * dt * 6;
 
     playerCar.rotation.y += state.steerYaw + state.driftAngle;
-    playerCar.rotation.z += state.steerRoll;
+    playerCar.rotation.z += state.steerRoll + bankAngle; // tilt car based on corner banking
     
     // Apply 3D stunt spins/rolls
     if (state.airborne) {
@@ -1729,17 +1907,26 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const botT = state.botDist / state.trackLength;
     const botPt = trackCurve.getPointAt(botT);
     const botTangent = trackCurve.getTangentAt(botT);
-    const botBinormal = new THREE.Vector3().crossVectors(botTangent, normal).normalize();
+
+    // Curvature-based banking roll for bot
+    const botTNext = (botT + 0.002) % 1.0;
+    const botTangentNext = trackCurve.getTangentAt(botTNext);
+    const botCurvature = botTangent.clone().cross(botTangentNext).y;
+    const botBankAngle = Math.max(-0.35, Math.min(0.35, botCurvature * 14.0));
+
+    let botBinormal = new THREE.Vector3().crossVectors(botTangent, normal).normalize();
+    botBinormal.applyAxisAngle(botTangent, botBankAngle);
     
     // AI steers slightly to avoid player
     const distToPlayer = Math.abs(state.botDist - state.playerDist);
     if (distToPlayer < 12) {
-      state.botLane += (state.playerLane > 0 ? -3.0 - state.botLane : 3.0 - state.botLane) * dt * 4;
+      state.botLane += (state.playerLane > 0 ? -4.5 - state.botLane : 4.5 - state.botLane) * dt * 4;
     }
     
     botCar.position.copy(botPt.clone().add(botBinormal.clone().multiplyScalar(state.botLane)));
     botCar.position.y += 0.35;
     botCar.lookAt(botPt.clone().add(botTangent));
+    botCar.rotation.z += botBankAngle;
 
     // G. Traffic Cars routing & Collisions
     state.trafficCars.forEach((tc) => {
@@ -1749,16 +1936,26 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const tcT = tc.dist / state.trackLength;
       const tcPt = trackCurve.getPointAt(tcT);
       const tcTangent = trackCurve.getTangentAt(tcT);
-      const tcBinormal = new THREE.Vector3().crossVectors(tcTangent, normal).normalize();
 
-      tc.mesh.position.copy(tcPt.clone().add(tcBinormal.clone().multiplyScalar(tc.lane * 4.2)));
+      // Curvature-based banking roll for traffic
+      const tcTNext = (tcT + 0.002) % 1.0;
+      const tcTangentNext = trackCurve.getTangentAt(tcTNext);
+      const tcCurvature = tcTangent.clone().cross(tcTangentNext).y;
+      const tcBankAngle = Math.max(-0.35, Math.min(0.35, tcCurvature * 14.0));
+
+      let tcBinormal = new THREE.Vector3().crossVectors(tcTangent, normal).normalize();
+      tcBinormal.applyAxisAngle(tcTangent, tcBankAngle);
+
+      tc.mesh.position.copy(tcPt.clone().add(tcBinormal.clone().multiplyScalar(tc.lane * 6.6))); // spread wider on 22 road
       tc.mesh.position.y += 0.35;
       tc.mesh.lookAt(tcPt.clone().add(tcTangent));
+      tc.mesh.rotation.z += tcBankAngle;
 
       // Player to Traffic vehicle collision check
       const distToTc = finalPos.distanceTo(tc.mesh.position);
       if (distToTc < 2.5 && state.crashCooldown <= 0) {
         state.crashCooldown = 0.8; // shorter crash recovery time (0.8s)
+        state.collisionShake = 0.45; // trigger camera screen shake
         audioSynth.playError(); // crash explosion
         setStuntNotification('COLLISION CRASH! SPEED DISRUPTED');
         state.speed = Math.max(16, state.speed * 0.55); // maintain 55% speed with floor of 16
@@ -1768,34 +1965,114 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
     });
 
-    // H. Camera modes updates (Chase, Far, Hood, Cockpit)
+    // H. Particle VFX updates (Exhaust Flames & Tire Smoke)
+    const exhaustParticles = threeRef.current.exhaustParticles;
+    const exhaustCount = 45;
+    if (exhaustParticles && threeRef.current.exhaustGeometry) {
+      const geom = threeRef.current.exhaustGeometry;
+      const posAttr = geom.attributes.position as THREE.BufferAttribute;
+      const pMat = exhaustParticles.material as THREE.PointsMaterial;
+
+      if (state.isNosActive) {
+        pMat.color.setHex(0x00d2ff); // cyan/blue nitro spark flames
+        pMat.size = 0.55;
+      } else if (state.isDrifting) {
+        pMat.color.setHex(0xe0e0e0); // white/grey tire smoke
+        pMat.size = 0.85;
+      } else {
+        pMat.size = 0.01; // hide particles
+      }
+
+      // Shift existing active particles
+      for (let i = 0; i < exhaustCount; i++) {
+        const px = posAttr.getX(i);
+        const py = posAttr.getY(i);
+        const pz = posAttr.getZ(i);
+        
+        // Move backward along negative tangent vector
+        const vx = -tangent.x * state.speed * 0.4 + (Math.random() - 0.5) * 2;
+        const vy = -tangent.y * state.speed * 0.4 + (Math.random() - 0.5) * 0.5;
+        const vz = -tangent.z * state.speed * 0.4 + (Math.random() - 0.5) * 2;
+        
+        posAttr.setXYZ(i, px + vx * dt, py + vy * dt, pz + vz * dt);
+        
+        // Check age/distance to respawn
+        const dist = new THREE.Vector3(px, py, pz).distanceTo(playerCar.position);
+        if (dist > 15 || Math.random() > 0.94) {
+          if (state.isNosActive) {
+            const offset = new THREE.Vector3((Math.random() - 0.5) * 0.8, -0.1, -2.1);
+            offset.applyQuaternion(playerCar.quaternion);
+            const spawnPos = playerCar.position.clone().add(offset);
+            posAttr.setXYZ(i, spawnPos.x, spawnPos.y, spawnPos.z);
+          } else if (state.isDrifting && state.speed > 10) {
+            const offset = new THREE.Vector3(Math.random() > 0.5 ? -0.95 : 0.95, -0.35, -1.2);
+            offset.applyQuaternion(playerCar.quaternion);
+            const spawnPos = playerCar.position.clone().add(offset);
+            posAttr.setXYZ(i, spawnPos.x, spawnPos.y, spawnPos.z);
+          } else {
+            posAttr.setXYZ(i, 9999, 9999, 9999);
+          }
+        }
+      }
+      posAttr.needsUpdate = true;
+    }
+
+    // I. Camera modes updates (Chase, Far, Hood, Cockpit)
     const camOffset = new THREE.Vector3();
-    const lookTarget = pt.clone().add(tangent.clone().multiplyScalar(15));
     
+    // Predictive Steering Look target (look slightly into the turn direction)
+    const lookTarget = pt.clone().add(tangent.clone().multiplyScalar(16.0)).add(binormal.clone().multiplyScalar(-state.steerAngle * 2.8));
+    
+    // Dynamic collision camera shake
+    if (state.collisionShake > 0) {
+      state.collisionShake -= dt * 2.2;
+      if (state.collisionShake < 0) state.collisionShake = 0;
+    }
+    const shake = state.collisionShake;
+    const shakeOffset = new THREE.Vector3(
+      (Math.random() - 0.5) * shake,
+      (Math.random() - 0.5) * shake,
+      (Math.random() - 0.5) * shake
+    );
+
     // Adjust dynamic Field-of-View zoom during NOS boosts
-    const targetFov = state.isNosActive ? 85 : 65;
+    const targetFov = state.isNosActive ? 82 : 65;
     camera.fov += (targetFov - camera.fov) * dt * 6;
     camera.updateProjectionMatrix();
 
     if (state.cameraMode === 'chase') {
       camOffset.copy(tangent).multiplyScalar(-8.5).add(binormal.clone().multiplyScalar(state.playerLane * 0.4));
       camOffset.y += 2.8;
-      camera.position.copy(finalPos).add(camOffset);
+      
+      const targetCamPos = finalPos.clone().add(camOffset);
+      camera.position.lerp(targetCamPos, dt * 8.5); // smooth cinematic lerp
+      camera.position.y = Math.max(pt.y + 1.2, camera.position.y); // prevent clipping below road deck
+      camera.position.add(shakeOffset);
+
       camera.lookAt(lookTarget);
+      camera.rotateZ(state.driftAngle * 0.22); // drift tilt camera roll
     } else if (state.cameraMode === 'far') {
       camOffset.copy(tangent).multiplyScalar(-14).add(binormal.clone().multiplyScalar(state.playerLane * 0.3));
       camOffset.y += 4.5;
-      camera.position.copy(finalPos).add(camOffset);
+      
+      const targetCamPos = finalPos.clone().add(camOffset);
+      camera.position.lerp(targetCamPos, dt * 6.5);
+      camera.position.y = Math.max(pt.y + 1.2, camera.position.y);
+      camera.position.add(shakeOffset);
+
       camera.lookAt(lookTarget);
+      camera.rotateZ(state.driftAngle * 0.16);
     } else if (state.cameraMode === 'hood') {
       camOffset.copy(tangent).multiplyScalar(1.2);
       camOffset.y += 0.6;
-      camera.position.copy(finalPos).add(camOffset);
+      
+      camera.position.copy(finalPos).add(camOffset).add(shakeOffset);
       camera.lookAt(lookTarget);
     } else if (state.cameraMode === 'cockpit') {
       camOffset.copy(tangent).multiplyScalar(-0.1);
       camOffset.y += 0.55;
-      camera.position.copy(finalPos).add(camOffset);
+      
+      camera.position.copy(finalPos).add(camOffset).add(shakeOffset);
       camera.lookAt(lookTarget);
     }
 
@@ -1919,6 +2196,25 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           stateRef.current.cameraMode === 'chase' ? 'far' :
           stateRef.current.cameraMode === 'far' ? 'hood' :
           stateRef.current.cameraMode === 'hood' ? 'cockpit' : 'chase';
+      }
+
+      // Reset vehicle positioning (R key)
+      if (k === 'r') {
+        stateRef.current.playerLane = 0;
+        stateRef.current.speed = 0;
+        stateRef.current.driftAngle = 0;
+        stateRef.current.isDrifting = false;
+        stateRef.current.steerYaw = 0;
+        stateRef.current.steerRoll = 0;
+        stateRef.current.airborne = false;
+        stateRef.current.airHeight = 0;
+        audioSynth.playGearShift();
+      }
+
+      // Pause toggle (Escape key)
+      if (k === 'escape') {
+        e.preventDefault();
+        togglePause();
       }
     };
 
@@ -2070,6 +2366,30 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           </div>
           <div className="text-sm font-bold uppercase tracking-widest text-gray-400 mt-6 animate-pulse">
             Establishing 3D WebGL Vector Matrix Pipelines...
+          </div>
+        </div>
+      )}
+
+      {/* PHASE 2.5: Pause Screen */}
+      {isPaused && (
+        <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/75 z-30 font-orbitron">
+          <div className="glass-panel p-8 border-neon-cyan/20 rounded-xl flex flex-col items-center space-y-6 max-w-sm w-full text-center">
+            <h2 className="text-2xl font-black text-neon-cyan tracking-wider uppercase">// SIMULATION PAUSED</h2>
+            <p className="text-xs text-gray-400 font-mono">Telemetry link on standby. Re-engage when ready.</p>
+            
+            <button 
+              onClick={togglePause}
+              className="px-6 py-2.5 bg-neon-cyan text-black hover:bg-neon-cyan/85 font-orbitron font-bold text-xs rounded uppercase shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all cursor-pointer w-full"
+            >
+              RESUME RACE
+            </button>
+            
+            <button 
+              onClick={() => { togglePause(); triggerGameFinished(false); }}
+              className="px-6 py-2.5 border border-red-500/30 text-red-500 hover:bg-red-500/10 font-orbitron font-bold text-xs rounded uppercase transition-all cursor-pointer w-full"
+            >
+              QUIT MATCH
+            </button>
           </div>
         </div>
       )}
