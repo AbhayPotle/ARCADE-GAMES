@@ -128,7 +128,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     lastExhaustTime: 0,
     crashCooldown: 0,
     gear: 1,
-    rpm: 1000
+    rpm: 1000,
+    gameOver: false
   });
 
   // Three.js instances ref
@@ -173,7 +174,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     // 1. Lower Chassis
     const bodyGeom = new THREE.BoxGeometry(2.0, 0.4, 4.4);
-    const bodyMat = new THREE.MeshStandardMaterial({
+    const bodyMat = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(paintColor),
       metalness: 0.9,
       roughness: 0.15,
