@@ -829,11 +829,16 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
 
       // Lane Markings
-      // Left and Right Solid White Shoulders
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 6;
+      // Left edge (solid cyan) and Right edge (solid magenta) glowing lines
+      ctx.strokeStyle = '#00f0ff'; // neon cyan
+      ctx.lineWidth = 10;
       ctx.beginPath();
       ctx.moveTo(15, 0); ctx.lineTo(15, 512);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ff007f'; // neon magenta
+      ctx.lineWidth = 10;
+      ctx.beginPath();
       ctx.moveTo(497, 0); ctx.lineTo(497, 512);
       ctx.stroke();
 
@@ -846,9 +851,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       ctx.stroke();
 
       // White Dashed Lane Dividers (separating lanes)
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
       ctx.lineWidth = 3.5;
-      ctx.setLineDash([25, 35]);
+      ctx.setLineDash([20, 25]);
       ctx.beginPath();
       ctx.moveTo(138, 0); ctx.lineTo(138, 512);
       ctx.moveTo(374, 0); ctx.lineTo(374, 512);
@@ -951,9 +956,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const roadMat = new THREE.MeshStandardMaterial({
       map: roadTexture,
       bumpMap: roadBumpTexture,
-      bumpScale: 0.012,
-      roughness: activeEvent.weather !== 'clear' ? 0.28 : 0.8,
-      metalness: 0.12
+      bumpScale: 0.02,
+      roughness: activeEvent.weather !== 'clear' ? 0.14 : 0.22, // highly reflective
+      metalness: 0.75 // metallic reflections
     });
 
     const roadMesh = new THREE.Mesh(roadGeometry, roadMat);
