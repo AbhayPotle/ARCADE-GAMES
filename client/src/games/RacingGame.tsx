@@ -1971,7 +1971,6 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // Start local loop animation frame requests
     let lastFrameTime = Date.now();
     const frameLoop = () => {
-      if (stateRef.current.gameOver) return;
       if (isPausedRef.current) {
         lastFrameTime = Date.now();
         animIdRef.current = requestAnimationFrame(frameLoop);
