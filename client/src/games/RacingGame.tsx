@@ -1469,9 +1469,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           arch.rotation.y = Math.PI / 2;
           bridgeGroup.add(arch);
 
+          const structForward = tangent.clone().normalize();
+          const structRight = binormal.clone().normalize();
+          const structUp = new THREE.Vector3().crossVectors(structForward, structRight).normalize();
+          const structOrientMat = new THREE.Matrix4().makeBasis(structRight, structUp, structForward);
+
           bridgeGroup.position.copy(pt);
-          bridgeGroup.lookAt(pt.clone().add(tangent));
-          bridgeGroup.rotation.z += bankAngle;
+          bridgeGroup.quaternion.setFromRotationMatrix(structOrientMat);
 
           scene.add(bridgeGroup);
         }
@@ -1500,9 +1504,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         light.position.set(0, 7.35, 0);
         tunnelGroup.add(light);
 
+        const structForward = tangent.clone().normalize();
+        const structRight = binormal.clone().normalize();
+        const structUp = new THREE.Vector3().crossVectors(structForward, structRight).normalize();
+        const structOrientMat = new THREE.Matrix4().makeBasis(structRight, structUp, structForward);
+
         tunnelGroup.position.copy(pt);
-        tunnelGroup.lookAt(pt.clone().add(tangent));
-        tunnelGroup.rotation.z += bankAngle;
+        tunnelGroup.quaternion.setFromRotationMatrix(structOrientMat);
 
         scene.add(tunnelGroup);
       }
