@@ -892,29 +892,39 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       // Base landscape colors
       let baseColor = '#111625'; // dark slate cyber ground
       if (eventId === 'coastal_slide') {
-        baseColor = '#1b3f22'; // deep grass green
+        baseColor = '#1e3f20'; // deep grass green
       } else if (eventId === 'canyon_jump') {
-        baseColor = '#9e4625'; // red canyon stone
+        baseColor = '#8e3f22'; // rich canyon rust orange/red
       }
       ctx.fillStyle = baseColor;
       ctx.fillRect(0, 0, 512, 512);
 
-      // Noise grain overlays
+      // Noise grain overlays (micro texture)
       const imgData = ctx.getImageData(0, 0, 512, 512);
       const data = imgData.data;
       for (let i = 0; i < data.length; i += 4) {
-        const factor = 1 + (Math.random() - 0.5) * 0.12;
+        const factor = 0.88 + Math.random() * 0.24;
         data[i] = Math.max(0, Math.min(255, data[i] * factor));
         data[i+1] = Math.max(0, Math.min(255, data[i+1] * factor));
         data[i+2] = Math.max(0, Math.min(255, data[i+2] * factor));
       }
       ctx.putImageData(imgData, 0, 0);
 
-      // Natural grass/rock cluster variations
-      ctx.fillStyle = eventId === 'coastal_slide' ? 'rgba(34, 110, 34, 0.3)' : 'rgba(120, 55, 20, 0.3)';
-      for (let i = 0; i < 24; i++) {
+      // Draw subtle organic noise variations instead of sharp polka dots
+      ctx.fillStyle = eventId === 'coastal_slide' ? 'rgba(15, 50, 15, 0.15)' : 'rgba(90, 35, 10, 0.15)';
+      for (let i = 0; i < 180; i++) {
         ctx.beginPath();
-        ctx.arc(Math.random() * 512, Math.random() * 512, 12 + Math.random() * 36, 0, Math.PI * 2);
+        const radius = 2 + Math.random() * 8;
+        ctx.arc(Math.random() * 512, Math.random() * 512, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Draw slightly larger soft dunes/patches
+      ctx.fillStyle = eventId === 'coastal_slide' ? 'rgba(40, 95, 40, 0.08)' : 'rgba(140, 65, 30, 0.08)';
+      for (let i = 0; i < 40; i++) {
+        ctx.beginPath();
+        const radius = 15 + Math.random() * 30;
+        ctx.arc(Math.random() * 512, Math.random() * 512, radius, 0, Math.PI * 2);
         ctx.fill();
       }
       return canvas;
@@ -950,15 +960,50 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     roadMesh.receiveShadow = true;
     scene.add(roadMesh);
 
+    // Pre-calculate 150 points along the track curve for terrain-road blending
+    const roadSamples: THREE.Vector3[] = [];
+    const sampleCount = 150;
+    for (let s = 0; s < sampleCount; s++) {
+      roadSamples.push(trackCurve.getPointAt(s / sampleCount));
+    }
+
+    const getTerrainHeight = (vx: number, vz: number) => {
+      // Base terrain height
+      const baseTerrainHeight = Math.sin(vx * 0.015) * Math.cos(vz * 0.015) * 22 + Math.sin(vx * 0.04) * 6 - 10;
+      
+      // Find closest road sample in XZ plane
+      let minDist = Infinity;
+      let closestY = 0;
+      for (let s = 0; s < sampleCount; s++) {
+        const rPt = roadSamples[s];
+        const dx = vx - rPt.x;
+        const dz = vz - rPt.z;
+        const distSq = dx * dx + dz * dz;
+        if (distSq < minDist) {
+          minDist = distSq;
+          closestY = rPt.y;
+        }
+      }
+      minDist = Math.sqrt(minDist);
+      
+      let height = baseTerrainHeight;
+      if (minDist < 45) {
+        const t = minDist / 45; // 0 at road, 1 at 45m away
+        const smoothT = t * t * (3 - 2 * t); // smoothstep
+        const targetY = closestY - 1.5;
+        height = THREE.MathUtils.lerp(targetY, baseTerrainHeight, smoothT);
+      }
+      return height;
+    };
+
     // 6. Build Continuous Terrain Plane Height Grids
-    const terrainGeom = new THREE.PlaneGeometry(800, 800, 32, 32);
+    const terrainGeom = new THREE.PlaneGeometry(1000, 1000, 80, 80);
     terrainGeom.rotateX(-Math.PI / 2);
     const pos = terrainGeom.attributes.position;
     for (let i = 0; i < pos.count; i++) {
       const vx = pos.getX(i);
       const vz = pos.getZ(i);
-      const height = Math.sin(vx * 0.015) * Math.cos(vz * 0.015) * 16 + Math.sin(vx * 0.04) * 5;
-      pos.setY(i, height - 12);
+      pos.setY(i, getTerrainHeight(vx, vz));
     }
     terrainGeom.computeVertexNormals();
 
