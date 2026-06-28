@@ -2227,6 +2227,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // I. Camera modes updates (Chase, Far, Hood, Cockpit)
     const camOffset = new THREE.Vector3();
     
+    // Hide player vehicle mesh inside hood/cockpit views to resolve clipping, show in chase/far views
+    if (state.cameraMode === 'hood' || state.cameraMode === 'cockpit') {
+      playerCar.visible = false;
+    } else {
+      playerCar.visible = true;
+    }
+    
     // Predictive Steering Look target (look slightly into the turn direction)
     const lookTarget = pt.clone().add(tangent.clone().multiplyScalar(16.0)).add(binormal.clone().multiplyScalar(-state.steerAngle * 2.8));
     
