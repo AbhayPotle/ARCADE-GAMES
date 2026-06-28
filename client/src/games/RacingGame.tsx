@@ -2188,8 +2188,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
     botCar.position.copy(botPt.clone().add(botBinormal.clone().multiplyScalar(state.botLane)));
     botCar.position.y += 0.35;
-    botCar.lookAt(botPt.clone().add(botTangent));
-    botCar.rotation.z += botBankAngle;
+    const botForward = botTangent.clone().normalize();
+    const botRight = botBinormal.clone().normalize();
+    const botUp = new THREE.Vector3().crossVectors(botForward, botRight).normalize();
+    const botOrientMat = new THREE.Matrix4().makeBasis(botRight, botUp, botForward);
+    botCar.quaternion.setFromRotationMatrix(botOrientMat);
 
     // Bot 2
     state.bot2Speed = 36 + (activeEvent.difficulty === 'Hard' ? 10 : activeEvent.difficulty === 'Expert' ? 14 : 0) + Math.cos(playerT * 8) * 6;
@@ -2210,8 +2213,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     bot2Binormal.applyAxisAngle(bot2Tangent, bot2BankAngle);
     bot2Car.position.copy(bot2Pt.clone().add(bot2Binormal.clone().multiplyScalar(state.bot2Lane)));
     bot2Car.position.y += 0.35;
-    bot2Car.lookAt(bot2Pt.clone().add(bot2Tangent));
-    bot2Car.rotation.z += bot2BankAngle;
+    const bot2Forward = bot2Tangent.clone().normalize();
+    const bot2Right = bot2Binormal.clone().normalize();
+    const bot2Up = new THREE.Vector3().crossVectors(bot2Forward, bot2Right).normalize();
+    const bot2OrientMat = new THREE.Matrix4().makeBasis(bot2Right, bot2Up, bot2Forward);
+    bot2Car.quaternion.setFromRotationMatrix(bot2OrientMat);
 
     // Bot 3
     state.bot3Speed = 34 + (activeEvent.difficulty === 'Hard' ? 8 : activeEvent.difficulty === 'Expert' ? 12 : 0) + Math.sin(playerT * 6) * 5;
@@ -2232,8 +2238,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     bot3Binormal.applyAxisAngle(bot3Tangent, bot3BankAngle);
     bot3Car.position.copy(bot3Pt.clone().add(bot3Binormal.clone().multiplyScalar(state.bot3Lane)));
     bot3Car.position.y += 0.35;
-    bot3Car.lookAt(bot3Pt.clone().add(bot3Tangent));
-    bot3Car.rotation.z += bot3BankAngle;
+    const bot3Forward = bot3Tangent.clone().normalize();
+    const bot3Right = bot3Binormal.clone().normalize();
+    const bot3Up = new THREE.Vector3().crossVectors(bot3Forward, bot3Right).normalize();
+    const bot3OrientMat = new THREE.Matrix4().makeBasis(bot3Right, bot3Up, bot3Forward);
+    bot3Car.quaternion.setFromRotationMatrix(bot3OrientMat);
 
     // Player to Bot collision checks
     const botsList = [
@@ -2272,8 +2281,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
       tc.mesh.position.copy(tcPt.clone().add(tcBinormal.clone().multiplyScalar(tc.lane * 6.6))); // spread wider on 22 road
       tc.mesh.position.y += 0.35;
-      tc.mesh.lookAt(tcPt.clone().add(tcTangent));
-      tc.mesh.rotation.z += tcBankAngle;
+      const tcForward = tcTangent.clone().normalize();
+      const tcRight = tcBinormal.clone().normalize();
+      const tcUp = new THREE.Vector3().crossVectors(tcForward, tcRight).normalize();
+      const tcOrientMat = new THREE.Matrix4().makeBasis(tcRight, tcUp, tcForward);
+      tc.mesh.quaternion.setFromRotationMatrix(tcOrientMat);
 
       // Player to Traffic vehicle collision check
       const distToTc = finalPos.distanceTo(tc.mesh.position);
