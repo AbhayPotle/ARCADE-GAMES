@@ -960,11 +960,15 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     roadMesh.receiveShadow = true;
     scene.add(roadMesh);
 
-    // Pre-calculate 150 points along the track curve for terrain-road blending
-    const roadSamples: THREE.Vector3[] = [];
-    const sampleCount = 150;
+    // Pre-calculate 400 points along the track curve for high-precision terrain-road blending
+    const roadSamples: { pt: THREE.Vector3, t: number }[] = [];
+    const sampleCount = 400;
     for (let s = 0; s < sampleCount; s++) {
-      roadSamples.push(trackCurve.getPointAt(s / sampleCount));
+      const t = s / sampleCount;
+      roadSamples.push({
+        pt: trackCurve.getPointAt(t),
+        t: t
+      });
     }
 
     const getTerrainHeight = (vx: number, vz: number) => {
@@ -974,24 +978,54 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       // Find closest road sample in XZ plane
       let minDist = Infinity;
       let closestY = 0;
+      let closestT = 0;
       for (let s = 0; s < sampleCount; s++) {
-        const rPt = roadSamples[s];
+        const rPt = roadSamples[s].pt;
         const dx = vx - rPt.x;
         const dz = vz - rPt.z;
         const distSq = dx * dx + dz * dz;
         if (distSq < minDist) {
           minDist = distSq;
           closestY = rPt.y;
+          closestT = roadSamples[s].t;
         }
       }
       minDist = Math.sqrt(minDist);
       
+      // Calculate if this segment is a bridge (smooth transition factor)
+      let bridgeFactor = 0;
+      if (closestT >= 0.12 && closestT <= 0.28) {
+        bridgeFactor = 1.0;
+      } else if (closestT >= 0.10 && closestT < 0.12) {
+        bridgeFactor = (0.12 - closestT) / 0.02; // transition from 1 to 0
+      } else if (closestT > 0.28 && closestT <= 0.30) {
+        bridgeFactor = (closestT - 0.28) / 0.02; // transition from 1 to 0
+      }
+
+      let targetY = closestY - 0.55;
+      if (bridgeFactor > 0) {
+        // Deepen the terrain under the bridge to create a beautiful canyon valley
+        const valleyY = Math.min(baseTerrainHeight, closestY - 18.0);
+        targetY = THREE.MathUtils.lerp(targetY, valleyY, bridgeFactor);
+      }
+
       let height = baseTerrainHeight;
-      if (minDist < 45) {
-        const t = minDist / 45; // 0 at road, 1 at 45m away
-        const smoothT = t * t * (3 - 2 * t); // smoothstep
-        const targetY = closestY - 1.5;
-        height = THREE.MathUtils.lerp(targetY, baseTerrainHeight, smoothT);
+      if (minDist < 12.0) {
+        // Road bed: strictly flat and just beneath the road surface (total 24m width bed)
+        height = targetY;
+      } else if (minDist < 25.0) {
+        // Road shoulder/ditch: transition from road height to a safe ditch depth
+        const t = (minDist - 12.0) / 13.0; // 0 to 1
+        const smoothT = t * t * (3 - 2 * t);
+        const roadEdgeHeight = targetY;
+        const ditchHeight = targetY - 1.55;
+        height = THREE.MathUtils.lerp(roadEdgeHeight, ditchHeight, smoothT);
+      } else if (minDist < 50.0) {
+        // Slope up/down to join the natural terrain
+        const t = (minDist - 25.0) / 25.0; // 0 to 1
+        const smoothT = t * t * (3 - 2 * t);
+        const ditchHeight = targetY - 1.55;
+        height = THREE.MathUtils.lerp(ditchHeight, baseTerrainHeight, smoothT);
       }
       return height;
     };
