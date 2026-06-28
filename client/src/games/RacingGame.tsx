@@ -1298,10 +1298,16 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const posRight2 = pt2.clone().add(binormal2.clone().multiplyScalar(shoulderOffset));
       
       // --- Left Guard Rail ---
+      const postForward = tangent1.clone().normalize();
+      const postRight = binormal1.clone().normalize();
+      const postUp = new THREE.Vector3().crossVectors(postForward, postRight).normalize();
+      const postOrientMat = new THREE.Matrix4().makeBasis(postRight, postUp, postForward);
+      const postQuat = new THREE.Quaternion().setFromRotationMatrix(postOrientMat);
+
       // Post Left
       const postL = new THREE.Mesh(postGeom, postMat);
-      postL.position.copy(posLeft1);
-      postL.position.y += 0.6;
+      postL.position.copy(posLeft1).add(postUp.clone().multiplyScalar(0.6));
+      postL.quaternion.copy(postQuat);
       postL.castShadow = true;
       scene.add(postL);
       
@@ -1309,18 +1315,21 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const distL = posLeft1.distanceTo(posLeft2);
       const beamL = new THREE.Mesh(beamGeom, beamMat);
       const midL = new THREE.Vector3().addVectors(posLeft1, posLeft2).multiplyScalar(0.5);
-      beamL.position.copy(midL);
-      beamL.position.y += 0.75;
+      
+      const midTangentL = new THREE.Vector3().subVectors(posLeft2, posLeft1).normalize();
+      const beamOrientMatL = new THREE.Matrix4().makeBasis(postRight, postUp, midTangentL);
+      
+      beamL.position.copy(midL).add(postUp.clone().multiplyScalar(0.75));
       beamL.scale.set(1.0, 1.0, distL);
-      beamL.lookAt(posLeft2);
+      beamL.quaternion.setFromRotationMatrix(beamOrientMatL);
       beamL.castShadow = true;
       scene.add(beamL);
       
       // --- Right Guard Rail ---
       // Post Right
       const postR = new THREE.Mesh(postGeom, postMat);
-      postR.position.copy(posRight1);
-      postR.position.y += 0.6;
+      postR.position.copy(posRight1).add(postUp.clone().multiplyScalar(0.6));
+      postR.quaternion.copy(postQuat);
       postR.castShadow = true;
       scene.add(postR);
       
@@ -1328,10 +1337,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const distR = posRight1.distanceTo(posRight2);
       const beamR = new THREE.Mesh(beamGeom, beamMat);
       const midR = new THREE.Vector3().addVectors(posRight1, posRight2).multiplyScalar(0.5);
-      beamR.position.copy(midR);
-      beamR.position.y += 0.75;
+      
+      const midTangentR = new THREE.Vector3().subVectors(posRight2, posRight1).normalize();
+      const beamOrientMatR = new THREE.Matrix4().makeBasis(postRight, postUp, midTangentR);
+      
+      beamR.position.copy(midR).add(postUp.clone().multiplyScalar(0.75));
       beamR.scale.set(1.0, 1.0, distR);
-      beamR.lookAt(posRight2);
+      beamR.quaternion.setFromRotationMatrix(beamOrientMatR);
       beamR.castShadow = true;
       scene.add(beamR);
 
@@ -1370,7 +1382,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         // Volumetric light cone
         const lightCone = new THREE.Mesh(coneGeom, coneMat);
         lightCone.position.set(isLeft ? 2.1 : -2.1, 6.75, 0);
-        lightCone.lookAt(new THREE.Vector3(isLeft ? 2.1 : -2.1, 0, 0).add(lampGroup.position));
+        lightCone.lookAt(new THREE.Vector3(isLeft ? 2.1 : -2.1, 0, 0));
         lampGroup.add(lightCone);
 
         // Add SpotLight for night/storm/sunset
@@ -1387,7 +1399,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         }
 
         lampGroup.position.copy(lampPos);
-        lampGroup.lookAt(lampPos.clone().add(tangent1));
+        
+        const lampForward = tangent1.clone().normalize();
+        const lampRight = binormal1.clone().normalize();
+        const lampUp = new THREE.Vector3().crossVectors(lampForward, lampRight).normalize();
+        const lampOrientMat = new THREE.Matrix4().makeBasis(lampRight, lampUp, lampForward);
+        lampGroup.quaternion.setFromRotationMatrix(lampOrientMat);
         
         scene.add(lampGroup);
       }
