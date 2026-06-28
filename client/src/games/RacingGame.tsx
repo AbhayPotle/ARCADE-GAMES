@@ -1371,6 +1371,78 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
     }
 
+    // 7.5. Build Glowing Neon Checkpoint Arch Gates
+    const checkpointMilestones = [0.25, 0.50, 0.75];
+    checkpointMilestones.forEach((tVal, idx) => {
+      const archPt = trackCurve.getPointAt(tVal);
+      const archTangent = trackCurve.getTangentAt(tVal);
+      const archNormal = new THREE.Vector3(0, 1, 0);
+      const archBinormal = new THREE.Vector3().crossVectors(archTangent, archNormal).normalize();
+      
+      const archGroup = new THREE.Group();
+      
+      // Structural pillars (left/right of highway)
+      const pillarGeom = new THREE.BoxGeometry(1.2, 9.0, 1.2);
+      const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1d212a, metalness: 0.9, roughness: 0.15 });
+      
+      const leftPillar = new THREE.Mesh(pillarGeom, pillarMat);
+      leftPillar.position.set(-11.5, 4.5, 0);
+      leftPillar.castShadow = true;
+      archGroup.add(leftPillar);
+      
+      const rightPillar = new THREE.Mesh(pillarGeom, pillarMat);
+      rightPillar.position.set(11.5, 4.5, 0);
+      rightPillar.castShadow = true;
+      archGroup.add(rightPillar);
+      
+      // Crossbar overhead beam
+      const crossbarGeom = new THREE.BoxGeometry(24.2, 1.0, 1.6);
+      const crossbar = new THREE.Mesh(crossbarGeom, pillarMat);
+      crossbar.position.set(0, 9.0, 0);
+      crossbar.castShadow = true;
+      archGroup.add(crossbar);
+      
+      // Glowing neon sign board: CHECKPOINT
+      const boardGeom = new THREE.BoxGeometry(6.5, 0.7, 0.45);
+      const boardMat = new THREE.MeshStandardMaterial({
+        color: 0x050c18,
+        emissive: 0x00f0ff,
+        emissiveIntensity: 1.8,
+        metalness: 0.9,
+        roughness: 0.05
+      });
+      const checkpointBoard = new THREE.Mesh(boardGeom, boardMat);
+      checkpointBoard.position.set(0, 10.15, 0);
+      archGroup.add(checkpointBoard);
+      
+      // Add glowing neon rings on pillars
+      const ringGeom = new THREE.BoxGeometry(1.36, 0.18, 1.36);
+      const ringMat = new THREE.MeshStandardMaterial({
+        color: 0x050c18,
+        emissive: 0xff007f, // neon pink/magenta
+        emissiveIntensity: 2.0
+      });
+      for (let y = 1; y <= 3; y++) {
+        const ringL = new THREE.Mesh(ringGeom, ringMat);
+        ringL.position.set(-11.5, y * 2.2, 0);
+        archGroup.add(ringL);
+        
+        const ringR = new THREE.Mesh(ringGeom, ringMat);
+        ringR.position.set(11.5, y * 2.2, 0);
+        archGroup.add(ringR);
+      }
+      
+      archGroup.position.copy(archPt);
+      
+      const archForward = archTangent.clone().normalize();
+      const archRight = archBinormal.clone().normalize();
+      const archUp = new THREE.Vector3().crossVectors(archForward, archRight).normalize();
+      const archOrientMat = new THREE.Matrix4().makeBasis(archRight, archUp, archForward);
+      archGroup.quaternion.setFromRotationMatrix(archOrientMat);
+      
+      scene.add(archGroup);
+    });
+
     // 8. Build Speed Checkpoint Ramps
     if (activeEvent.id === 'canyon_jump') {
       const rampPoints = [0.28, 0.58, 0.88];
