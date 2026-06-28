@@ -105,6 +105,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   const [hudStuntTimer, setHudStuntTimer] = useState<number>(0);
   
   const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [endTotalScore, setEndTotalScore] = useState<number>(0);
+  const [endWinnerId, setEndWinnerId] = useState<string>('');
   const isPausedRef = useRef<boolean>(false);
   const togglePause = () => {
     const nextPause = !isPausedRef.current;
@@ -2911,11 +2913,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       setCoins(newCoins);
       localStorage.setItem('arcade_coins', newCoins.toString());
       
-      alert(`CONGRATULATIONS! You won the event. Reward: +${earnedCoins} Cyber-Coins, +${earnedXp} XP!`);
-      onComplete(totalCalculated, currentUser.id);
+      setEndTotalScore(totalCalculated);
+      setEndWinnerId(currentUser.id);
     } else {
-      alert('RACE TIMEOUT / BOT DEFEATED YOU. Returning to Garage grid.');
-      onComplete(Math.round(totalCalculated * 0.4), 'bot-id');
+      setEndTotalScore(Math.round(totalCalculated * 0.4));
+      setEndWinnerId('bot-id');
     }
   };
 
@@ -3096,12 +3098,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
       {/* PHASE 2: Countdown Screen */}
       {gamePhase === 'countdown' && (
-        <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/85 z-20 font-orbitron">
-          <div className="text-[120px] font-black text-neon-cyan animate-ping">
-            {countdownNum}
+        <div className="absolute inset-0 flex flex-col justify-center items-center bg-slate-950/40 backdrop-blur-md z-20 font-orbitron">
+          <div className="text-[140px] font-black text-white drop-shadow-[0_0_24px_rgba(0,240,255,0.7)] animate-pulse">
+            {countdownNum === 0 ? 'GO!' : countdownNum}
           </div>
-          <div className="text-sm font-bold uppercase tracking-widest text-gray-400 mt-6 animate-pulse">
-            Establishing 3D WebGL Vector Matrix Pipelines...
+          <div className="text-[9px] font-black uppercase tracking-widest text-neon-cyan/85 mt-6 animate-pulse font-mono">
+            // TELEMETRY LINK SYNCHRONIZATION ACTIVE
           </div>
         </div>
       )}
@@ -3138,33 +3140,33 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
       {/* Overlay HUD indicators */}
       {gamePhase === 'racing' && (
-        <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4 font-mono text-xs select-none">
+        <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-3 font-mono text-xs select-none">
           
           {/* Top Panel stats */}
           <div className="flex justify-between items-start w-full">
-            <div className="glass-panel p-3 border-neon-cyan/20 rounded flex flex-col space-y-1">
-              <span className="text-neon-cyan font-bold tracking-widest uppercase">// 3D TELEMETRY</span>
-              <span className="text-[16px] text-white font-orbitron font-bold">POS: {hudPosition} / 4</span>
-              <span className="text-gray-400 font-mono">Lap Progress: {hudProgress}%</span>
+            <div className="glass-panel p-2 border-neon-cyan/20 rounded flex flex-col space-y-1">
+              <span className="text-neon-cyan font-bold tracking-widest text-[8px] uppercase">// telemetry</span>
+              <span className="text-[14px] text-white font-orbitron font-bold">POS: {hudPosition} / 4</span>
+              <span className="text-[9px] text-gray-400 font-mono">Progress: {hudProgress}%</span>
               <canvas 
                 ref={minimapCanvasRef} 
-                width="110" 
-                height="110" 
-                className="w-[110px] h-[110px] bg-black/40 border border-neon-cyan/20 rounded mt-2" 
+                width="120" 
+                height="120" 
+                className="w-[120px] h-[120px] bg-black/40 border border-neon-cyan/20 rounded mt-1" 
               />
             </div>
 
             {/* Stunt popups notifier */}
             {hudStuntTimer > 0 && (
-              <div className="glass-panel border-neon-yellow/30 bg-neon-yellow/10 text-neon-yellow text-xs font-orbitron font-bold uppercase px-4 py-2 rounded animate-bounce">
+              <div className="glass-panel border-neon-yellow/30 bg-neon-yellow/10 text-neon-yellow text-xs font-orbitron font-bold uppercase px-4 py-2 rounded animate-bounce self-center">
                 {hudStuntMsg}
               </div>
             )}
 
-            <div className="glass-panel p-3 border-neon-cyan/20 rounded flex flex-col items-end space-y-1">
-              <span className="text-neon-magenta font-bold tracking-widest uppercase">// SECTOR TIME</span>
-              <span className="text-[18px] text-white font-bold font-orbitron">{hudTimer}s</span>
-              <span className="text-gray-400">Score: {hudScore} pts</span>
+            <div className="glass-panel p-2 border-neon-cyan/20 rounded flex flex-col items-end space-y-1">
+              <span className="text-neon-magenta font-bold tracking-widest text-[8px] uppercase">// sector logs</span>
+              <span className="text-[14px] text-white font-bold font-orbitron">{hudTimer}s</span>
+              <span className="text-gray-400 font-mono">Score: {hudScore} pts</span>
             </div>
           </div>
 
@@ -3176,13 +3178,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           {/* Bottom Panel cockpit dials */}
           <div className="flex justify-between items-end w-full">
             {/* Speed Dial */}
-            <div className="glass-panel p-3 border-neon-cyan/20 rounded flex flex-col space-y-1">
-              <span className="text-neon-cyan font-bold uppercase tracking-wider text-[9px]">// KPH</span>
+            <div className="glass-panel p-2 border-neon-cyan/20 rounded flex flex-col space-y-1">
+              <span className="text-neon-cyan font-bold uppercase tracking-wider text-[8px]">// kph</span>
               <div className="flex items-baseline space-x-1">
-                <span className="text-3xl font-orbitron font-black text-white">{hudSpeed}</span>
-                <span className="text-[9px] text-gray-400">KM/H</span>
+                <span className="text-2xl font-orbitron font-black text-white">{hudSpeed}</span>
+                <span className="text-[8px] text-gray-400">KM/H</span>
               </div>
-              <div className="w-24 bg-black/60 h-1.5 rounded overflow-hidden">
+              <div className="w-20 bg-black/60 h-1 rounded overflow-hidden">
                 <div 
                   className="bg-neon-cyan h-full shadow-[0_0_8px_#00f0ff]" 
                   style={{ width: `${Math.min(100, (hudSpeed / 300) * 100)}%` }} 
@@ -3191,15 +3193,15 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
             </div>
 
             {/* Gear & RPM Dial */}
-            <div className="flex flex-col items-center space-y-1 glass-panel px-4 py-2 border-neon-yellow/20 rounded">
-              <span className="text-neon-yellow text-[9px] font-bold uppercase tracking-wider">// RPM DIAL</span>
-              <div className="text-2xl font-orbitron font-black text-neon-yellow">
+            <div className="flex flex-col items-center space-y-1 glass-panel px-3 py-1.5 border-neon-yellow/20 rounded">
+              <span className="text-neon-yellow text-[8px] font-bold uppercase tracking-wider">// engine status</span>
+              <div className="text-xl font-orbitron font-black text-neon-yellow">
                 GEAR {hudGear}
               </div>
-              <div className="text-[10px] text-gray-400 font-mono">
+              <div className="text-[9px] text-gray-400 font-mono">
                 {hudRpm} RPM
               </div>
-              <div className="w-28 bg-black/60 h-1 rounded-full overflow-hidden">
+              <div className="w-24 bg-black/60 h-1 rounded-full overflow-hidden">
                 <div 
                   className={`h-full ${hudRpm > 7200 ? 'bg-red-500 animate-pulse' : 'bg-neon-yellow'}`}
                   style={{ width: `${(hudRpm / 8000) * 100}%` }}
@@ -3208,12 +3210,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
             </div>
 
             {/* NOS Tank Dial */}
-            <div className="glass-panel p-3 border-neon-cyan/20 rounded flex flex-col space-y-1 items-end">
-              <span className="text-neon-cyan font-bold uppercase tracking-wider text-[9px]">// NOS TANK</span>
+            <div className="glass-panel p-2 border-neon-cyan/20 rounded flex flex-col space-y-1 items-end">
+              <span className="text-neon-cyan font-bold uppercase tracking-wider text-[8px]">// nos boost</span>
               <div className="flex items-baseline space-x-1">
-                <span className="text-3xl font-orbitron font-black text-neon-cyan">{hudNos}%</span>
+                <span className="text-2xl font-orbitron font-black text-neon-cyan">{hudNos}%</span>
               </div>
-              <div className="w-24 bg-black/60 h-1.5 rounded overflow-hidden">
+              <div className="w-20 bg-black/60 h-1 rounded overflow-hidden">
                 <div 
                   className="bg-neon-cyan h-full shadow-[0_0_8px_#00f0ff]" 
                   style={{ width: `${hudNos}%` }} 
@@ -3222,6 +3224,56 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* PHASE 4: Match Finished Results Overlay (Replacing native alerts) */}
+      {gamePhase === 'ended' && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/75 z-20 p-6">
+          <div className="w-full max-w-md glass-panel border-neon-cyan/20 p-6 rounded-xl flex flex-col items-center space-y-6 text-center shadow-[0_0_50px_rgba(0,240,255,0.15)]">
+            <h2 className="text-2xl font-orbitron font-black text-white tracking-widest animate-pulse">
+              {hudProgress >= 100 ? '// VICTORIOUS' : '// MATCH ENDED'}
+            </h2>
+            
+            <div className="w-full bg-white/5 border border-white/10 p-4 rounded-lg font-mono text-left space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-400">EVENT:</span>
+                <span className="text-white font-bold">{activeEvent.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">SCORE:</span>
+                <span className="text-neon-cyan font-bold">{hudScore} PTS</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">TIME REMAINING:</span>
+                <span className="text-neon-yellow font-bold">{hudTimer.toFixed(2)}s</span>
+              </div>
+              <div className="flex justify-between border-t border-white/5 pt-2 text-xs">
+                <span className="text-gray-400">COINS EARNED:</span>
+                <span className="text-green-400 font-bold">
+                  {hudProgress >= 100 ? `+${activeEvent.rewardCoins}` : `+${Math.round(activeEvent.rewardCoins * 0.4)}`} 🪙
+                </span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">XP EARNED:</span>
+                <span className="text-green-400 font-bold">
+                  {hudProgress >= 100 ? `+${activeEvent.rewardXp}` : `+${Math.round(activeEvent.rewardXp * 0.4)}`} XP
+                </span>
+              </div>
+            </div>
+
+            <div className="flex space-x-4 w-full">
+              <button 
+                onClick={() => {
+                  audioSynth.playClick();
+                  onComplete(endTotalScore, endWinnerId);
+                }}
+                className="flex-1 py-3 bg-neon-cyan text-black hover:bg-neon-cyan/85 font-orbitron font-bold text-sm rounded-lg uppercase tracking-wider transition-all duration-100 shadow-[0_4px_0_0_rgba(0,240,255,0.4)] hover:translate-y-[2px] active:translate-y-[4px] active:shadow-none cursor-pointer"
+              >
+                Return to Grid
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
