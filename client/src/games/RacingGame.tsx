@@ -1958,9 +1958,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     state.playerDist += state.speed * dt;
     if (state.playerDist >= state.trackLength) {
       // Loop track finish line
-      state.playerDist -= trackCurve.getLength(); // use accurate track length
+      state.playerDist -= state.trackLength;
       triggerGameFinished(true);
       return;
+    }
+    if (state.playerDist < 0) {
+      state.playerDist += state.trackLength;
     }
 
     // D. Position player supercar mesh relative to Spline track coordinates
@@ -1982,23 +1985,34 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     finalPos.y += state.airHeight + 0.35; // base clearance offset
     playerCar.position.copy(finalPos);
 
-    // Steer / drift visual alignment rotation
-    playerCar.lookAt(pt.clone().add(tangent));
+    // D. Orient player vehicle correctly relative to Spline road geometry
+    const localForward = tangent.clone().normalize();
+    const localRight = binormal.clone().normalize();
+    const localUp = new THREE.Vector3().crossVectors(localForward, localRight).normalize();
+    
+    // Construct base rotation matrix and quaternion from basis vectors
+    const orientMat = new THREE.Matrix4().makeBasis(localRight, localUp, localForward);
+    const baseQuat = new THREE.Quaternion().setFromRotationMatrix(orientMat);
 
     // Program steering yaw and suspension roll physics
-    const targetYaw = (steerLeft ? 0.28 : (steerRight ? -0.28 : 0)) * Math.min(1.0, state.speed / 20);
-    const targetRoll = (steerLeft ? -0.05 : (steerRight ? 0.05 : 0)) * Math.min(1.0, state.speed / 20);
+    const targetYaw = (steerLeft ? 0.28 : (steerRight ? -0.28 : 0)) * Math.min(1.0, Math.abs(state.speed) / 20);
+    const targetRoll = (steerLeft ? -0.05 : (steerRight ? 0.05 : 0)) * Math.min(1.0, Math.abs(state.speed) / 20);
     state.steerYaw += (targetYaw - state.steerYaw) * dt * 6;
     state.steerRoll += (targetRoll - state.steerRoll) * dt * 6;
 
-    playerCar.rotation.y += state.steerYaw + state.driftAngle;
-    playerCar.rotation.z += state.steerRoll + bankAngle; // tilt car based on corner banking
-    
-    // Apply 3D stunt spins/rolls
+    // Apply local rotations in sequence: base track orientation * yaw (steering/drifting) * roll (suspension)
+    const yawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), state.steerYaw + state.driftAngle);
+    const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), state.steerRoll);
+    baseQuat.multiply(yawQuat).multiply(rollQuat);
+
+    // Apply 3D airborne stunt spins/rolls if airborne
     if (state.airborne) {
-      playerCar.rotation.y += state.spinAngle;
-      playerCar.rotation.z += state.rollAngle;
+      const stuntYawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), state.spinAngle);
+      const stuntRollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), state.rollAngle);
+      baseQuat.multiply(stuntYawQuat).multiply(stuntRollQuat);
     }
+
+    playerCar.quaternion.copy(baseQuat);
 
     // E. Animate player car wheels spinning & steering wheel rotation
     const targetSteerAngle = steerLeft ? 1.4 : (steerRight ? -1.4 : 0);
