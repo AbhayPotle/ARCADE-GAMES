@@ -595,35 +595,84 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     const camera = new THREE.PerspectiveCamera(65, width / height, 0.5, 800);
     
-    // Procedural Sky Dome with high-fidelity gradient
+    // Procedural Sky Dome with high-fidelity gradient, stars, and moon/sun
     const createSkyTexture = (timeOfDay: string) => {
       if (typeof document === 'undefined') return null;
       const canvas = document.createElement('canvas');
-      canvas.width = 1;
-      canvas.height = 256;
+      canvas.width = 512;
+      canvas.height = 512;
       const ctx = canvas.getContext('2d');
       if (!ctx) return null;
 
-      const grad = ctx.createLinearGradient(0, 0, 0, 256);
+      const grad = ctx.createLinearGradient(0, 0, 0, 512);
       if (timeOfDay === 'sunset') {
-        grad.addColorStop(0, '#0d081f'); // deep indigo top
-        grad.addColorStop(0.4, '#1b0f2e'); // dark purple
-        grad.addColorStop(0.7, '#621a2c'); // crimson red
-        grad.addColorStop(0.9, '#a83c24'); // hot orange
-        grad.addColorStop(1, '#d86a24'); // sunset golden horizon
+        grad.addColorStop(0, '#0a0518'); // deep indigo top
+        grad.addColorStop(0.3, '#180a2b'); // dark purple
+        grad.addColorStop(0.6, '#511029'); // crimson red
+        grad.addColorStop(0.85, '#9a321a'); // hot orange
+        grad.addColorStop(1, '#cb5f1a'); // sunset golden horizon
       } else if (timeOfDay === 'night') {
         grad.addColorStop(0, '#000000'); // black top
-        grad.addColorStop(0.5, '#03030b'); // very dark indigo
-        grad.addColorStop(0.9, '#070814'); // horizon dark blue
-        grad.addColorStop(1, '#0e1224'); // subtle horizon glow
+        grad.addColorStop(0.4, '#020208'); // very dark indigo
+        grad.addColorStop(0.8, '#050612'); // horizon dark blue
+        grad.addColorStop(1, '#0c0f24'); // horizon glow
       } else {
-        grad.addColorStop(0, '#105282'); // sky blue top
-        grad.addColorStop(0.5, '#357da8'); // medium blue
-        grad.addColorStop(0.85, '#6ab6db'); // light blue
-        grad.addColorStop(1, '#c5e2f0'); // horizon light cyan
+        grad.addColorStop(0, '#0c446d'); // sky blue top
+        grad.addColorStop(0.5, '#2e6b91'); // medium blue
+        grad.addColorStop(0.8, '#5aa1c4'); // light blue
+        grad.addColorStop(1, '#afd6e8'); // horizon light cyan
       }
       ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 1, 256);
+      ctx.fillRect(0, 0, 512, 512);
+
+      // Draw starry sky for night and sunset
+      if (timeOfDay === 'night' || timeOfDay === 'sunset') {
+        ctx.fillStyle = '#ffffff';
+        for (let i = 0; i < 180; i++) {
+          const sx = Math.random() * 512;
+          const sy = Math.random() * 250; // upper half of sky dome
+          const size = Math.random() * 1.5;
+          ctx.globalAlpha = 0.3 + Math.random() * 0.7;
+          ctx.fillRect(sx, sy, size, size);
+        }
+        ctx.globalAlpha = 1.0;
+      }
+
+      // Draw large glowing celestial bodies
+      if (timeOfDay === 'night') {
+        // Glowing futuristic neon blue moon
+        const gradMoon = ctx.createRadialGradient(380, 120, 2, 380, 120, 45);
+        gradMoon.addColorStop(0, 'rgba(0, 240, 255, 1.0)');
+        gradMoon.addColorStop(0.2, 'rgba(0, 200, 255, 0.8)');
+        gradMoon.addColorStop(0.5, 'rgba(0, 120, 255, 0.2)');
+        gradMoon.addColorStop(1, 'rgba(0, 80, 255, 0.0)');
+        ctx.fillStyle = gradMoon;
+        ctx.beginPath();
+        ctx.arc(380, 120, 45, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(380, 120, 18, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (timeOfDay === 'sunset') {
+        // Glowing giant sunset sun
+        const gradSun = ctx.createRadialGradient(256, 320, 5, 256, 320, 90);
+        gradSun.addColorStop(0, 'rgba(255, 100, 0, 1.0)');
+        gradSun.addColorStop(0.3, 'rgba(255, 60, 0, 0.6)');
+        gradSun.addColorStop(0.7, 'rgba(255, 30, 0, 0.15)');
+        gradSun.addColorStop(1, 'rgba(255, 0, 0, 0.0)');
+        ctx.fillStyle = gradSun;
+        ctx.beginPath();
+        ctx.arc(256, 320, 90, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffea70';
+        ctx.beginPath();
+        ctx.arc(256, 320, 36, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
       return canvas;
     };
 
@@ -639,6 +688,67 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       skyMesh.name = 'sky_dome';
       scene.add(skyMesh);
     }
+
+    // Add 2 rotating sky searchlights for sunset/night
+    if (activeEvent.timeOfDay === 'sunset' || activeEvent.timeOfDay === 'night') {
+      const searchlightGeom = new THREE.CylinderGeometry(0.1, 12, 400, 16, 1, true);
+      searchlightGeom.translate(0, 200, 0); // shift pivot to base
+      const searchlightMat = new THREE.MeshBasicMaterial({
+        color: 0x00f0ff,
+        transparent: true,
+        opacity: 0.06,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      
+      for (let s = 0; s < 2; s++) {
+        const beam = new THREE.Mesh(searchlightGeom, searchlightMat.clone());
+        beam.name = `searchlight_${s}`;
+        beam.position.set(s === 0 ? -180 : 180, -10, s === 0 ? -120 : 120);
+        scene.add(beam);
+      }
+    }
+
+    // Spawn 18 flying city traffic drones/vehicles in sky lanes
+    const dronesList: { mesh: THREE.Group, t: number, speed: number, lane: number, alt: number }[] = [];
+    const droneBoxGeom = new THREE.BoxGeometry(0.8, 0.4, 2.2);
+    const droneRedMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+    const droneBlueMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff });
+    
+    for (let d = 0; d < 18; d++) {
+      const droneGroup = new THREE.Group();
+      // Body
+      const body = new THREE.Mesh(droneBoxGeom, new THREE.MeshStandardMaterial({
+        color: 0x0c0c0e,
+        metalness: 0.9,
+        roughness: 0.1,
+        emissive: d % 2 === 0 ? 0xff0055 : 0x00d2ff,
+        emissiveIntensity: 1.5
+      }));
+      body.castShadow = true;
+      droneGroup.add(body);
+      
+      // Side glowing lights (LED indicators)
+      const ledLeft = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), droneRedMat);
+      ledLeft.position.set(-0.55, 0, -0.6);
+      droneGroup.add(ledLeft);
+      
+      const ledRight = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), droneBlueMat);
+      ledRight.position.set(0.55, 0, 0.6);
+      droneGroup.add(ledRight);
+      
+      scene.add(droneGroup);
+      
+      dronesList.push({
+        mesh: droneGroup,
+        t: Math.random(),
+        speed: 12 + Math.random() * 15,
+        lane: (Math.random() - 0.5) * 55, // fly far to left/right of road
+        alt: 25 + Math.random() * 40 // fly high in sky
+      });
+    }
+    stateRef.current.drones = dronesList;
     
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
     renderer.setSize(width, height);
