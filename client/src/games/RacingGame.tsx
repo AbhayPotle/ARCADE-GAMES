@@ -1170,9 +1170,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const offset = binormal.multiplyScalar(side * (12 + Math.random() * 25));
       const pos = pt.clone().add(offset);
 
+      const terrY = getTerrainHeight(pos.x, pos.z);
+
       if (activeEvent.id === 'neon_sprint' || activeEvent.id === 'storm_escape') {
         const h = 25 + Math.random() * 65;
         const skyscraper = createHighDetailSkyscraper(pos, h);
+        skyscraper.position.y = terrY - 1.5;
         scene.add(skyscraper);
       } else {
         // Multi-layered organic pine trees
@@ -1192,6 +1195,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         }
 
         treeGroup.position.copy(pos);
+        treeGroup.position.y = terrY;
         treeGroup.scale.setScalar(0.7 + Math.random() * 0.8);
         scene.add(treeGroup);
       }
