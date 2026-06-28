@@ -1215,11 +1215,18 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const rampMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.1 });
         const ramp = new THREE.Mesh(rampGeom, rampMat);
         
-        // Pitch upward
-        ramp.position.copy(pt);
-        ramp.position.y += 0.8;
-        ramp.lookAt(pt.clone().add(tangent));
-        ramp.rotation.x += 0.25; // Ramp slope gradient angle
+        const rampForward = tangent.clone().normalize();
+        const rampRight = binormal.clone().normalize();
+        const rampUp = new THREE.Vector3().crossVectors(rampForward, rampRight).normalize();
+        const rampOrientMat = new THREE.Matrix4().makeBasis(rampRight, rampUp, rampForward);
+        const rampQuat = new THREE.Quaternion().setFromRotationMatrix(rampOrientMat);
+        
+        // Pitch upward (local X rotation)
+        const pitchQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.25);
+        rampQuat.multiply(pitchQuat);
+        
+        ramp.position.copy(pt).add(rampUp.clone().multiplyScalar(0.8));
+        ramp.quaternion.copy(rampQuat);
         
         scene.add(ramp);
       });
