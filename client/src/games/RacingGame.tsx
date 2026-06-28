@@ -2002,11 +2002,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   }, []);
 
   // Update Game Variables on every Frame Tick
-  const gameLoopTick = (dt: number) => {
+  const gameLoopTick = (originalDt: number) => {
     const { scene, camera, renderer, composer, trackCurve, playerCar, botCar, bot2Car, bot3Car, rainParticles, warpLines } = threeRef.current;
     if (!scene || !camera || !renderer || !composer || !trackCurve || !playerCar || !botCar || !bot2Car || !bot3Car) return;
 
     const state = stateRef.current;
+    let dt = originalDt;
     const playerT = state.playerDist / state.trackLength;
 
     // A. Dynamic Weather/Rain Updates
@@ -2026,6 +2027,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       } else {
         rMat.opacity = 0.0;
       }
+    }
+
+    // Override physics time step to 0 if frozen (countdown or game over)
+    const isPhysicsFrozen = state.gameOver || state.countdownActive;
+    if (isPhysicsFrozen) {
+      dt = 0;
     }
 
     // B. Player Movement Mechanics (KeyboardWASD & Touch Controls)
