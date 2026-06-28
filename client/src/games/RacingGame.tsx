@@ -2621,6 +2621,46 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       skyDome.position.copy(camera.position);
     }
 
+    // Animate city drones
+    if (state.drones && state.drones.length > 0) {
+      state.drones.forEach((drone) => {
+        drone.t += (drone.speed * dt) / state.trackLength;
+        if (drone.t >= 1.0) drone.t -= 1.0;
+        
+        const dPt = trackCurve.getPointAt(drone.t);
+        const dTangent = trackCurve.getTangentAt(drone.t);
+        const dBinormal = new THREE.Vector3().crossVectors(dTangent, new THREE.Vector3(0, 1, 0)).normalize();
+        
+        drone.mesh.position.copy(dPt).add(dBinormal.multiplyScalar(drone.lane));
+        drone.mesh.position.y += drone.alt;
+        drone.mesh.lookAt(dPt.clone().add(dTangent));
+      });
+    }
+
+    // Rotate sky searchlights
+    const sTime = Date.now() * 0.0006;
+    const beam0 = scene.getObjectByName('searchlight_0');
+    if (beam0) {
+      beam0.rotation.z = Math.sin(sTime) * 0.35;
+      beam0.rotation.x = Math.cos(sTime * 0.7) * 0.25;
+    }
+    const beam1 = scene.getObjectByName('searchlight_1');
+    if (beam1) {
+      beam1.rotation.z = -Math.sin(sTime * 0.8) * 0.35;
+      beam1.rotation.x = Math.sin(sTime * 0.5) * 0.25;
+    }
+
+    // Dynamic Speed Wind lines opacity
+    if (warpLines) {
+      const wMat = warpLines.material as THREE.LineBasicMaterial;
+      if (state.isNosActive) {
+        wMat.opacity = 0.75;
+      } else {
+        const speedRatio = Math.max(0, (state.speed - 28) / (maxSpeedLimit - 28));
+        wMat.opacity = speedRatio * 0.35;
+      }
+    }
+
     // Render WebGL frame via EffectComposer Post-Processing Pipeline
     composer.render();
 
