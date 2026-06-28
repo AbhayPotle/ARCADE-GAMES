@@ -158,8 +158,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     steerYaw: 0,
     steerRoll: 0,
     collisionShake: 0,
-    landingCompression: 0,
-    gameOver: false
+    gameOver: false,
+    countdownActive: false
   });
 
   // Three.js instances ref
@@ -541,20 +541,30 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     audioSynth.playClick();
     setGamePhase('countdown');
     setCountdownNum(3);
+    stateRef.current.countdownActive = true;
+
+    // Start the 3D Engine Frame loops immediately!
+    startRacingEngine();
 
     // Start countdown timer
     let count = 3;
     const interval = setInterval(() => {
       count -= 1;
-      setCountdownNum(count);
-      if (count > 0) {
-        audioSynth.playClick();
-      } else {
+      if (count >= 0) {
+        setCountdownNum(count);
+        if (count > 0) {
+          audioSynth.playClick();
+        } else {
+          // Play starting buzzer
+          audioSynth.playStart();
+          audioSynth.startEngine();
+        }
+      }
+      
+      if (count < 0) {
         clearInterval(interval);
-        audioSynth.playStart();
-        audioSynth.startEngine();
+        stateRef.current.countdownActive = false;
         setGamePhase('racing');
-        startRacingEngine();
       }
     }, 1000);
   };
