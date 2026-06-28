@@ -1092,10 +1092,27 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         [w/2, -d/2],
         [w/2, d/2]
       ];
+      
+      // Neon glow material for vertical accents
+      const neonGlowColor = Math.random() > 0.5 ? 0x00f0ff : 0xff007f; // neon cyan or magenta
+      const neonGlowMat = new THREE.MeshStandardMaterial({
+        color: 0x050c18,
+        emissive: neonGlowColor,
+        emissiveIntensity: 1.6,
+        metalness: 0.9,
+        roughness: 0.1
+      });
+
       corners.forEach(([cx, cz]) => {
         const pillar = new THREE.Mesh(pillarGeom, metalMat);
         pillar.position.set(cx, 0, cz);
         tierGroup.add(pillar);
+
+        // Neon vertical trim line
+        const neonLineGeom = new THREE.BoxGeometry(0.08, h + 0.12, 0.08);
+        const neonLine = new THREE.Mesh(neonLineGeom, neonGlowMat);
+        neonLine.position.set(cx * 1.02, 0, cz * 1.02);
+        tierGroup.add(neonLine);
       });
 
       // Horizontal floor dividers
@@ -1111,11 +1128,15 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       // Lit office windows (random individual glowing plates on sides)
       const windowsPerSide = Math.floor(w / 2.4);
       const winCellGeom = new THREE.BoxGeometry(0.5, 0.8, 0.06);
-      const winLitMat = new THREE.MeshBasicMaterial({ color: Math.random() > 0.45 ? 0xffeaad : 0xaadeff });
-
+      const winColors = [0xffeaad, 0xaadeff, 0x00f0ff, 0xff00ff, 0xff007f];
+      
       for (let f = 0; f < numFloors; f++) {
         const winY = -h/2 + f * floorSpacing + 1.6;
         for (let side = 0; side < 4; side++) {
+          const winLitMat = new THREE.MeshBasicMaterial({ 
+            color: winColors[Math.floor(Math.random() * winColors.length)] 
+          });
+
           for (let k = 0; k < windowsPerSide; k++) {
             if (Math.random() > 0.48) continue; // Random occupancy simulation
 
