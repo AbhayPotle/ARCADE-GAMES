@@ -2455,7 +2455,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     composer.render();
 
     // Synchronize HUD state properties to DOM
-    setHudSpeed(Math.round(state.speed * 2.8));
+    setHudSpeed(Math.round(Math.abs(state.speed) * 2.8));
     setHudNos(Math.round(state.nitro));
     setHudScore(state.score + state.driftScore + state.stuntScore);
     let currentPos = 4;
@@ -2524,27 +2524,37 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     // Dynamic Gear & RPM calculations
     let calculatedRpm = 1000;
-    let nextGear = state.gear;
+    let nextGear: number | string = state.gear;
     const speedKphVal = Math.round(state.speed * 2.8);
-    if (speedKphVal > 25 && state.gear === 1) nextGear = 2;
-    else if (speedKphVal > 60 && state.gear === 2) nextGear = 3;
-    else if (speedKphVal > 110 && state.gear === 3) nextGear = 4;
-    else if (speedKphVal > 165 && state.gear === 4) nextGear = 5;
-    else if (speedKphVal > 230 && state.gear === 5) nextGear = 6;
-    else if (speedKphVal < 18 && state.gear === 2) nextGear = 1;
-    else if (speedKphVal < 50 && state.gear === 3) nextGear = 2;
-    else if (speedKphVal < 90 && state.gear === 4) nextGear = 3;
-    else if (speedKphVal < 140 && state.gear === 5) nextGear = 4;
-    else if (speedKphVal < 200 && state.gear === 6) nextGear = 5;
+    
+    if (state.speed < -0.1) {
+      nextGear = 'R';
+      calculatedRpm = 1000 + Math.round((Math.abs(state.speed) / 20) * 4500);
+    } else {
+      let gearNum = typeof state.gear === 'number' ? state.gear : 1;
+      let nextGearNum = gearNum;
+      if (speedKphVal > 25 && gearNum === 1) nextGearNum = 2;
+      else if (speedKphVal > 60 && gearNum === 2) nextGearNum = 3;
+      else if (speedKphVal > 110 && gearNum === 3) nextGearNum = 4;
+      else if (speedKphVal > 165 && gearNum === 4) nextGearNum = 5;
+      else if (speedKphVal > 230 && gearNum === 5) nextGearNum = 6;
+      else if (speedKphVal < 18 && gearNum === 2) nextGearNum = 1;
+      else if (speedKphVal < 50 && gearNum === 3) nextGearNum = 2;
+      else if (speedKphVal < 90 && gearNum === 4) nextGearNum = 3;
+      else if (speedKphVal < 140 && gearNum === 5) nextGearNum = 4;
+      else if (speedKphVal < 200 && gearNum === 6) nextGearNum = 5;
 
-    if (nextGear !== state.gear) {
-      state.gear = nextGear;
-      audioSynth.playGearShift();
+      if (nextGearNum !== gearNum) {
+        state.gear = nextGearNum;
+        audioSynth.playGearShift();
+      }
+      nextGear = nextGearNum;
+
+      const gearMax = maxSpeedLimit * [0.15, 0.32, 0.52, 0.72, 0.88, 1.0][nextGearNum - 1];
+      const gearMin = nextGearNum === 1 ? 0 : maxSpeedLimit * [0.15, 0.32, 0.52, 0.72, 0.88, 1.0][nextGearNum - 2];
+      calculatedRpm = 1000 + Math.round(((state.speed - gearMin) / Math.max(1, gearMax - gearMin)) * 7000);
     }
     
-    const gearMax = maxSpeedLimit * [0.15, 0.32, 0.52, 0.72, 0.88, 1.0][nextGear - 1];
-    const gearMin = nextGear === 1 ? 0 : maxSpeedLimit * [0.15, 0.32, 0.52, 0.72, 0.88, 1.0][nextGear - 2];
-    calculatedRpm = 1000 + Math.round(((state.speed - gearMin) / Math.max(1, gearMax - gearMin)) * 7000);
     if (calculatedRpm > 8000) calculatedRpm = 8000;
 
     setHudRpm(calculatedRpm);
