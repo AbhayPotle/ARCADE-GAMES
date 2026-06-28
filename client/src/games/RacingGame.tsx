@@ -1821,15 +1821,23 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // Acceleration & Speed
     const maxSpeedLimit = activeCar.maxSpeed * nosSpdMult + (engineLvl - 1) * 6;
     const accelRate = activeCar.accel * (state.isNosActive ? 2.0 : 1.0);
-    const speedSensitiveFactor = Math.max(0.32, 1.0 - state.speed / 130);
+    const speedSensitiveFactor = Math.max(0.32, 1.0 - Math.abs(state.speed) / 130);
     const handlingRate = activeCar.handling * speedSensitiveFactor * (state.isDrifting ? activeCar.driftGrip : 1.0) * (1.0 + (tiresLvl - 1) * 0.12);
 
     if (state.crashCooldown > 0) {
       state.crashCooldown -= dt;
-      state.speed = Math.max(14, state.speed - 22 * dt);
+      if (state.speed > 0) {
+        state.speed = Math.max(14, state.speed - 22 * dt);
+      } else if (state.speed < 0) {
+        state.speed = Math.min(-14, state.speed + 22 * dt);
+      }
     } else if (Math.abs(state.playerLane) >= 9.6) {
       // Guardrail friction scraping
-      state.speed = Math.max(12, state.speed - 15 * dt);
+      if (state.speed > 0) {
+        state.speed = Math.max(12, state.speed - 15 * dt);
+      } else if (state.speed < 0) {
+        state.speed = Math.min(-12, state.speed + 15 * dt);
+      }
       state.collisionShake = Math.max(0.12, state.collisionShake);
       if (Math.random() > 0.8) {
         audioSynth.playNitro(); // screech sound effect proxy
@@ -1845,25 +1853,49 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
       if (state.speed > maxSpeedLimit * 0.85) state.speed = maxSpeedLimit * 0.85;
       if (state.speed < 0) state.speed = 0;
-    } else if (accelInput) {
-      state.speed += accelRate * dt;
-      if (state.speed > maxSpeedLimit) state.speed = maxSpeedLimit;
-    } else if (brakeInput) {
-      state.speed -= accelRate * dt * 1.8;
-      if (state.speed < 0) state.speed = 0;
     } else {
-      // Passive rolling drag
-      state.speed -= 4.5 * dt;
-      if (state.speed < 0) state.speed = 0;
+      // Normal driving (forward, stationary, or reverse)
+      if (state.speed >= 0) {
+        if (accelInput) {
+          state.speed += accelRate * dt;
+          if (state.speed > maxSpeedLimit) state.speed = maxSpeedLimit;
+        } else if (brakeInput) {
+          // If speed is 0 or very small, holding brake transitions into reverse
+          if (state.speed <= 0.5) {
+            state.speed -= accelRate * dt * 0.45;
+          } else {
+            state.speed -= accelRate * dt * 1.8;
+          }
+        } else {
+          // Passive rolling drag
+          state.speed -= 4.5 * dt;
+          if (state.speed < 0) state.speed = 0;
+        }
+      } else {
+        // Reversing (state.speed < 0)
+        if (accelInput) {
+          // Accelerator acts as brake in reverse
+          state.speed += accelRate * dt * 1.8;
+          if (state.speed > 0) state.speed = 0;
+        } else if (brakeInput) {
+          // Brake acts as accelerator in reverse
+          state.speed -= accelRate * dt * 0.45;
+          if (state.speed < -20) state.speed = -20;
+        } else {
+          // Passive rolling drag in reverse (towards 0)
+          state.speed += 4.5 * dt;
+          if (state.speed > 0) state.speed = 0;
+        }
+      }
     }
 
     // Lane Steering bounds
     const maxLaneOffset = 10.0; // half of roadWidth (22)
     if (steerLeft) {
-      state.playerLane = Math.max(-maxLaneOffset, state.playerLane - handlingRate * dt * (state.speed * 0.15));
+      state.playerLane = Math.max(-maxLaneOffset, state.playerLane - handlingRate * dt * (Math.abs(state.speed) * 0.15));
     }
     if (steerRight) {
-      state.playerLane = Math.min(maxLaneOffset, state.playerLane + handlingRate * dt * (state.speed * 0.15));
+      state.playerLane = Math.min(maxLaneOffset, state.playerLane + handlingRate * dt * (Math.abs(state.speed) * 0.15));
     }
 
     // C. Airborne Ramps check
