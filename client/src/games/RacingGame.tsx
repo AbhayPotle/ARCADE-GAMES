@@ -2563,12 +2563,22 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       (Math.random() - 0.5) * shake
     );
 
-    // Adjust dynamic Field-of-View zoom during NOS boosts
-    const targetFov = state.isNosActive ? 82 : 65;
-    camera.fov += (targetFov - camera.fov) * dt * 6;
+    // Adjust dynamic Field-of-View zoom based on speed & NOS boost
+    const baseFov = state.isNosActive ? 82 : 65;
+    const speedRatio = Math.max(0, Math.min(1.0, Math.abs(state.speed) / maxSpeedLimit));
+    const targetFov = baseFov + speedRatio * 16.0;
+    camera.fov += (targetFov - camera.fov) * originalDt * 6; // use originalDt so zoom transitions still run on game over
     camera.updateProjectionMatrix();
 
-    if (state.cameraMode === 'chase') {
+    if (state.gameOver) {
+      // Slow-motion victory orbital camera sweep
+      const orbitAngle = Date.now() * 0.0006;
+      const orbitRadius = 10.0;
+      camera.position.x = finalPos.x + Math.sin(orbitAngle) * orbitRadius;
+      camera.position.z = finalPos.z + Math.cos(orbitAngle) * orbitRadius;
+      camera.position.y = finalPos.y + 2.8;
+      camera.lookAt(finalPos);
+    } else if (state.cameraMode === 'chase') {
       camOffset.copy(tangent).multiplyScalar(-8.5).add(binormal.clone().multiplyScalar(state.playerLane * 0.4));
       camOffset.y += 2.8;
       
