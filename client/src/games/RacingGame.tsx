@@ -595,6 +595,51 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     const camera = new THREE.PerspectiveCamera(65, width / height, 0.5, 800);
     
+    // Procedural Sky Dome with high-fidelity gradient
+    const createSkyTexture = (timeOfDay: string) => {
+      if (typeof document === 'undefined') return null;
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      const grad = ctx.createLinearGradient(0, 0, 0, 256);
+      if (timeOfDay === 'sunset') {
+        grad.addColorStop(0, '#0d081f'); // deep indigo top
+        grad.addColorStop(0.4, '#1b0f2e'); // dark purple
+        grad.addColorStop(0.7, '#621a2c'); // crimson red
+        grad.addColorStop(0.9, '#a83c24'); // hot orange
+        grad.addColorStop(1, '#d86a24'); // sunset golden horizon
+      } else if (timeOfDay === 'night') {
+        grad.addColorStop(0, '#000000'); // black top
+        grad.addColorStop(0.5, '#03030b'); // very dark indigo
+        grad.addColorStop(0.9, '#070814'); // horizon dark blue
+        grad.addColorStop(1, '#0e1224'); // subtle horizon glow
+      } else {
+        grad.addColorStop(0, '#105282'); // sky blue top
+        grad.addColorStop(0.5, '#357da8'); // medium blue
+        grad.addColorStop(0.85, '#6ab6db'); // light blue
+        grad.addColorStop(1, '#c5e2f0'); // horizon light cyan
+      }
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1, 256);
+      return canvas;
+    };
+
+    const skyCanvas = createSkyTexture(activeEvent.timeOfDay);
+    if (skyCanvas) {
+      const skyTexture = new THREE.CanvasTexture(skyCanvas);
+      const skyMat = new THREE.MeshBasicMaterial({
+        map: skyTexture,
+        side: THREE.BackSide,
+        depthWrite: false
+      });
+      const skyMesh = new THREE.Mesh(new THREE.SphereGeometry(700, 32, 15), skyMat);
+      skyMesh.name = 'sky_dome';
+      scene.add(skyMesh);
+    }
+    
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
     renderer.setSize(width, height);
     renderer.shadowMap.enabled = true;
@@ -2306,6 +2351,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     if (bLightL && bLightR) {
       const bMat = bLightL.material as THREE.MeshStandardMaterial;
       bMat.emissiveIntensity = brakeIntensity;
+    }
+
+    const skyDome = scene.getObjectByName('sky_dome');
+    if (skyDome) {
+      skyDome.position.copy(camera.position);
     }
 
     // Render WebGL frame via EffectComposer Post-Processing Pipeline
