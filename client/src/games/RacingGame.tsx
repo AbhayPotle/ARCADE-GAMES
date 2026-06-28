@@ -96,7 +96,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   const [hudSpeed, setHudSpeed] = useState<number>(0);
   const [hudNos, setHudNos] = useState<number>(100);
   const [hudRpm, setHudRpm] = useState<number>(1000);
-  const [hudGear, setHudGear] = useState<number>(1);
+  const [hudGear, setHudGear] = useState<number | string>(1);
   const [hudPosition, setHudPosition] = useState<number>(1);
   const [hudProgress, setHudProgress] = useState<number>(0);
   const [hudTimer, setHudTimer] = useState<number>(45.00);
