@@ -148,6 +148,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     bot3Lane: 3.0,
     bot3Speed: 36,
     trafficCars: [] as { mesh: THREE.Group; dist: number; lane: number; speed: number }[],
+    drones: [] as { mesh: THREE.Group; t: number; speed: number; lane: number; alt: number }[],
+    landingCompression: 0,
     cameraMode: 'chase' as 'chase' | 'far' | 'hood' | 'cockpit',
     trackLength: 1500,     // length of spline loop in meters
     roadWidth: 22,
@@ -205,6 +207,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     warpLines: null,
     lights: { sun: null, headlights: null, headlightsRight: null, taillights: null }
   });
+
+  const roadSamplesRef = useRef<{ pt: THREE.Vector3, tangent: THREE.Vector3, normal: THREE.Vector3, binormal: THREE.Vector3, t: number }[]>([]);
 
   // HIGH-FIDELITY PROCEDURAL VEHICLE MODEL GENERATOR
   // Employs extrusions, sub-divided panel groups, calipers, steer wheels, carbon surfaces and clear physical glass
@@ -858,11 +862,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // Pre-calculate 400 points and Frenet frames along the track curve
     const sampleCount = 400;
     const trackFrames = trackCurve.computeFrenetFrames(sampleCount, true);
-    const roadSamples: { pt: THREE.Vector3, tangent: THREE.Vector3, normal: THREE.Vector3, binormal: THREE.Vector3, t: number }[] = [];
+    roadSamplesRef.current = [];
     
     for (let s = 0; s < sampleCount; s++) {
       const t = s / sampleCount;
-      roadSamples.push({
+      roadSamplesRef.current.push({
         pt: trackCurve.getPointAt(t),
         tangent: trackFrames.tangents[s],
         normal: trackFrames.normals[s],
@@ -870,23 +874,6 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         t: t
       });
     }
-
-    const getTrackFrame = (tVal: number) => {
-      const normalizedT = ((tVal % 1.0) + 1.0) % 1.0;
-      const index = Math.floor(normalizedT * sampleCount);
-      const nextIndex = (index + 1) % sampleCount;
-      const alpha = (normalizedT * sampleCount) - index;
-      
-      const s1 = roadSamples[index];
-      const s2 = roadSamples[nextIndex];
-      
-      return {
-        pt: new THREE.Vector3().lerpVectors(s1.pt, s2.pt, alpha),
-        tangent: new THREE.Vector3().lerpVectors(s1.tangent, s2.tangent, alpha).normalize(),
-        normal: new THREE.Vector3().lerpVectors(s1.normal, s2.normal, alpha).normalize(),
-        binormal: new THREE.Vector3().lerpVectors(s1.binormal, s2.binormal, alpha).normalize()
-      };
-    };
 
     // 5. Procedural Road Mesh Extrusion
     const roadSegmentsCount = 400;
@@ -1160,14 +1147,14 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       let closestY = 0;
       let closestT = 0;
       for (let s = 0; s < sampleCount; s++) {
-        const rPt = roadSamples[s].pt;
+        const rPt = roadSamplesRef.current[s].pt;
         const dx = vx - rPt.x;
         const dz = vz - rPt.z;
         const distSq = dx * dx + dz * dz;
         if (distSq < minDist) {
           minDist = distSq;
           closestY = rPt.y;
-          closestT = roadSamples[s].t;
+          closestT = roadSamplesRef.current[s].t;
         }
       }
       minDist = Math.sqrt(minDist);
@@ -2151,6 +2138,33 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
     };
   }, []);
+
+  const getTrackFrame = (tVal: number) => {
+    const samples = roadSamplesRef.current;
+    if (samples.length === 0) {
+      return {
+        pt: new THREE.Vector3(),
+        tangent: new THREE.Vector3(0, 0, 1),
+        normal: new THREE.Vector3(0, 1, 0),
+        binormal: new THREE.Vector3(1, 0, 0)
+      };
+    }
+    const sampleCount = samples.length;
+    const normalizedT = ((tVal % 1.0) + 1.0) % 1.0;
+    const index = Math.floor(normalizedT * sampleCount);
+    const nextIndex = (index + 1) % sampleCount;
+    const alpha = (normalizedT * sampleCount) - index;
+    
+    const s1 = samples[index];
+    const s2 = samples[nextIndex];
+    
+    return {
+      pt: new THREE.Vector3().lerpVectors(s1.pt, s2.pt, alpha),
+      tangent: new THREE.Vector3().lerpVectors(s1.tangent, s2.tangent, alpha).normalize(),
+      normal: new THREE.Vector3().lerpVectors(s1.normal, s2.normal, alpha).normalize(),
+      binormal: new THREE.Vector3().lerpVectors(s1.binormal, s2.binormal, alpha).normalize()
+    };
+  };
 
   // Update Game Variables on every Frame Tick
   const gameLoopTick = (originalDt: number) => {
