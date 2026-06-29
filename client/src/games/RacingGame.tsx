@@ -534,11 +534,6 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       carGroup.add(wheelHub);
     });
 
-    // 11. Neon Underglow Lights matching the paint color
-    const underlight = new THREE.PointLight(new THREE.Color(paintColor), 4.5, 6.0, 1.35);
-    underlight.position.set(0, -0.4, 0); // beneath chassis plate
-    carGroup.add(underlight);
-
     return carGroup;
   };
 
@@ -617,8 +612,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     // 1. Scene, Camera, WebGLRenderer Setup
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(activeEvent.timeOfDay === 'sunset' ? 0x1a0f2b : activeEvent.timeOfDay === 'night' ? 0x050510 : 0x4f8bb5);
-    scene.fog = new THREE.FogExp2(scene.background, 0.005);
+    scene.background = new THREE.Color(0x4f8bb5);
+    scene.fog = new THREE.FogExp2(scene.background, 0.0035);
 
     // Dynamic Spherical Equirectangular Reflections using local 8K cyberpunk backdrop
     const textureLoader = new THREE.TextureLoader();
@@ -710,7 +705,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       return canvas;
     };
 
-    const skyCanvas = createSkyTexture(activeEvent.timeOfDay);
+    const skyCanvas = createSkyTexture('day');
     if (skyCanvas) {
       const skyTexture = new THREE.CanvasTexture(skyCanvas);
       const skyMat = new THREE.MeshBasicMaterial({
@@ -724,7 +719,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
 
     // Add 2 rotating sky searchlights for sunset/night
-    if (activeEvent.timeOfDay === 'sunset' || activeEvent.timeOfDay === 'night') {
+    if (false) {
       const searchlightGeom = new THREE.CylinderGeometry(0.1, 12, 400, 16, 1, true);
       searchlightGeom.translate(0, 200, 0); // shift pivot to base
       const searchlightMat = new THREE.MeshBasicMaterial({
@@ -750,37 +745,39 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const droneRedMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
     const droneBlueMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff });
     
-    for (let d = 0; d < 18; d++) {
-      const droneGroup = new THREE.Group();
-      // Body
-      const body = new THREE.Mesh(droneBoxGeom, new THREE.MeshStandardMaterial({
-        color: 0x0c0c0e,
-        metalness: 0.9,
-        roughness: 0.1,
-        emissive: d % 2 === 0 ? 0xff0055 : 0x00d2ff,
-        emissiveIntensity: 1.5
-      }));
-      body.castShadow = true;
-      droneGroup.add(body);
-      
-      // Side glowing lights (LED indicators)
-      const ledLeft = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), droneRedMat);
-      ledLeft.position.set(-0.55, 0, -0.6);
-      droneGroup.add(ledLeft);
-      
-      const ledRight = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), droneBlueMat);
-      ledRight.position.set(0.55, 0, 0.6);
-      droneGroup.add(ledRight);
-      
-      scene.add(droneGroup);
-      
-      dronesList.push({
-        mesh: droneGroup,
-        t: Math.random(),
-        speed: 12 + Math.random() * 15,
-        lane: (Math.random() - 0.5) * 55, // fly far to left/right of road
-        alt: 25 + Math.random() * 40 // fly high in sky
-      });
+    if (false) {
+      for (let d = 0; d < 18; d++) {
+        const droneGroup = new THREE.Group();
+        // Body
+        const body = new THREE.Mesh(droneBoxGeom, new THREE.MeshStandardMaterial({
+          color: 0x0c0c0e,
+          metalness: 0.9,
+          roughness: 0.1,
+          emissive: d % 2 === 0 ? 0xff0055 : 0x00d2ff,
+          emissiveIntensity: 1.5
+        }));
+        body.castShadow = true;
+        droneGroup.add(body);
+        
+        // Side glowing lights (LED indicators)
+        const ledLeft = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), droneRedMat);
+        ledLeft.position.set(-0.55, 0, -0.6);
+        droneGroup.add(ledLeft);
+        
+        const ledRight = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), droneBlueMat);
+        ledRight.position.set(0.55, 0, 0.6);
+        droneGroup.add(ledRight);
+        
+        scene.add(droneGroup);
+        
+        dronesList.push({
+          mesh: droneGroup,
+          t: Math.random(),
+          speed: 12 + Math.random() * 15,
+          lane: (Math.random() - 0.5) * 55, // fly far to left/right of road
+          alt: 25 + Math.random() * 40 // fly high in sky
+        });
+      }
     }
     stateRef.current.drones = dronesList;
     
@@ -987,67 +984,32 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         ctx.stroke();
       }
 
-      // Lane Markings styling based on Career Event type
-      if (activeEvent.id === 'neon_sprint' || activeEvent.id === 'storm_escape') {
-        // Futuristic Cyberpunk Neon Layout
-        // Left edge (solid cyan) and Right edge (solid magenta) glowing lines
-        ctx.strokeStyle = '#00f0ff'; // neon cyan
-        ctx.lineWidth = 10;
-        ctx.beginPath();
-        ctx.moveTo(15, 0); ctx.lineTo(15, 512);
-        ctx.stroke();
+      // Realistic Clean Asphalt Road (matching Image 2: natural grass/pine environment)
+      // Solid White Shoulder Lines
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(15, 0); ctx.lineTo(15, 512);
+      ctx.moveTo(497, 0); ctx.lineTo(497, 512);
+      ctx.stroke();
 
-        ctx.strokeStyle = '#ff007f'; // neon magenta
-        ctx.lineWidth = 10;
-        ctx.beginPath();
-        ctx.moveTo(497, 0); ctx.lineTo(497, 512);
-        ctx.stroke();
+      // Double Yellow Center Line
+      ctx.strokeStyle = '#f5c500';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(252, 0); ctx.lineTo(252, 512);
+      ctx.moveTo(260, 0); ctx.lineTo(260, 512);
+      ctx.stroke();
 
-        // Double Solid Yellow Center Line
-        ctx.strokeStyle = '#e5b800';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(252, 0); ctx.lineTo(252, 512);
-        ctx.moveTo(260, 0); ctx.lineTo(260, 512);
-        ctx.stroke();
-
-        // White Dashed Lane Dividers (separating lanes)
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-        ctx.lineWidth = 3.5;
-        ctx.setLineDash([20, 25]);
-        ctx.beginPath();
-        ctx.moveTo(138, 0); ctx.lineTo(138, 512);
-        ctx.moveTo(374, 0); ctx.lineTo(374, 512);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      } else {
-        // Realistic Clean Asphalt Road (matching Image 2: natural grass/pine environment)
-        // Solid White Shoulder Lines
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        ctx.moveTo(15, 0); ctx.lineTo(15, 512);
-        ctx.moveTo(497, 0); ctx.lineTo(497, 512);
-        ctx.stroke();
-
-        // Double Yellow Center Line
-        ctx.strokeStyle = '#f5c500';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(252, 0); ctx.lineTo(252, 512);
-        ctx.moveTo(260, 0); ctx.lineTo(260, 512);
-        ctx.stroke();
-
-        // White Dashed Dividers
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.lineWidth = 4;
-        ctx.setLineDash([25, 30]);
-        ctx.beginPath();
-        ctx.moveTo(138, 0); ctx.lineTo(138, 512);
-        ctx.moveTo(374, 0); ctx.lineTo(374, 512);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
+      // White Dashed Dividers
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([25, 30]);
+      ctx.beginPath();
+      ctx.moveTo(138, 0); ctx.lineTo(138, 512);
+      ctx.moveTo(374, 0); ctx.lineTo(374, 512);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
       return canvas;
     };
@@ -1430,7 +1392,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
       const terrY = getTerrainHeight(pos.x, pos.z);
 
-      if (activeEvent.id === 'neon_sprint' || activeEvent.id === 'storm_escape') {
+      if (false) {
         const h = 25 + Math.random() * 65;
         const skyscraper = createHighDetailSkyscraper(pos, h);
         skyscraper.position.y = terrY - 1.5;
@@ -1490,25 +1452,23 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       crossbar.castShadow = true;
       archGroup.add(crossbar);
       
-      // Glowing neon sign board: CHECKPOINT
+      // Realistic sign board: CHECKPOINT (clean forest green highway sign)
       const boardGeom = new THREE.BoxGeometry(6.5, 0.7, 0.45);
       const boardMat = new THREE.MeshStandardMaterial({
-        color: 0x050c18,
-        emissive: 0x00f0ff,
-        emissiveIntensity: 1.8,
-        metalness: 0.9,
-        roughness: 0.05
+        color: 0x113e19, // forest green
+        metalness: 0.1,
+        roughness: 0.8
       });
       const checkpointBoard = new THREE.Mesh(boardGeom, boardMat);
       checkpointBoard.position.set(0, 10.15, 0);
       archGroup.add(checkpointBoard);
       
-      // Add glowing neon rings on pillars
+      // Add metallic warning rings on pillars instead of glowing neon
       const ringGeom = new THREE.BoxGeometry(1.36, 0.18, 1.36);
       const ringMat = new THREE.MeshStandardMaterial({
-        color: 0x050c18,
-        emissive: 0xff007f, // neon pink/magenta
-        emissiveIntensity: 2.0
+        color: 0xf5c500, // safety yellow
+        metalness: 0.2,
+        roughness: 0.5
       });
       for (let y = 1; y <= 3; y++) {
         const ringL = new THREE.Mesh(ringGeom, ringMat);
