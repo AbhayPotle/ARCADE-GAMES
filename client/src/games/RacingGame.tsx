@@ -855,6 +855,39 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const trackCurve = new THREE.CatmullRomCurve3(controlPoints);
     stateRef.current.trackLength = trackCurve.getLength();
 
+    // Pre-calculate 400 points and Frenet frames along the track curve
+    const sampleCount = 400;
+    const trackFrames = trackCurve.computeFrenetFrames(sampleCount, true);
+    const roadSamples: { pt: THREE.Vector3, tangent: THREE.Vector3, normal: THREE.Vector3, binormal: THREE.Vector3, t: number }[] = [];
+    
+    for (let s = 0; s < sampleCount; s++) {
+      const t = s / sampleCount;
+      roadSamples.push({
+        pt: trackCurve.getPointAt(t),
+        tangent: trackFrames.tangents[s],
+        normal: trackFrames.normals[s],
+        binormal: trackFrames.binormals[s],
+        t: t
+      });
+    }
+
+    const getTrackFrame = (tVal: number) => {
+      const normalizedT = ((tVal % 1.0) + 1.0) % 1.0;
+      const index = Math.floor(normalizedT * sampleCount);
+      const nextIndex = (index + 1) % sampleCount;
+      const alpha = (normalizedT * sampleCount) - index;
+      
+      const s1 = roadSamples[index];
+      const s2 = roadSamples[nextIndex];
+      
+      return {
+        pt: new THREE.Vector3().lerpVectors(s1.pt, s2.pt, alpha),
+        tangent: new THREE.Vector3().lerpVectors(s1.tangent, s2.tangent, alpha).normalize(),
+        normal: new THREE.Vector3().lerpVectors(s1.normal, s2.normal, alpha).normalize(),
+        binormal: new THREE.Vector3().lerpVectors(s1.binormal, s2.binormal, alpha).normalize()
+      };
+    };
+
     // 5. Procedural Road Mesh Extrusion
     const roadSegmentsCount = 400;
     const roadWidth = stateRef.current.roadWidth;
@@ -863,21 +896,20 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const roadIndices: number[] = [];
     const roadUvs: number[] = [];
 
-    // Sample track coordinates and construct absolute vertices
+    // Sample track coordinates and construct absolute vertices using parallel transport Frenet frames
     for (let i = 0; i <= roadSegmentsCount; i++) {
       const t = i / roadSegmentsCount;
-      const pt = trackCurve.getPointAt(t);
-      const tangent = trackCurve.getTangentAt(t);
+      const frame = getTrackFrame(t);
+      const pt = frame.pt;
+      const tangent = frame.tangent;
       
       // Calculate dynamic curvature banking roll
       const tNext = (i + 1) / roadSegmentsCount;
-      const tangentNext = trackCurve.getTangentAt(tNext % 1.0);
-      const curvature = tangent.clone().cross(tangentNext).y;
+      const frameNext = getTrackFrame(tNext);
+      const curvature = tangent.clone().cross(frameNext.tangent).y;
       const bankAngle = Math.max(-0.35, Math.min(0.35, curvature * 14.0)); // up to 20 degrees banking
 
-      // Calculate perpendicular road normal vectors
-      const normal = new THREE.Vector3(0, 1, 0);
-      let binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+      let binormal = frame.binormal.clone();
       binormal.applyAxisAngle(tangent, bankAngle);
 
       // Left edge, center, right edge
@@ -1117,16 +1149,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     roadMesh.receiveShadow = true;
     scene.add(roadMesh);
 
-    // Pre-calculate 400 points along the track curve for high-precision terrain-road blending
-    const roadSamples: { pt: THREE.Vector3, t: number }[] = [];
-    const sampleCount = 400;
-    for (let s = 0; s < sampleCount; s++) {
-      const t = s / sampleCount;
-      roadSamples.push({
-        pt: trackCurve.getPointAt(t),
-        t: t
-      });
-    }
+
 
     const getTerrainHeight = (vx: number, vz: number) => {
       // Base terrain height
