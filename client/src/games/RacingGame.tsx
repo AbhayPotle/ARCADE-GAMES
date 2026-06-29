@@ -1066,13 +1066,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       roadTexture = new THREE.CanvasTexture(asphaltCanvas);
       roadTexture.wrapS = THREE.RepeatWrapping;
       roadTexture.wrapT = THREE.RepeatWrapping;
-      roadTexture.repeat.set(1, 400); // 1 repeat per segment count for high detail
+      roadTexture.repeat.set(1, 150); // repeat 150 times for beautiful, realistic tiling density
     }
     if (bumpCanvas) {
       roadBumpTexture = new THREE.CanvasTexture(bumpCanvas);
       roadBumpTexture.wrapS = THREE.RepeatWrapping;
       roadBumpTexture.wrapT = THREE.RepeatWrapping;
-      roadBumpTexture.repeat.set(1, 400);
+      roadBumpTexture.repeat.set(1, 150);
     }
 
     const roadMat = new THREE.MeshStandardMaterial({
