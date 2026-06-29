@@ -878,17 +878,23 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     // Pre-calculate 400 points and Frenet frames along the track curve
     const sampleCount = 400;
-    const trackFrames = trackCurve.computeFrenetFrames(sampleCount, true);
     roadSamplesRef.current = [];
     
     for (let s = 0; s < sampleCount; s++) {
       const t = s / sampleCount;
+      const pt = trackCurve.getPointAt(t);
+      const tangent = trackCurve.getTangentAt(t).normalize();
+      
+      // Calculate stable horizontal binormal and upward normal to prevent any 90-degree twist
+      const binormal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+      const normal = new THREE.Vector3().crossVectors(binormal, tangent).normalize();
+      
       roadSamplesRef.current.push({
-        pt: trackCurve.getPointAt(t),
-        tangent: trackFrames.tangents[s],
-        normal: trackFrames.normals[s],
-        binormal: trackFrames.binormals[s],
-        t: t
+        pt,
+        tangent,
+        normal,
+        binormal,
+        t
       });
     }
 
