@@ -2421,18 +2421,18 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       state.playerDist += state.trackLength;
     }
 
-    // D. Position player supercar mesh relative to Spline track coordinates
-    const pt = trackCurve.getPointAt(playerT);
-    const tangent = trackCurve.getTangentAt(playerT);
+    // D. Position player supercar mesh relative to Spline track coordinates using parallel transport Frenet frames
+    const frame = getTrackFrame(playerT);
+    const pt = frame.pt;
+    const tangent = frame.tangent;
 
     // Dynamic curvature-based banking roll
     const tNext = (playerT + 0.002) % 1.0;
-    const tangentNext = trackCurve.getTangentAt(tNext);
-    const curvature = tangent.clone().cross(tangentNext).y;
+    const frameNext = getTrackFrame(tNext);
+    const curvature = tangent.clone().cross(frameNext.tangent).y;
     const bankAngle = Math.max(-0.35, Math.min(0.35, curvature * 14.0));
 
-    const normal = new THREE.Vector3(0, 1, 0);
-    let binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+    let binormal = frame.binormal.clone();
     binormal.applyAxisAngle(tangent, bankAngle);
 
     // Set position incorporating lane displacement & airborne elevation
