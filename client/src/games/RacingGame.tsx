@@ -1754,17 +1754,17 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       
       if (!isBridge && !isTunnel) continue;
 
-      const pt = trackCurve.getPointAt(t);
-      const tangent = trackCurve.getTangentAt(t);
-      const normal = new THREE.Vector3(0, 1, 0);
+      const frame = getTrackFrame(t);
+      const pt = frame.pt;
+      const tangent = frame.tangent;
 
       // Curvature-based banking angle
       const tNext = (i + 1) / structureSegments;
-      const tangentNext = trackCurve.getTangentAt(tNext % 1.0);
-      const curvature = tangent.clone().cross(tangentNext).y;
+      const frameNext = getTrackFrame(tNext);
+      const curvature = tangent.clone().cross(frameNext.tangent).y;
       const bankAngle = Math.max(-0.35, Math.min(0.35, curvature * 14.0));
 
-      let binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+      let binormal = frame.binormal.clone();
       binormal.applyAxisAngle(tangent, bankAngle);
 
       if (isBridge) {
