@@ -887,8 +887,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       roadVertices.push(vL.x, vL.y, vL.z);
       roadVertices.push(vR.x, vR.y, vR.z);
 
-      roadUvs.push(0, t * 100);
-      roadUvs.push(1, t * 100);
+      roadUvs.push(0, t);
+      roadUvs.push(1, t);
 
       if (i < roadSegmentsCount) {
         const row = i * 2;
