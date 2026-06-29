@@ -2321,11 +2321,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     // Lane Steering bounds
     const maxLaneOffset = 10.0; // half of roadWidth (22)
+    const steerSpeedFactor = Math.max(0.4, Math.min(2.0, Math.abs(state.speed) * 0.075 + 0.35));
     if (steerLeft) {
-      state.playerLane = Math.max(-maxLaneOffset, state.playerLane - handlingRate * dt * (Math.abs(state.speed) * 0.15));
+      state.playerLane = Math.max(-maxLaneOffset, state.playerLane - handlingRate * dt * steerSpeedFactor);
     }
     if (steerRight) {
-      state.playerLane = Math.min(maxLaneOffset, state.playerLane + handlingRate * dt * (Math.abs(state.speed) * 0.15));
+      state.playerLane = Math.min(maxLaneOffset, state.playerLane + handlingRate * dt * steerSpeedFactor);
     }
 
     // C. Airborne Ramps check
