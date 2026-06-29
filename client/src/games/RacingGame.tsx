@@ -161,6 +161,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     steerAngle: 0,
     steerYaw: 0,
     steerRoll: 0,
+    steerPitch: 0,
     collisionShake: 0,
     gameOver: false,
     countdownActive: false
@@ -218,12 +219,15 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // Materials
     const bodyMat = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(paintColor),
-      metalness: 0.95,
-      roughness: 0.08,
+      metalness: 0.92,
+      roughness: 0.05,
       clearcoat: 1.0,
-      clearcoatRoughness: 0.03,
-      reflectivity: 0.9,
-      sheen: 0.5,
+      clearcoatRoughness: 0.02,
+      reflectivity: 0.95,
+      iridescence: 0.45, // metallic color shift
+      iridescenceIOR: 1.8,
+      iridescenceThicknessRange: [100, 400],
+      sheen: 0.6,
       sheenColor: new THREE.Color(0xffffff)
     });
 
@@ -358,24 +362,34 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     carGroup.add(seatL, seatR);
 
     // 6. Spoiler Wing Assembly (Carbon plate + vertical struts + winglets)
+    const spoilerGroup = new THREE.Group();
+    spoilerGroup.name = 'spoiler_group';
+
     const wingGeom = new THREE.BoxGeometry(2.35, 0.04, 0.68);
     const wingMesh = new THREE.Mesh(wingGeom, carbonMat);
-    wingMesh.position.set(0, 0.68, -1.98);
+    wingMesh.position.set(0, 0.28, 0); // local offset
     wingMesh.castShadow = true;
+    spoilerGroup.add(wingMesh);
 
     const strutGeom = new THREE.BoxGeometry(0.06, 0.45, 0.12);
     const strutMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.95 });
     const strutL = new THREE.Mesh(strutGeom, strutMat);
-    strutL.position.set(-0.82, 0.42, -1.98);
+    strutL.position.set(-0.82, 0.02, 0);
     const strutR = strutL.clone();
     strutR.position.x = 0.82;
+    spoilerGroup.add(strutL, strutR);
 
     // Wing end-plates / side fins
     const finGeom = new THREE.BoxGeometry(0.03, 0.35, 0.72);
     const finL = new THREE.Mesh(finGeom, carbonMat);
-    finL.position.set(-1.18, 0.68, -1.98);
+    finL.position.set(-1.18, 0.28, 0);
     const finR = finL.clone();
     finR.position.x = 1.18;
+    spoilerGroup.add(finL, finR);
+
+    // Position the entire spoiler group at the back
+    spoilerGroup.position.set(0, 0.4, -1.98);
+    carGroup.add(spoilerGroup);
 
     if (modelId === 'vortex') {
       const dorsalFinGeom = new THREE.BoxGeometry(0.04, 0.6, 1.3);
@@ -383,7 +397,6 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       dorsalFin.position.set(0, 0.62, -1.1);
       carGroup.add(dorsalFin);
     }
-    carGroup.add(wingMesh, strutL, strutR, finL, finR);
 
     // 7. Exhaust pipes & dynamic flames
     const exhaustTubeGeom = new THREE.CylinderGeometry(0.12, 0.12, 0.35, 12);
@@ -520,6 +533,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
       carGroup.add(wheelHub);
     });
+
+    // 11. Neon Underglow Lights matching the paint color
+    const underlight = new THREE.PointLight(new THREE.Color(paintColor), 4.5, 6.0, 1.35);
+    underlight.position.set(0, -0.4, 0); // beneath chassis plate
+    carGroup.add(underlight);
 
     return carGroup;
   };
@@ -2467,16 +2485,24 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const orientMat = new THREE.Matrix4().makeBasis(localRight, localUp, localForward);
     const baseQuat = new THREE.Quaternion().setFromRotationMatrix(orientMat);
 
-    // Program steering yaw and suspension roll physics
+    // Program steering yaw and suspension roll/pitch physics
     const targetYaw = (steerLeft ? 0.28 : (steerRight ? -0.28 : 0)) * Math.min(1.0, Math.abs(state.speed) / 20);
     const targetRoll = (steerLeft ? -0.05 : (steerRight ? 0.05 : 0)) * Math.min(1.0, Math.abs(state.speed) / 20);
+    let targetPitch = 0;
+    if (accelInput && state.speed < maxSpeedLimit) {
+      targetPitch = -0.035; // Nose lift under acceleration (negative rotation around local X)
+    } else if (brakeInput && state.speed > 5) {
+      targetPitch = 0.06; // Nose dive under braking (positive rotation around local X)
+    }
     state.steerYaw += (targetYaw - state.steerYaw) * dt * 6;
     state.steerRoll += (targetRoll - state.steerRoll) * dt * 6;
+    state.steerPitch += (targetPitch - state.steerPitch) * dt * 8;
 
-    // Apply local rotations in sequence: base track orientation * yaw (steering/drifting) * roll (suspension)
+    // Apply local rotations in sequence: base track orientation * yaw (steering/drifting) * roll (suspension) * pitch (acceleration)
     const yawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), state.steerYaw + state.driftAngle);
     const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), state.steerRoll);
-    baseQuat.multiply(yawQuat).multiply(rollQuat);
+    const pitchQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), state.steerPitch);
+    baseQuat.multiply(yawQuat).multiply(rollQuat).multiply(pitchQuat);
 
     // Apply 3D airborne stunt spins/rolls if airborne
     if (state.airborne) {
@@ -2486,6 +2512,26 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
 
     playerCar.quaternion.copy(baseQuat);
+
+    // Animate active aerodynamic spoiler wing for player car
+    const spoiler = playerCar.getObjectByName('spoiler_group');
+    if (spoiler) {
+      let targetY = 0.4;
+      let targetRotX = 0;
+      if (brakeInput && state.speed > 10) {
+        targetY = 0.62; // Airbrake height
+        targetRotX = 0.35; // Airbrake angle
+      } else if (state.isNosActive) {
+        targetY = 0.55; // NOS speed wing height
+        targetRotX = -0.08; // NOS low-drag downforce angle
+      } else {
+        const speedRatio = Math.min(1.0, state.speed / maxSpeedLimit);
+        targetY = 0.4 + speedRatio * 0.12;
+        targetRotX = speedRatio * -0.04;
+      }
+      spoiler.position.y += (targetY - spoiler.position.y) * dt * 8;
+      spoiler.rotation.x += (targetRotX - spoiler.rotation.x) * dt * 8;
+    }
 
     // E. Animate player car wheels spinning & steering wheel rotation
     const targetSteerAngle = steerLeft ? 1.4 : (steerRight ? -1.4 : 0);
@@ -2542,6 +2588,16 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const botOrientMat = new THREE.Matrix4().makeBasis(botRight, botUp, botForward);
     botCar.quaternion.setFromRotationMatrix(botOrientMat);
 
+    // Bot 1 spoiler animation
+    const botSpoiler = botCar.getObjectByName('spoiler_group');
+    if (botSpoiler) {
+      const speedRatio = Math.min(1.0, state.botSpeed / 55);
+      const targetY = 0.4 + speedRatio * 0.12;
+      const targetRotX = speedRatio * -0.04;
+      botSpoiler.position.y += (targetY - botSpoiler.position.y) * dt * 8;
+      botSpoiler.rotation.x += (targetRotX - botSpoiler.rotation.x) * dt * 8;
+    }
+
     // Bot 2
     state.bot2Speed = 36 + (activeEvent.difficulty === 'Hard' ? 10 : activeEvent.difficulty === 'Expert' ? 14 : 0) + Math.cos(playerT * 8) * 6;
     state.bot2Dist += state.bot2Speed * dt;
@@ -2568,6 +2624,16 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const bot2OrientMat = new THREE.Matrix4().makeBasis(bot2Right, bot2Up, bot2Forward);
     bot2Car.quaternion.setFromRotationMatrix(bot2OrientMat);
 
+    // Bot 2 spoiler animation
+    const bot2Spoiler = bot2Car.getObjectByName('spoiler_group');
+    if (bot2Spoiler) {
+      const speedRatio = Math.min(1.0, state.bot2Speed / 55);
+      const targetY = 0.4 + speedRatio * 0.12;
+      const targetRotX = speedRatio * -0.04;
+      bot2Spoiler.position.y += (targetY - bot2Spoiler.position.y) * dt * 8;
+      bot2Spoiler.rotation.x += (targetRotX - bot2Spoiler.rotation.x) * dt * 8;
+    }
+
     // Bot 3
     state.bot3Speed = 34 + (activeEvent.difficulty === 'Hard' ? 8 : activeEvent.difficulty === 'Expert' ? 12 : 0) + Math.sin(playerT * 6) * 5;
     state.bot3Dist += state.bot3Speed * dt;
@@ -2593,6 +2659,16 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const bot3Up = new THREE.Vector3().crossVectors(bot3Forward, bot3Right).normalize();
     const bot3OrientMat = new THREE.Matrix4().makeBasis(bot3Right, bot3Up, bot3Forward);
     bot3Car.quaternion.setFromRotationMatrix(bot3OrientMat);
+
+    // Bot 3 spoiler animation
+    const bot3Spoiler = bot3Car.getObjectByName('spoiler_group');
+    if (bot3Spoiler) {
+      const speedRatio = Math.min(1.0, state.bot3Speed / 55);
+      const targetY = 0.4 + speedRatio * 0.12;
+      const targetRotX = speedRatio * -0.04;
+      bot3Spoiler.position.y += (targetY - bot3Spoiler.position.y) * dt * 8;
+      bot3Spoiler.rotation.x += (targetRotX - bot3Spoiler.rotation.x) * dt * 8;
+    }
 
     // Player to Bot collision checks
     const botsList = [
