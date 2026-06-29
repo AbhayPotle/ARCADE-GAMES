@@ -950,37 +950,67 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         ctx.stroke();
       }
 
-      // Lane Markings
-      // Left edge (solid cyan) and Right edge (solid magenta) glowing lines
-      ctx.strokeStyle = '#00f0ff'; // neon cyan
-      ctx.lineWidth = 10;
-      ctx.beginPath();
-      ctx.moveTo(15, 0); ctx.lineTo(15, 512);
-      ctx.stroke();
+      // Lane Markings styling based on Career Event type
+      if (activeEvent.id === 'neon_sprint' || activeEvent.id === 'storm_escape') {
+        // Futuristic Cyberpunk Neon Layout
+        // Left edge (solid cyan) and Right edge (solid magenta) glowing lines
+        ctx.strokeStyle = '#00f0ff'; // neon cyan
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(15, 0); ctx.lineTo(15, 512);
+        ctx.stroke();
 
-      ctx.strokeStyle = '#ff007f'; // neon magenta
-      ctx.lineWidth = 10;
-      ctx.beginPath();
-      ctx.moveTo(497, 0); ctx.lineTo(497, 512);
-      ctx.stroke();
+        ctx.strokeStyle = '#ff007f'; // neon magenta
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(497, 0); ctx.lineTo(497, 512);
+        ctx.stroke();
 
-      // Double Solid Yellow Center Line
-      ctx.strokeStyle = '#e5b800';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(252, 0); ctx.lineTo(252, 512);
-      ctx.moveTo(260, 0); ctx.lineTo(260, 512);
-      ctx.stroke();
+        // Double Solid Yellow Center Line
+        ctx.strokeStyle = '#e5b800';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(252, 0); ctx.lineTo(252, 512);
+        ctx.moveTo(260, 0); ctx.lineTo(260, 512);
+        ctx.stroke();
 
-      // White Dashed Lane Dividers (separating lanes)
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-      ctx.lineWidth = 3.5;
-      ctx.setLineDash([20, 25]);
-      ctx.beginPath();
-      ctx.moveTo(138, 0); ctx.lineTo(138, 512);
-      ctx.moveTo(374, 0); ctx.lineTo(374, 512);
-      ctx.stroke();
-      ctx.setLineDash([]);
+        // White Dashed Lane Dividers (separating lanes)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+        ctx.lineWidth = 3.5;
+        ctx.setLineDash([20, 25]);
+        ctx.beginPath();
+        ctx.moveTo(138, 0); ctx.lineTo(138, 512);
+        ctx.moveTo(374, 0); ctx.lineTo(374, 512);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        // Realistic Clean Asphalt Road (matching Image 2: natural grass/pine environment)
+        // Solid White Shoulder Lines
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(15, 0); ctx.lineTo(15, 512);
+        ctx.moveTo(497, 0); ctx.lineTo(497, 512);
+        ctx.stroke();
+
+        // Double Yellow Center Line
+        ctx.strokeStyle = '#f5c500';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(252, 0); ctx.lineTo(252, 512);
+        ctx.moveTo(260, 0); ctx.lineTo(260, 512);
+        ctx.stroke();
+
+        // White Dashed Dividers
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([25, 30]);
+        ctx.beginPath();
+        ctx.moveTo(138, 0); ctx.lineTo(138, 512);
+        ctx.moveTo(374, 0); ctx.lineTo(374, 512);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
 
       return canvas;
     };
