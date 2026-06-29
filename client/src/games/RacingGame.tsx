@@ -1124,9 +1124,19 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       if (closestT >= 0.12 && closestT <= 0.28) {
         bridgeFactor = 1.0;
       } else if (closestT >= 0.10 && closestT < 0.12) {
-        bridgeFactor = (0.12 - closestT) / 0.02; // transition from 1 to 0
+        bridgeFactor = (closestT - 0.10) / 0.02; // transition from 0 to 1
       } else if (closestT > 0.28 && closestT <= 0.30) {
-        bridgeFactor = (closestT - 0.28) / 0.02; // transition from 1 to 0
+        bridgeFactor = (0.30 - closestT) / 0.02; // transition from 1 to 0
+      }
+
+      // Calculate if this segment is a tunnel (smooth transition factor)
+      let tunnelFactor = 0;
+      if (closestT >= 0.55 && closestT <= 0.72) {
+        tunnelFactor = 1.0;
+      } else if (closestT >= 0.53 && closestT < 0.55) {
+        tunnelFactor = (closestT - 0.53) / 0.02; // transition from 0 to 1
+      } else if (closestT > 0.72 && closestT <= 0.74) {
+        tunnelFactor = (0.74 - closestT) / 0.02; // transition from 1 to 0
       }
 
       let targetY = closestY - 0.55;
@@ -1137,22 +1147,26 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
 
       let height = baseTerrainHeight;
+      const flattenFactor = 1.0 - tunnelFactor; // keeps mountain solid inside tunnels!
+
       if (minDist < 12.0) {
-        // Road bed: strictly flat and just beneath the road surface (total 24m width bed)
-        height = targetY;
+        // Road bed: strictly flat
+        height = THREE.MathUtils.lerp(baseTerrainHeight, targetY, flattenFactor);
       } else if (minDist < 25.0) {
         // Road shoulder/ditch: transition from road height to a safe ditch depth
         const t = (minDist - 12.0) / 13.0; // 0 to 1
         const smoothT = t * t * (3 - 2 * t);
         const roadEdgeHeight = targetY;
         const ditchHeight = targetY - 1.55;
-        height = THREE.MathUtils.lerp(roadEdgeHeight, ditchHeight, smoothT);
+        const flatHeight = THREE.MathUtils.lerp(roadEdgeHeight, ditchHeight, smoothT);
+        height = THREE.MathUtils.lerp(baseTerrainHeight, flatHeight, flattenFactor);
       } else if (minDist < 50.0) {
         // Slope up/down to join the natural terrain
         const t = (minDist - 25.0) / 25.0; // 0 to 1
         const smoothT = t * t * (3 - 2 * t);
         const ditchHeight = targetY - 1.55;
-        height = THREE.MathUtils.lerp(ditchHeight, baseTerrainHeight, smoothT);
+        const flatHeight = THREE.MathUtils.lerp(ditchHeight, baseTerrainHeight, smoothT);
+        height = THREE.MathUtils.lerp(baseTerrainHeight, flatHeight, flattenFactor);
       }
       return height;
     };
