@@ -2158,6 +2158,17 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     let dt = originalDt;
     const playerT = state.playerDist / state.trackLength;
 
+    // Pre-query player track coordinate Frenet frame
+    const frame = getTrackFrame(playerT);
+    const pt = frame.pt;
+    const tangent = frame.tangent;
+    const tNext = (playerT + 0.002) % 1.0;
+    const frameNext = getTrackFrame(tNext);
+    const curvature = tangent.clone().cross(frameNext.tangent).y;
+    const bankAngle = Math.max(-0.35, Math.min(0.35, curvature * 14.0));
+    let binormal = frame.binormal.clone();
+    binormal.applyAxisAngle(tangent, bankAngle);
+
     // A. Dynamic Weather/Rain Updates
     const isPlayerInTunnel = playerT >= 0.55 && playerT <= 0.72;
     if (rainParticles) {
@@ -2274,7 +2285,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const speedSensitiveFactor = Math.max(0.32, 1.0 - Math.abs(state.speed) / 130);
     const handlingRate = activeCar.handling * speedSensitiveFactor * (state.isDrifting ? activeCar.driftGrip : 1.0) * (1.0 + (tiresLvl - 1) * 0.12);
 
-    if (state.crashCooldown > 0) {
+    if (state.airborne) {
+      // Light air drag on speed, no engine traction acceleration
+      state.speed -= 1.8 * dt;
+      if (state.speed < 12) state.speed = 12;
+    } else if (state.crashCooldown > 0) {
       state.crashCooldown -= dt;
       if (state.speed > 0) {
         state.speed = Math.max(14, state.speed - 22 * dt);
@@ -2342,11 +2357,28 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // Lane Steering bounds
     const maxLaneOffset = 10.0; // half of roadWidth (22)
     const steerSpeedFactor = Math.max(0.4, Math.min(2.0, Math.abs(state.speed) * 0.075 + 0.35));
-    if (steerLeft) {
-      state.playerLane = Math.max(-maxLaneOffset, state.playerLane - handlingRate * dt * steerSpeedFactor);
-    }
-    if (steerRight) {
-      state.playerLane = Math.min(maxLaneOffset, state.playerLane + handlingRate * dt * steerSpeedFactor);
+    if (!state.airborne) {
+      if (steerLeft) {
+        state.playerLane = Math.max(-maxLaneOffset, state.playerLane - handlingRate * dt * steerSpeedFactor);
+      }
+      if (steerRight) {
+        state.playerLane = Math.min(maxLaneOffset, state.playerLane + handlingRate * dt * steerSpeedFactor);
+      }
+
+      // Centrifugal slide force: slides outer-ward during drift based on road curvature
+      if (state.isDrifting) {
+        const slideForce = curvature * state.speed * 0.85; // positive slide for turning left, negative for right
+        state.playerLane = Math.max(-maxLaneOffset, Math.min(maxLaneOffset, state.playerLane + slideForce * dt));
+      }
+
+      // Guardrail elastic recoil (prevents sticking to guardrails)
+      if (state.playerLane >= maxLaneOffset) {
+        state.playerLane = maxLaneOffset;
+        if (steerRight) state.playerLane -= 1.2 * dt;
+      } else if (state.playerLane <= -maxLaneOffset) {
+        state.playerLane = -maxLaneOffset;
+        if (steerLeft) state.playerLane += 1.2 * dt;
+      }
     }
 
     // C. Airborne Ramps check
@@ -2417,20 +2449,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       state.playerDist += state.trackLength;
     }
 
-    // D. Position player supercar mesh relative to Spline track coordinates using parallel transport Frenet frames
-    const frame = getTrackFrame(playerT);
-    const pt = frame.pt;
-    const tangent = frame.tangent;
-
-    // Dynamic curvature-based banking roll
-    const tNext = (playerT + 0.002) % 1.0;
-    const frameNext = getTrackFrame(tNext);
-    const curvature = tangent.clone().cross(frameNext.tangent).y;
-    const bankAngle = Math.max(-0.35, Math.min(0.35, curvature * 14.0));
-
-    let binormal = frame.binormal.clone();
-    binormal.applyAxisAngle(tangent, bankAngle);
-
+    // D. Position player supercar mesh relative to Spline track coordinates
     // Set position incorporating lane displacement & airborne elevation
     const finalPos = pt.clone().add(binormal.clone().multiplyScalar(state.playerLane));
     finalPos.y += state.airHeight + 0.35; // base clearance offset
@@ -2632,9 +2651,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     // Player to Bot collision checks
     const botsList = [
-      { mesh: botCar, name: 'RIVAL 1' },
-      { mesh: bot2Car, name: 'RIVAL 2' },
-      { mesh: bot3Car, name: 'RIVAL 3' }
+      { mesh: botCar, name: 'RIVAL 1', get lane() { return state.botLane; }, set lane(v) { state.botLane = v; }, get speed() { return state.botSpeed; }, set speed(v) { state.botSpeed = v; } },
+      { mesh: bot2Car, name: 'RIVAL 2', get lane() { return state.bot2Lane; }, set lane(v) { state.bot2Lane = v; }, get speed() { return state.bot2Speed; }, set speed(v) { state.bot2Speed = v; } },
+      { mesh: bot3Car, name: 'RIVAL 3', get lane() { return state.bot3Lane; }, set lane(v) { state.bot3Lane = v; }, get speed() { return state.bot3Speed; }, set speed(v) { state.bot3Speed = v; } }
     ];
     botsList.forEach((bObj) => {
       const distToB = finalPos.distanceTo(bObj.mesh.position);
@@ -2644,6 +2663,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         audioSynth.playError();
         setStuntNotification(`BUMPED WITH ${bObj.name}!`);
         state.speed = Math.max(18, state.speed * 0.72);
+
+        // Physics response: decelerate and displace bot sideways
+        bObj.speed = Math.max(15, bObj.speed * 0.75);
+        const pushSide = bObj.lane > state.playerLane ? 1.8 : -1.8;
+        bObj.lane = Math.max(-9.5, Math.min(9.5, bObj.lane + pushSide));
       }
     });
 
@@ -2683,8 +2707,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         setStuntNotification('COLLISION CRASH! SPEED DISRUPTED');
         state.speed = Math.max(16, state.speed * 0.55); // maintain 55% speed with floor of 16
         
-        // Push traffic car away
-        tc.dist += 12;
+        // Push traffic car away and slow them down
+        tc.speed = Math.max(8, tc.speed * 0.5);
+        const pushSide = tc.lane > state.playerLane ? 1.5 : -1.5;
+        tc.lane = Math.max(-1.0, Math.min(1.0, tc.lane + (pushSide > 0 ? 0.35 : -0.35)));
+        tc.dist += 14;
       }
     });
 
