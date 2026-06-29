@@ -1410,13 +1410,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     for (let i = 0; i < sceneryCount; i++) {
       const t = Math.random();
-      const pt = trackCurve.getPointAt(t);
-      const tangent = trackCurve.getTangentAt(t);
-      const normal = new THREE.Vector3(0, 1, 0);
-      const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+      const frame = getTrackFrame(t);
+      const pt = frame.pt;
+      const binormal = frame.binormal;
       
       const side = Math.random() > 0.5 ? 1 : -1;
-      const offset = binormal.multiplyScalar(side * (12 + Math.random() * 25));
+      const offset = binormal.clone().multiplyScalar(side * (12 + Math.random() * 25));
       const pos = pt.clone().add(offset);
 
       const terrY = getTerrainHeight(pos.x, pos.z);
@@ -1453,10 +1452,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // 7.5. Build Glowing Neon Checkpoint Arch Gates
     const checkpointMilestones = [0.25, 0.50, 0.75];
     checkpointMilestones.forEach((tVal, idx) => {
-      const archPt = trackCurve.getPointAt(tVal);
-      const archTangent = trackCurve.getTangentAt(tVal);
-      const archNormal = new THREE.Vector3(0, 1, 0);
-      const archBinormal = new THREE.Vector3().crossVectors(archTangent, archNormal).normalize();
+      const frame = getTrackFrame(tVal);
+      const archPt = frame.pt;
+      const archTangent = frame.tangent;
+      const archBinormal = frame.binormal;
       
       const archGroup = new THREE.Group();
       
@@ -1526,10 +1525,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     if (activeEvent.id === 'canyon_jump') {
       const rampPoints = [0.28, 0.58, 0.88];
       rampPoints.forEach((t) => {
-        const pt = trackCurve.getPointAt(t);
-        const tangent = trackCurve.getTangentAt(t);
-        const normal = new THREE.Vector3(0, 1, 0);
-        const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+        const frame = getTrackFrame(t);
+        const pt = frame.pt;
+        const tangent = frame.tangent;
+        const binormal = frame.binormal;
         
         // Wedge ramp shape
         const rampGeom = new THREE.BoxGeometry(roadWidth - 2, 2.5, 8.0);
@@ -2800,11 +2799,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         drone.t += (drone.speed * dt) / state.trackLength;
         if (drone.t >= 1.0) drone.t -= 1.0;
         
-        const dPt = trackCurve.getPointAt(drone.t);
-        const dTangent = trackCurve.getTangentAt(drone.t);
-        const dBinormal = new THREE.Vector3().crossVectors(dTangent, new THREE.Vector3(0, 1, 0)).normalize();
+        const dFrame = getTrackFrame(drone.t);
+        const dPt = dFrame.pt;
+        const dTangent = dFrame.tangent;
+        const dBinormal = dFrame.binormal;
         
-        drone.mesh.position.copy(dPt).add(dBinormal.multiplyScalar(drone.lane));
+        drone.mesh.position.copy(dPt).add(dBinormal.clone().multiplyScalar(drone.lane));
         drone.mesh.position.y += drone.alt;
         drone.mesh.lookAt(dPt.clone().add(dTangent));
       });
