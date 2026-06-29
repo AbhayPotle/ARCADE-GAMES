@@ -2599,16 +2599,17 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       if (tc.dist >= state.trackLength) tc.dist -= state.trackLength;
 
       const tcT = tc.dist / state.trackLength;
-      const tcPt = trackCurve.getPointAt(tcT);
-      const tcTangent = trackCurve.getTangentAt(tcT);
+      const tcFrame = getTrackFrame(tcT);
+      const tcPt = tcFrame.pt;
+      const tcTangent = tcFrame.tangent;
 
       // Curvature-based banking roll for traffic
       const tcTNext = (tcT + 0.002) % 1.0;
-      const tcTangentNext = trackCurve.getTangentAt(tcTNext);
-      const tcCurvature = tcTangent.clone().cross(tcTangentNext).y;
+      const tcFrameNext = getTrackFrame(tcTNext);
+      const tcCurvature = tcTangent.clone().cross(tcFrameNext.tangent).y;
       const tcBankAngle = Math.max(-0.35, Math.min(0.35, tcCurvature * 14.0));
 
-      let tcBinormal = new THREE.Vector3().crossVectors(tcTangent, normal).normalize();
+      let tcBinormal = tcFrame.binormal.clone();
       tcBinormal.applyAxisAngle(tcTangent, tcBankAngle);
 
       tc.mesh.position.copy(tcPt.clone().add(tcBinormal.clone().multiplyScalar(tc.lane * 6.6))); // spread wider on 22 road
