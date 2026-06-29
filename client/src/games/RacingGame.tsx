@@ -1142,19 +1142,24 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       // Base terrain height
       const baseTerrainHeight = Math.sin(vx * 0.015) * Math.cos(vz * 0.015) * 22 + Math.sin(vx * 0.04) * 6 - 10;
       
+      const samples = roadSamplesRef.current;
+      if (samples.length === 0) {
+        return baseTerrainHeight;
+      }
+      
       // Find closest road sample in XZ plane
       let minDist = Infinity;
       let closestY = 0;
       let closestT = 0;
-      for (let s = 0; s < sampleCount; s++) {
-        const rPt = roadSamplesRef.current[s].pt;
+      for (let s = 0; s < samples.length; s++) {
+        const rPt = samples[s].pt;
         const dx = vx - rPt.x;
         const dz = vz - rPt.z;
         const distSq = dx * dx + dz * dz;
         if (distSq < minDist) {
           minDist = distSq;
           closestY = rPt.y;
-          closestT = roadSamplesRef.current[s].t;
+          closestT = samples[s].t;
         }
       }
       minDist = Math.sqrt(minDist);
@@ -2151,12 +2156,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
     const sampleCount = samples.length;
     const normalizedT = ((tVal % 1.0) + 1.0) % 1.0;
-    const index = Math.floor(normalizedT * sampleCount);
+    const index = Math.floor(normalizedT * sampleCount) % sampleCount;
     const nextIndex = (index + 1) % sampleCount;
-    const alpha = (normalizedT * sampleCount) - index;
+    const alpha = (normalizedT * sampleCount) - Math.floor(normalizedT * sampleCount);
     
-    const s1 = samples[index];
-    const s2 = samples[nextIndex];
+    const s1 = samples[index] || samples[0];
+    const s2 = samples[nextIndex] || samples[0];
     
     return {
       pt: new THREE.Vector3().lerpVectors(s1.pt, s2.pt, alpha),
