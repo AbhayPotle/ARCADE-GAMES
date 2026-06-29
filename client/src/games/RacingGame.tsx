@@ -142,17 +142,17 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     botLane: 0,
     botSpeed: 40,
     bot2Dist: 10,
-    bot2Lane: -3.0,
+    bot2Lane: -6.0,
     bot2Speed: 38,
     bot3Dist: 0,
-    bot3Lane: 3.0,
+    bot3Lane: 6.0,
     bot3Speed: 36,
     trafficCars: [] as { mesh: THREE.Group; dist: number; lane: number; speed: number }[],
     drones: [] as { mesh: THREE.Group; t: number; speed: number; lane: number; alt: number }[],
     landingCompression: 0,
     cameraMode: 'chase' as 'chase' | 'far' | 'hood' | 'cockpit',
     trackLength: 1500,     // length of spline loop in meters
-    roadWidth: 22,
+    roadWidth: 32,
     slipstreamActive: false,
     lastExhaustTime: 0,
     crashCooldown: 0,
@@ -841,9 +841,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     for (let i = 0; i < numPoints; i++) {
       const angle = (i / numPoints) * Math.PI * 2;
       
-      // Organic racing track with long straights and winding hairpins
-      let x = Math.cos(angle) * 320 + Math.sin(angle * 2) * 45;
-      let z = Math.sin(angle) * 320 + Math.cos(angle * 3) * 35;
+      // Organic racing track with long straights and sweeping professional bank corners
+      const factorX = 350 + Math.cos(angle * 2) * 80 + Math.sin(angle * 3) * 30;
+      const factorZ = 280 + Math.sin(angle * 2) * 60 + Math.cos(angle * 4) * 20;
+      let x = Math.cos(angle) * factorX;
+      let z = Math.sin(angle) * factorZ;
       
       // Dynamic height profiles representing bridges, dips, and mountain tunnels
       let y = Math.sin(angle * 3) * 14;
@@ -1436,17 +1438,17 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1d212a, metalness: 0.9, roughness: 0.15 });
       
       const leftPillar = new THREE.Mesh(pillarGeom, pillarMat);
-      leftPillar.position.set(-11.5, 4.5, 0);
+      leftPillar.position.set(-16.5, 4.5, 0);
       leftPillar.castShadow = true;
       archGroup.add(leftPillar);
       
       const rightPillar = new THREE.Mesh(pillarGeom, pillarMat);
-      rightPillar.position.set(11.5, 4.5, 0);
+      rightPillar.position.set(16.5, 4.5, 0);
       rightPillar.castShadow = true;
       archGroup.add(rightPillar);
       
       // Crossbar overhead beam
-      const crossbarGeom = new THREE.BoxGeometry(24.2, 1.0, 1.6);
+      const crossbarGeom = new THREE.BoxGeometry(34.2, 1.0, 1.6);
       const crossbar = new THREE.Mesh(crossbarGeom, pillarMat);
       crossbar.position.set(0, 9.0, 0);
       crossbar.castShadow = true;
@@ -1472,11 +1474,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       });
       for (let y = 1; y <= 3; y++) {
         const ringL = new THREE.Mesh(ringGeom, ringMat);
-        ringL.position.set(-11.5, y * 2.2, 0);
+        ringL.position.set(-16.5, y * 2.2, 0);
         archGroup.add(ringL);
         
         const ringR = new THREE.Mesh(ringGeom, ringMat);
-        ringR.position.set(11.5, y * 2.2, 0);
+        ringR.position.set(16.5, y * 2.2, 0);
         archGroup.add(ringR);
       }
       
@@ -1580,7 +1582,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       binormal2.applyAxisAngle(tangent2, bankAngle2);
       
       // Shoulder offsets: roadWidth / 2 + offset
-      const shoulderOffset = 11.3;
+      const shoulderOffset = 16.3;
       
       const posLeft1 = pt1.clone().add(binormal1.clone().multiplyScalar(-shoulderOffset));
       const posLeft2 = pt2.clone().add(binormal2.clone().multiplyScalar(-shoulderOffset));
@@ -2296,7 +2298,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       } else if (state.speed < 0) {
         state.speed = Math.min(-14, state.speed + 22 * dt);
       }
-    } else if (Math.abs(state.playerLane) >= 9.6) {
+    } else if (Math.abs(state.playerLane) >= 14.6) {
       // Guardrail friction scraping
       if (state.speed > 0) {
         state.speed = Math.max(12, state.speed - 15 * dt);
@@ -2355,7 +2357,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
 
     // Lane Steering bounds
-    const maxLaneOffset = 10.0; // half of roadWidth (22)
+    const maxLaneOffset = 15.0; // half of roadWidth (32)
     const steerSpeedFactor = Math.max(0.4, Math.min(2.0, Math.abs(state.speed) * 0.075 + 0.35));
     if (!state.airborne) {
       if (steerLeft) {
@@ -2690,7 +2692,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       let tcBinormal = tcFrame.binormal.clone();
       tcBinormal.applyAxisAngle(tcTangent, tcBankAngle);
 
-      tc.mesh.position.copy(tcPt.clone().add(tcBinormal.clone().multiplyScalar(tc.lane * 6.6))); // spread wider on 22 road
+      tc.mesh.position.copy(tcPt.clone().add(tcBinormal.clone().multiplyScalar(tc.lane * 10.0))); // spread wider on 32 road
       tc.mesh.position.y += 0.35;
       const tcForward = tcTangent.clone().normalize();
       const tcRight = tcBinormal.clone().normalize();
