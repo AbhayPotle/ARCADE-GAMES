@@ -2501,13 +2501,14 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       return;
     }
     const botT = state.botDist / state.trackLength;
-    const botPt = trackCurve.getPointAt(botT);
-    const botTangent = trackCurve.getTangentAt(botT);
+    const botFrame = getTrackFrame(botT);
+    const botPt = botFrame.pt;
+    const botTangent = botFrame.tangent;
     const botTNext = (botT + 0.002) % 1.0;
-    const botTangentNext = trackCurve.getTangentAt(botTNext);
-    const botCurvature = botTangent.clone().cross(botTangentNext).y;
+    const botFrameNext = getTrackFrame(botTNext);
+    const botCurvature = botTangent.clone().cross(botFrameNext.tangent).y;
     const botBankAngle = Math.max(-0.35, Math.min(0.35, botCurvature * 14.0));
-    let botBinormal = new THREE.Vector3().crossVectors(botTangent, normal).normalize();
+    let botBinormal = botFrame.binormal.clone();
     botBinormal.applyAxisAngle(botTangent, botBankAngle);
     
     // AI steers slightly to avoid player
@@ -2532,13 +2533,14 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       return;
     }
     const bot2T = state.bot2Dist / state.trackLength;
-    const bot2Pt = trackCurve.getPointAt(bot2T);
-    const bot2Tangent = trackCurve.getTangentAt(bot2T);
+    const bot2Frame = getTrackFrame(bot2T);
+    const bot2Pt = bot2Frame.pt;
+    const bot2Tangent = bot2Frame.tangent;
     const bot2TNext = (bot2T + 0.002) % 1.0;
-    const bot2TangentNext = trackCurve.getTangentAt(bot2TNext);
-    const bot2Curvature = bot2Tangent.clone().cross(bot2TangentNext).y;
+    const bot2FrameNext = getTrackFrame(bot2TNext);
+    const bot2Curvature = bot2Tangent.clone().cross(bot2FrameNext.tangent).y;
     const bot2BankAngle = Math.max(-0.35, Math.min(0.35, bot2Curvature * 14.0));
-    let bot2Binormal = new THREE.Vector3().crossVectors(bot2Tangent, normal).normalize();
+    let bot2Binormal = bot2Frame.binormal.clone();
     bot2Binormal.applyAxisAngle(bot2Tangent, bot2BankAngle);
     bot2Car.position.copy(bot2Pt.clone().add(bot2Binormal.clone().multiplyScalar(state.bot2Lane)));
     bot2Car.position.y += 0.35;
@@ -2557,13 +2559,14 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       return;
     }
     const bot3T = state.bot3Dist / state.trackLength;
-    const bot3Pt = trackCurve.getPointAt(bot3T);
-    const bot3Tangent = trackCurve.getTangentAt(bot3T);
+    const bot3Frame = getTrackFrame(bot3T);
+    const bot3Pt = bot3Frame.pt;
+    const bot3Tangent = bot3Frame.tangent;
     const bot3TNext = (bot3T + 0.002) % 1.0;
-    const bot3TangentNext = trackCurve.getTangentAt(bot3TNext);
-    const bot3Curvature = bot3Tangent.clone().cross(bot3TangentNext).y;
+    const bot3FrameNext = getTrackFrame(bot3TNext);
+    const bot3Curvature = bot3Tangent.clone().cross(bot3FrameNext.tangent).y;
     const bot3BankAngle = Math.max(-0.35, Math.min(0.35, bot3Curvature * 14.0));
-    let bot3Binormal = new THREE.Vector3().crossVectors(bot3Tangent, normal).normalize();
+    let bot3Binormal = bot3Frame.binormal.clone();
     bot3Binormal.applyAxisAngle(bot3Tangent, bot3BankAngle);
     bot3Car.position.copy(bot3Pt.clone().add(bot3Binormal.clone().multiplyScalar(state.bot3Lane)));
     bot3Car.position.y += 0.35;
