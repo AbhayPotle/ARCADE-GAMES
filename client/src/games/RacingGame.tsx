@@ -1584,29 +1584,30 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const t1 = (i / railSegments) % 1.0;
       const t2 = ((i + 1) / railSegments) % 1.0;
       
-      const pt1 = trackCurve.getPointAt(t1);
-      const pt2 = trackCurve.getPointAt(t2);
+      const frame1 = getTrackFrame(t1);
+      const frame2 = getTrackFrame(t2);
       
-      const tangent1 = trackCurve.getTangentAt(t1);
-      const tangent2 = trackCurve.getTangentAt(t2);
+      const pt1 = frame1.pt;
+      const pt2 = frame2.pt;
       
-      const normal = new THREE.Vector3(0, 1, 0);
+      const tangent1 = frame1.tangent;
+      const tangent2 = frame2.tangent;
 
       // Curvature-based banking angles
       const t1Next = (i + 1) / railSegments;
-      const tangent1Next = trackCurve.getTangentAt(t1Next % 1.0);
-      const curvature1 = tangent1.clone().cross(tangent1Next).y;
+      const frame1Next = getTrackFrame(t1Next);
+      const curvature1 = tangent1.clone().cross(frame1Next.tangent).y;
       const bankAngle1 = Math.max(-0.35, Math.min(0.35, curvature1 * 14.0));
 
       const t2Next = ((i + 1) / railSegments + 0.002) % 1.0;
-      const tangent2Next = trackCurve.getTangentAt(t2Next);
-      const curvature2 = tangent2.clone().cross(tangent2Next).y;
+      const frame2Next = getTrackFrame(t2Next);
+      const curvature2 = tangent2.clone().cross(frame2Next.tangent).y;
       const bankAngle2 = Math.max(-0.35, Math.min(0.35, curvature2 * 14.0));
 
-      let binormal1 = new THREE.Vector3().crossVectors(tangent1, normal).normalize();
+      let binormal1 = frame1.binormal.clone();
       binormal1.applyAxisAngle(tangent1, bankAngle1);
 
-      let binormal2 = new THREE.Vector3().crossVectors(tangent2, normal).normalize();
+      let binormal2 = frame2.binormal.clone();
       binormal2.applyAxisAngle(tangent2, bankAngle2);
       
       // Shoulder offsets: roadWidth / 2 + offset
