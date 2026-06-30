@@ -837,9 +837,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     // 4. Generate 3D CatmullRom Path representing Racetrack Loop
     const controlPoints: THREE.Vector3[] = [];
-    const numPoints = 24;
+    const numPoints = 36;
     for (let i = 0; i < numPoints; i++) {
       const angle = (i / numPoints) * Math.PI * 2;
+      const anglePercentage = angle / (Math.PI * 2);
       
       // Organic racing track with long straights and sweeping professional bank corners
       const factorX = 350 + Math.cos(angle * 2) * 80 + Math.sin(angle * 3) * 30;
@@ -863,8 +864,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
 
       // Canyon jumps smooth bell-curve elevation
-      if (activeEvent.id === 'canyon_jump' && i >= 4 && i <= 10) {
-        const tBump = (i - 4) / 6;
+      if (activeEvent.id === 'canyon_jump' && anglePercentage >= 0.16 && anglePercentage <= 0.42) {
+        const tBump = (anglePercentage - 0.16) / (0.42 - 0.16);
         y += Math.sin(tBump * Math.PI) * 24;
       }
       
