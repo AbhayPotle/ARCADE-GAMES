@@ -2305,15 +2305,26 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         state.speed = Math.min(-14, state.speed + 22 * dt);
       }
     } else if (Math.abs(state.playerLane) >= 14.6) {
-      // Guardrail friction scraping
-      if (state.speed > 0) {
-        state.speed = Math.max(12, state.speed - 15 * dt);
-      } else if (state.speed < 0) {
-        state.speed = Math.min(-12, state.speed + 15 * dt);
-      }
-      state.collisionShake = Math.max(0.12, state.collisionShake);
-      if (Math.random() > 0.8) {
-        audioSynth.playDrift(); // screech sound effect
+      // Guardrail friction scraping and elastic bounce
+      const isLeftWall = state.playerLane < 0;
+      if (Math.abs(state.speed) > 18 && state.crashCooldown <= 0) {
+        // Elastic rebound: bounce vehicle away from the wall
+        state.playerLane += isLeftWall ? 1.6 : -1.6;
+        state.speed *= 0.82; // Lose 18% speed on impact
+        state.collisionShake = Math.max(0.25, state.collisionShake);
+        state.crashCooldown = 0.35; // short cooldown to prevent immediate multi-bounce
+        audioSynth.playError(); // play thud crash SFX
+      } else {
+        // Slow-speed scrape drag
+        if (state.speed > 0) {
+          state.speed = Math.max(12, state.speed - 18 * dt);
+        } else if (state.speed < 0) {
+          state.speed = Math.min(-12, state.speed + 18 * dt);
+        }
+        state.collisionShake = Math.max(0.12, state.collisionShake);
+        if (Math.random() > 0.7) {
+          audioSynth.playDrift(); // screech sound
+        }
       }
     } else if (state.isDrifting) {
       if (accelInput) {
