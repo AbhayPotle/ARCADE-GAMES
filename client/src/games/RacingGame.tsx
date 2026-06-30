@@ -2281,7 +2281,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       // Spark/Smoke VFX
       state.nitro = Math.min(100, state.nitro + 18 * dt); // Drifting refills NOS fast!
       if (Math.random() > 0.6) {
-        audioSynth.playNitro(); // Screech SFX layer proxy
+        audioSynth.playDrift(); // Screech SFX
       }
     } else {
       state.driftAngle += (0 - state.driftAngle) * dt * 7.5;
@@ -2313,7 +2313,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
       state.collisionShake = Math.max(0.12, state.collisionShake);
       if (Math.random() > 0.8) {
-        audioSynth.playNitro(); // screech sound effect proxy
+        audioSynth.playDrift(); // screech sound effect
       }
     } else if (state.isDrifting) {
       if (accelInput) {
