@@ -2321,7 +2321,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       } else if (state.speed < 0) {
         state.speed = Math.min(-14, state.speed + 22 * dt);
       }
-    } else if (Math.abs(state.playerLane) >= 14.6) {
+    } else if (Math.abs(state.playerLane) >= 16.6) {
       // Guardrail friction scraping and elastic bounce
       const isLeftWall = state.playerLane < 0;
       if (Math.abs(state.speed) > 18 && state.crashCooldown <= 0) {
@@ -2391,7 +2391,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
 
     // Lane Steering bounds
-    const maxLaneOffset = 15.0; // half of roadWidth (32)
+    const maxLaneOffset = 17.0; // half of roadWidth (36)
     const steerSpeedFactor = Math.max(0.4, Math.min(2.0, Math.abs(state.speed) * 0.075 + 0.35));
     if (!state.airborne) {
       const isReversing = state.speed < -1.0;
@@ -2731,7 +2731,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       let tcBinormal = tcFrame.binormal.clone();
       tcBinormal.applyAxisAngle(tcTangent, tcBankAngle);
 
-      tc.mesh.position.copy(tcPt.clone().add(tcBinormal.clone().multiplyScalar(tc.lane * 10.0))); // spread wider on 32 road
+      tc.mesh.position.copy(tcPt.clone().add(tcBinormal.clone().multiplyScalar(tc.lane * 12.0))); // spread wider on 36 road
       tc.mesh.position.y += 0.35;
       const tcForward = tcTangent.clone().normalize();
       const tcRight = tcBinormal.clone().normalize();
@@ -2770,7 +2770,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       } else if (state.isDrifting) {
         pMat.color.setHex(0xe0e0e0); // white/grey tire smoke
         pMat.size = 0.85;
-      } else if (Math.abs(state.playerLane) >= 14.6 && state.speed > 8) {
+      } else if (Math.abs(state.playerLane) >= 16.6 && state.speed > 8) {
         pMat.color.setHex(0xffaa00); // orange guardrail scraping sparks
         pMat.size = 0.7;
       } else {
