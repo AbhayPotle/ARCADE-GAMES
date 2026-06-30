@@ -2753,7 +2753,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       } else if (state.isDrifting) {
         pMat.color.setHex(0xe0e0e0); // white/grey tire smoke
         pMat.size = 0.85;
-      } else if (Math.abs(state.playerLane) >= 9.6 && state.speed > 8) {
+      } else if (Math.abs(state.playerLane) >= 14.6 && state.speed > 8) {
         pMat.color.setHex(0xffaa00); // orange guardrail scraping sparks
         pMat.size = 0.7;
       } else {
