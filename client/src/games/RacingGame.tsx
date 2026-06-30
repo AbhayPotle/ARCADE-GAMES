@@ -2944,7 +2944,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     composer.render();
 
     // Synchronize HUD state properties to DOM
-    setHudSpeed(Math.round(Math.abs(state.speed) * 2.8));
+    setHudSpeed(Math.round(Math.abs(state.speed) * 3.6));
     setHudNos(Math.round(state.nitro));
     setHudScore(state.score + state.driftScore + state.stuntScore);
     let currentPos = 4;
@@ -3014,7 +3014,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // Dynamic Gear & RPM calculations
     let calculatedRpm = 1000;
     let nextGear: number | string = state.gear;
-    const speedKphVal = Math.round(state.speed * 2.8);
+    const speedKphVal = Math.round(state.speed * 3.6);
     
     if (state.speed < -0.1) {
       nextGear = 'R';
@@ -3178,7 +3178,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
                         <div>
                           <p className="text-xs font-bold font-orbitron">{car.name}</p>
                           <p className="text-[9px] text-gray-500 font-mono mt-0.5">{car.desc}</p>
-                          <p className="text-[10px] text-gray-400 font-mono mt-1">Max Speed: {car.maxSpeed * 2.8} KPH</p>
+                          <p className="text-[10px] text-gray-400 font-mono mt-1">Max Speed: {Math.round(car.maxSpeed * 3.6)} KPH</p>
                         </div>
                       </div>
                       
