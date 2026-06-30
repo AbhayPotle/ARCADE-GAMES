@@ -3081,7 +3081,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     audioSynth.stopEngine();
     setGamePhase('ended');
 
-    const totalCalculated = hudScore + Math.round(hudTimer * 180);
+    const state = stateRef.current;
+    const finalScore = state.score + state.driftScore + state.stuntScore;
+    const totalCalculated = finalScore + Math.round(state.timer * 180);
     audioSynth.playGameOver(playerWon);
 
     if (playerWon) {
