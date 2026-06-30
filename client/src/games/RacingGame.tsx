@@ -2366,12 +2366,17 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const maxLaneOffset = 15.0; // half of roadWidth (32)
     const steerSpeedFactor = Math.max(0.4, Math.min(2.0, Math.abs(state.speed) * 0.075 + 0.35));
     if (!state.airborne) {
+      const isReversing = state.speed < -1.0;
+      const steerDirection = isReversing ? -1 : 1;
+      const steerAmount = handlingRate * dt * steerSpeedFactor * steerDirection;
+
       if (steerLeft) {
-        state.playerLane = Math.max(-maxLaneOffset, state.playerLane - handlingRate * dt * steerSpeedFactor);
+        state.playerLane -= steerAmount;
       }
       if (steerRight) {
-        state.playerLane = Math.min(maxLaneOffset, state.playerLane + handlingRate * dt * steerSpeedFactor);
+        state.playerLane += steerAmount;
       }
+      state.playerLane = Math.max(-maxLaneOffset, Math.min(maxLaneOffset, state.playerLane));
 
       // Centrifugal slide force: slides outer-ward during drift based on road curvature
       if (state.isDrifting) {
