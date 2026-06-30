@@ -1701,7 +1701,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         
         const lampForward = tangent1.clone().normalize();
         const lampRight = binormal1.clone().normalize();
-        const lampUp = new THREE.Vector3().crossVectors(lampForward, lampRight).normalize();
+        const lampUp = frame1.normal.clone().normalize();
         const lampOrientMat = new THREE.Matrix4().makeBasis(lampRight, lampUp, lampForward);
         lampGroup.quaternion.setFromRotationMatrix(lampOrientMat);
         
@@ -1770,7 +1770,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
           const structForward = tangent.clone().normalize();
           const structRight = binormal.clone().normalize();
-          const structUp = new THREE.Vector3().crossVectors(structForward, structRight).normalize();
+          const structUp = frame.normal.clone().normalize();
           const structOrientMat = new THREE.Matrix4().makeBasis(structRight, structUp, structForward);
 
           bridgeGroup.position.copy(pt);
@@ -1805,7 +1805,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
         const structForward = tangent.clone().normalize();
         const structRight = binormal.clone().normalize();
-        const structUp = new THREE.Vector3().crossVectors(structForward, structRight).normalize();
+        const structUp = frame.normal.clone().normalize();
         const structOrientMat = new THREE.Matrix4().makeBasis(structRight, structUp, structForward);
 
         tunnelGroup.position.copy(pt);
@@ -2466,7 +2466,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // D. Orient player vehicle correctly relative to Spline road geometry
     const localForward = tangent.clone().normalize();
     const localRight = binormal.clone().normalize();
-    const localUp = new THREE.Vector3().crossVectors(localForward, localRight).normalize();
+    const localUp = frame.normal.clone().normalize();
     
     // Construct base rotation matrix and quaternion from basis vectors
     const orientMat = new THREE.Matrix4().makeBasis(localRight, localUp, localForward);
@@ -2571,7 +2571,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     botCar.position.y += 0.35;
     const botForward = botTangent.clone().normalize();
     const botRight = botBinormal.clone().normalize();
-    const botUp = new THREE.Vector3().crossVectors(botForward, botRight).normalize();
+    const botUp = botFrame.normal.clone().normalize();
     const botOrientMat = new THREE.Matrix4().makeBasis(botRight, botUp, botForward);
     botCar.quaternion.setFromRotationMatrix(botOrientMat);
 
@@ -2607,7 +2607,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     bot2Car.position.y += 0.35;
     const bot2Forward = bot2Tangent.clone().normalize();
     const bot2Right = bot2Binormal.clone().normalize();
-    const bot2Up = new THREE.Vector3().crossVectors(bot2Forward, bot2Right).normalize();
+    const bot2Up = bot2Frame.normal.clone().normalize();
     const bot2OrientMat = new THREE.Matrix4().makeBasis(bot2Right, bot2Up, bot2Forward);
     bot2Car.quaternion.setFromRotationMatrix(bot2OrientMat);
 
@@ -2643,7 +2643,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     bot3Car.position.y += 0.35;
     const bot3Forward = bot3Tangent.clone().normalize();
     const bot3Right = bot3Binormal.clone().normalize();
-    const bot3Up = new THREE.Vector3().crossVectors(bot3Forward, bot3Right).normalize();
+    const bot3Up = bot3Frame.normal.clone().normalize();
     const bot3OrientMat = new THREE.Matrix4().makeBasis(bot3Right, bot3Up, bot3Forward);
     bot3Car.quaternion.setFromRotationMatrix(bot3OrientMat);
 
@@ -2702,7 +2702,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       tc.mesh.position.y += 0.35;
       const tcForward = tcTangent.clone().normalize();
       const tcRight = tcBinormal.clone().normalize();
-      const tcUp = new THREE.Vector3().crossVectors(tcForward, tcRight).normalize();
+      const tcUp = tcFrame.normal.clone().normalize();
       const tcOrientMat = new THREE.Matrix4().makeBasis(tcRight, tcUp, tcForward);
       tc.mesh.quaternion.setFromRotationMatrix(tcOrientMat);
 
