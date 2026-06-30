@@ -1445,17 +1445,17 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1d212a, metalness: 0.9, roughness: 0.15 });
       
       const leftPillar = new THREE.Mesh(pillarGeom, pillarMat);
-      leftPillar.position.set(-16.5, 4.5, 0);
+      leftPillar.position.set(-18.5, 4.5, 0);
       leftPillar.castShadow = true;
       archGroup.add(leftPillar);
       
       const rightPillar = new THREE.Mesh(pillarGeom, pillarMat);
-      rightPillar.position.set(16.5, 4.5, 0);
+      rightPillar.position.set(18.5, 4.5, 0);
       rightPillar.castShadow = true;
       archGroup.add(rightPillar);
       
       // Crossbar overhead beam
-      const crossbarGeom = new THREE.BoxGeometry(34.2, 1.0, 1.6);
+      const crossbarGeom = new THREE.BoxGeometry(38.2, 1.0, 1.6);
       const crossbar = new THREE.Mesh(crossbarGeom, pillarMat);
       crossbar.position.set(0, 9.0, 0);
       crossbar.castShadow = true;
@@ -1481,11 +1481,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       });
       for (let y = 1; y <= 3; y++) {
         const ringL = new THREE.Mesh(ringGeom, ringMat);
-        ringL.position.set(-16.5, y * 2.2, 0);
+        ringL.position.set(-18.5, y * 2.2, 0);
         archGroup.add(ringL);
         
         const ringR = new THREE.Mesh(ringGeom, ringMat);
-        ringR.position.set(16.5, y * 2.2, 0);
+        ringR.position.set(18.5, y * 2.2, 0);
         archGroup.add(ringR);
       }
       
@@ -1532,9 +1532,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
 
     // 8.5. Build Steel Guard Rails and Street Lamps
-    const postGeom = new THREE.CylinderGeometry(0.12, 0.12, 1.2, 6);
+    const postGeom = new THREE.CylinderGeometry(0.2, 0.2, 1.2, 8);
     const postMat = new THREE.MeshStandardMaterial({ color: 0x78909c, metalness: 0.9, roughness: 0.2 });
-    const beamGeom = new THREE.BoxGeometry(0.12, 0.35, 1.0); // Z-axis length is scaled dynamically
+    const beamGeom = new THREE.BoxGeometry(0.2, 0.45, 1.0); // Z-axis length is scaled dynamically
     const beamMat = new THREE.MeshStandardMaterial({ color: 0xb0bec5, metalness: 0.9, roughness: 0.2 });
 
     const lampPoleGeom = new THREE.CylinderGeometry(0.14, 0.18, 7.0, 8);
@@ -1589,7 +1589,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       binormal2.applyAxisAngle(tangent2, bankAngle2);
       
       // Shoulder offsets: roadWidth / 2 + offset
-      const shoulderOffset = 16.3;
+      const shoulderOffset = 18.3;
       
       const posLeft1 = pt1.clone().add(binormal1.clone().multiplyScalar(-shoulderOffset));
       const posLeft2 = pt2.clone().add(binormal2.clone().multiplyScalar(-shoulderOffset));
@@ -1600,7 +1600,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       // --- Left Guard Rail ---
       const postForward = tangent1.clone().normalize();
       const postRight = binormal1.clone().normalize();
-      const postUp = new THREE.Vector3().crossVectors(postForward, postRight).normalize();
+      const postUp = frame1.normal.clone().normalize();
       const postOrientMat = new THREE.Matrix4().makeBasis(postRight, postUp, postForward);
       const postQuat = new THREE.Quaternion().setFromRotationMatrix(postOrientMat);
 
@@ -1611,19 +1611,27 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       postL.castShadow = true;
       scene.add(postL);
       
-      // Beam Left
+      // Beam Left (Double Rail)
       const distL = posLeft1.distanceTo(posLeft2);
-      const beamL = new THREE.Mesh(beamGeom, beamMat);
       const midL = new THREE.Vector3().addVectors(posLeft1, posLeft2).multiplyScalar(0.5);
-      
       const midTangentL = new THREE.Vector3().subVectors(posLeft2, posLeft1).normalize();
       const beamOrientMatL = new THREE.Matrix4().makeBasis(postRight, postUp, midTangentL);
       
+      // Upper Beam Left
+      const beamL = new THREE.Mesh(beamGeom, beamMat);
       beamL.position.copy(midL).add(postUp.clone().multiplyScalar(0.75));
       beamL.scale.set(1.0, 1.0, distL);
       beamL.quaternion.setFromRotationMatrix(beamOrientMatL);
       beamL.castShadow = true;
       scene.add(beamL);
+
+      // Lower Beam Left
+      const beamL2 = new THREE.Mesh(beamGeom, beamMat);
+      beamL2.position.copy(midL).add(postUp.clone().multiplyScalar(0.42));
+      beamL2.scale.set(1.0, 1.0, distL);
+      beamL2.quaternion.setFromRotationMatrix(beamOrientMatL);
+      beamL2.castShadow = true;
+      scene.add(beamL2);
       
       // --- Right Guard Rail ---
       // Post Right
@@ -1633,19 +1641,27 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       postR.castShadow = true;
       scene.add(postR);
       
-      // Beam Right
+      // Beam Right (Double Rail)
       const distR = posRight1.distanceTo(posRight2);
-      const beamR = new THREE.Mesh(beamGeom, beamMat);
       const midR = new THREE.Vector3().addVectors(posRight1, posRight2).multiplyScalar(0.5);
-      
       const midTangentR = new THREE.Vector3().subVectors(posRight2, posRight1).normalize();
       const beamOrientMatR = new THREE.Matrix4().makeBasis(postRight, postUp, midTangentR);
       
+      // Upper Beam Right
+      const beamR = new THREE.Mesh(beamGeom, beamMat);
       beamR.position.copy(midR).add(postUp.clone().multiplyScalar(0.75));
       beamR.scale.set(1.0, 1.0, distR);
       beamR.quaternion.setFromRotationMatrix(beamOrientMatR);
       beamR.castShadow = true;
       scene.add(beamR);
+
+      // Lower Beam Right
+      const beamR2 = new THREE.Mesh(beamGeom, beamMat);
+      beamR2.position.copy(midR).add(postUp.clone().multiplyScalar(0.42));
+      beamR2.scale.set(1.0, 1.0, distR);
+      beamR2.quaternion.setFromRotationMatrix(beamOrientMatR);
+      beamR2.castShadow = true;
+      scene.add(beamR2);
 
       // --- Street Lamps ---
       // Place street lamps every 12 segments (~60 meters) alternating left and right
