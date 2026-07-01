@@ -3357,6 +3357,28 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
                 ))}
               </div>
 
+              <div className="mt-3">
+                <h3 className="text-[10px] font-bold font-orbitron text-gray-400 uppercase mb-2">// GEAR TRANSMISSION</h3>
+                <div className="flex space-x-2">
+                  {['auto', 'manual'].map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => {
+                        audioSynth.playClick();
+                        setTransmissionMode(mode as 'auto' | 'manual');
+                      }}
+                      className={`px-3 py-1.5 text-[9px] font-orbitron font-bold rounded border transition-all uppercase cursor-pointer ${
+                        transmissionMode === mode 
+                          ? 'border-neon-cyan bg-neon-cyan/20 text-neon-cyan shadow-[0_0_8px_rgba(0,240,255,0.15)]' 
+                          : 'border-white/10 hover:border-white/20 text-gray-400 bg-white/5'
+                      }`}
+                    >
+                      {mode === 'auto' ? 'Automatic' : 'Manual (Q/E)'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="mt-4 bg-black/40 border border-white/5 p-3 rounded-lg text-[10px] font-mono space-y-1">
                 <p className="text-neon-yellow">// GARAGE TELEMETRY UPGRADES</p>
                 <p className="text-gray-400">ENGINE BOOST: Level {engineLvl} / 5</p>
