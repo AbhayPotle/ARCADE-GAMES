@@ -455,7 +455,7 @@ export class RoadSystem {
         // Dynamic light source
         const spotLight = new THREE.SpotLight(0xffea85, 8.0, 36.0, 0.65, 0.45, 1.2);
         spotLight.position.set(isLeft ? 2.1 : -2.1, 6.78, 0);
-        spotLight.castShadow = true;
+        spotLight.castShadow = false;
         spotLight.shadow.mapSize.width = 512;
         spotLight.shadow.mapSize.height = 512;
         lampGroup.add(spotLight);
