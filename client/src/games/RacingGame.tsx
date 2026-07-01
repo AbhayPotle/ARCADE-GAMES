@@ -2312,7 +2312,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
             // Restore night lighting levels
             sun.intensity = 0.15;
             sun.color.setHex(0xffffff);
-            scene.fog.color.setHex(0x060614);
+            if (scene.fog) scene.fog.color.setHex(0x060614);
             if (scene.background instanceof THREE.Color) {
               scene.background.setHex(0x060614);
             }
@@ -2321,7 +2321,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
             const intensity = 3.5 + Math.random() * 2.0;
             sun.intensity = intensity;
             sun.color.setHex(0xddeeff); // cool lightning blue
-            scene.fog.color.setHex(0xeef6ff);
+            if (scene.fog) scene.fog.color.setHex(0xeef6ff);
             if (scene.background instanceof THREE.Color) {
               scene.background.setHex(0xeef6ff);
             }
