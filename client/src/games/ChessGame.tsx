@@ -574,43 +574,41 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
 
           {/* Interactive Chessboard */}
           <div className="flex flex-col items-center w-full max-w-[min(400px,92vw,50vh)] shrink-0">
-            <div className={`aspect-square w-[min(400px,92vw,50vh)] h-[min(400px,92vw,50vh)] border-2 rounded-3xl p-2 flex flex-col justify-between shadow-2xl transition-all duration-700 relative ${
+            <div className={`aspect-square w-[min(400px,92vw,50vh)] h-[min(400px,92vw,50vh)] border-2 rounded-3xl p-2 grid grid-cols-8 grid-rows-8 gap-0 shadow-2xl transition-all duration-700 relative ${
               isMyTurn && !gameOver
-                ? 'scale-[1.01] border-[#FFD93D] shadow-[0_25px_65px_rgba(0,212,255,0.18)] bg-white/5'
-                : 'scale-100 border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)] bg-black/35'
+                ? 'border-[#FFD93D] shadow-[0_25px_65px_rgba(0,212,255,0.18)] bg-white/5'
+                : 'border-[#3d2414] shadow-[0_15px_40px_rgba(0,0,0,0.65)] bg-black/35'
             }`}>
-              {board.map((row, r) => (
-                <div key={r} className="flex flex-1 justify-between">
-                  {row.map((piece, c) => {
-                    const isSelected = selectedSquare?.r === r && selectedSquare?.c === c;
-                    const isHighlighted = possibleMoves.some(m => m.r === r && m.c === c);
-                    const isDark = (r + c) % 2 === 1;
+              {board.flatMap((row, r) => (
+                row.map((piece, c) => {
+                  const isSelected = selectedSquare?.r === r && selectedSquare?.c === c;
+                  const isHighlighted = possibleMoves.some(m => m.r === r && m.c === c);
+                  const isDark = (r + c) % 2 === 1;
 
-                    // Flashing king check animation
-                    const isWhite = isWhitePiece(piece);
-                    const pieceColor = isWhite ? 'w' : 'b';
-                    const isKingCheck = piece && piece.toLowerCase() === 'k' && (
-                      pieceColor === myColor ? isPlayerInCheck : isBotInCheck
-                    );
+                  // Flashing king check animation
+                  const isWhite = isWhitePiece(piece);
+                  const pieceColor = isWhite ? 'w' : 'b';
+                  const isKingCheck = piece && piece.toLowerCase() === 'k' && (
+                    pieceColor === myColor ? isPlayerInCheck : isBotInCheck
+                  );
 
-                    return (
-                      <div
-                        key={c}
-                        onClick={() => handleSquareClick(r, c)}
-                        className={`flex-1 flex items-center justify-center text-3.5xl md:text-4xl select-none cursor-pointer border transition-all ${
-                          getSquareThemeStyle(isDark, isSelected, isHighlighted, !!isKingCheck)
-                        } hover:scale-[1.03] duration-150 rounded`}
+                  return (
+                    <div
+                      key={`${r}-${c}`}
+                      onClick={() => handleSquareClick(r, c)}
+                      className={`flex items-center justify-center text-3.5xl md:text-4xl select-none cursor-pointer border transition-all ${
+                        getSquareThemeStyle(isDark, isSelected, isHighlighted, !!isKingCheck)
+                      } hover:scale-[1.03] duration-150 rounded`}
+                    >
+                      <span 
+                        style={getPieceStyle(piece)}
+                        className="filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] select-none"
                       >
-                        <span 
-                          style={getPieceStyle(piece)}
-                          className="filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] select-none"
-                        >
-                          {getPieceEmoji(piece)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
+                        {getPieceEmoji(piece)}
+                      </span>
+                    </div>
+                  );
+                })
               ))}
 
               {/* Glowing Vector Last Move Trajectory Ray Overlay */}
