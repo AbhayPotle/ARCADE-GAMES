@@ -687,6 +687,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     stateRef.current.airborne = false;
     stateRef.current.airHeight = 0;
     stateRef.current.crashCooldown = 0;
+    stateRef.current.gear = 1;
+    stateRef.current.rpm = 1000;
 
     // 1. Scene, Camera, WebGLRenderer Setup
     const scene = new THREE.Scene();
@@ -2513,12 +2515,20 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       // Normal driving (forward, stationary, or reverse)
       if (state.speed >= 0) {
         if (accelInput) {
-          state.speed += finalAccelRate * dt;
-          if (state.speed > maxSpeedLimit) state.speed = maxSpeedLimit;
+          if (state.transmissionMode === 'manual' && state.gear === 'R') {
+            state.speed = Math.max(0, state.speed - finalAccelRate * dt * 1.8);
+          } else {
+            state.speed += finalAccelRate * dt;
+            if (state.speed > maxSpeedLimit) state.speed = maxSpeedLimit;
+          }
         } else if (brakeInput) {
-          // If speed is 0 or very small, holding brake transitions into reverse
+          const canReverse = state.transmissionMode === 'auto' || state.gear === 'R';
           if (state.speed <= 0.5) {
-            state.speed -= finalAccelRate * dt * 0.45;
+            if (canReverse) {
+              state.speed -= finalAccelRate * dt * 0.45;
+            } else {
+              state.speed = 0;
+            }
           } else {
             state.speed -= finalAccelRate * dt * 1.8;
           }
@@ -2534,9 +2544,14 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           state.speed += finalAccelRate * dt * 1.8;
           if (state.speed > 0) state.speed = 0;
         } else if (brakeInput) {
-          // Brake acts as accelerator in reverse
-          state.speed -= finalAccelRate * dt * 0.45;
-          if (state.speed < -20) state.speed = -20;
+          const canReverse = state.transmissionMode === 'auto' || state.gear === 'R';
+          if (canReverse) {
+            state.speed -= finalAccelRate * dt * 0.45;
+            if (state.speed < -20) state.speed = -20;
+          } else {
+            state.speed += finalAccelRate * dt * 1.8;
+            if (state.speed > 0) state.speed = 0;
+          }
         } else {
           // Passive rolling drag in reverse (towards 0)
           state.speed += 4.5 * dt;
