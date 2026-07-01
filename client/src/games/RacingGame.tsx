@@ -966,18 +966,18 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const trackCurve = new THREE.CatmullRomCurve3(controlPoints);
     stateRef.current.trackLength = trackCurve.getLength();
 
-    // Pre-calculate 400 points and stable frames along the track curve using Parallel Transport Bishop Frames
+    // Pre-calculate 400 points and stable frames along the track curve
     const sampleCount = 400;
     roadSamplesRef.current = [];
-    const FrenetFrames = trackCurve.computeFrenetFrames(sampleCount, true);
     
     for (let s = 0; s < sampleCount; s++) {
       const t = s / sampleCount;
       const pt = trackCurve.getPointAt(t);
-      const tangent = FrenetFrames.tangents[s].normalize();
-      let up = FrenetFrames.binormals[s].normalize();
-      if (up.y < 0) up.negate();
-      const right = new THREE.Vector3().crossVectors(tangent, up).normalize();
+      const tangent = trackCurve.getTangentAt(t).normalize();
+      
+      // Calculate stable horizontal right and vertical up vectors locked to gravity
+      const right = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+      const up = new THREE.Vector3().crossVectors(right, tangent).normalize();
       
       roadSamplesRef.current.push({
         pt: pt,
