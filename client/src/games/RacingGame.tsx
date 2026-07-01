@@ -679,8 +679,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     stateRef.current.isDrifting = false;
     stateRef.current.nitro = 100;
     stateRef.current.botDist = 40;
+    stateRef.current.botLane = 0;
     stateRef.current.bot2Dist = 20;
+    stateRef.current.bot2Lane = -7.0;
     stateRef.current.bot3Dist = 0;
+    stateRef.current.bot3Lane = 7.0;
     stateRef.current.airborne = false;
     stateRef.current.airHeight = 0;
     stateRef.current.crashCooldown = 0;
@@ -1267,20 +1270,20 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       let height = baseTerrainHeight;
       const flattenFactor = 1.0 - tunnelFactor; // keeps mountain solid inside tunnels!
 
-      if (minDist < 12.0) {
+      if (minDist < 18.0) {
         // Road bed: strictly flat
         height = THREE.MathUtils.lerp(baseTerrainHeight, targetY, flattenFactor);
-      } else if (minDist < 25.0) {
+      } else if (minDist < 30.0) {
         // Road shoulder/ditch: transition from road height to a safe ditch depth
-        const t = (minDist - 12.0) / 13.0; // 0 to 1
+        const t = (minDist - 18.0) / 12.0; // 0 to 1
         const smoothT = t * t * (3 - 2 * t);
         const roadEdgeHeight = targetY;
         const ditchHeight = targetY - 1.55;
         const flatHeight = THREE.MathUtils.lerp(roadEdgeHeight, ditchHeight, smoothT);
         height = THREE.MathUtils.lerp(baseTerrainHeight, flatHeight, flattenFactor);
-      } else if (minDist < 50.0) {
+      } else if (minDist < 55.0) {
         // Slope up/down to join the natural terrain
-        const t = (minDist - 25.0) / 25.0; // 0 to 1
+        const t = (minDist - 30.0) / 25.0; // 0 to 1
         const smoothT = t * t * (3 - 2 * t);
         const ditchHeight = targetY - 1.55;
         const flatHeight = THREE.MathUtils.lerp(ditchHeight, baseTerrainHeight, smoothT);
