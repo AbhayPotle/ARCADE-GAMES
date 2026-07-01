@@ -18,6 +18,8 @@ export class CameraController {
     binormal: THREE.Vector3,
     maxSpeedLimit: number
   ) {
+    this.camera.up.set(0, 1, 0);
+
     const lookTarget = pt.clone()
       .add(tangent.clone().multiplyScalar(16.0))
       .add(binormal.clone().multiplyScalar(-state.steerAngle * 2.8));

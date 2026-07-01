@@ -1100,7 +1100,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
         const gearMax = maxSpeedLimit * [0.15, 0.32, 0.52, 0.72, 0.88, 1.0][nextGearNum - 1];
         const gearMin = nextGearNum === 1 ? 0 : maxSpeedLimit * [0.15, 0.32, 0.52, 0.72, 0.88, 1.0][nextGearNum - 2];
-        calculatedRpm = 1000 + Math.round(((state.speed - gearMin) / Math.max(1, gearMax - gearMin)) * 7000);
+        calculatedRpm = Math.max(1000, 1000 + Math.round(((state.speed - gearMin) / Math.max(1, gearMax - gearMin)) * 7000));
       }
       
       if (calculatedRpm >= 8000) {
