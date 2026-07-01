@@ -1892,7 +1892,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           bridgeGroup.add(arch);
 
           const structForward = tangent.clone().normalize();
-          const structRight = binormal.clone().normalize();
+          const structRight = frame.binormal.clone().normalize();
           const structUp = frame.normal.clone().normalize();
           const structOrientMat = new THREE.Matrix4().makeBasis(structRight, structUp, structForward);
 
@@ -1927,7 +1927,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         tunnelGroup.add(light);
 
         const structForward = tangent.clone().normalize();
-        const structRight = binormal.clone().normalize();
+        const structRight = frame.binormal.clone().normalize();
         const structUp = frame.normal.clone().normalize();
         const structOrientMat = new THREE.Matrix4().makeBasis(structRight, structUp, structForward);
 
@@ -2668,8 +2668,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     // D. Orient player vehicle correctly relative to Spline road geometry
     const localForward = tangent.clone().normalize();
-    const localRight = binormal.clone().normalize();
-    const localUp = frame.normal.clone().normalize();
+    
+    // Apply banking roll to both right and up basis vectors to maintain perfect orthonormality
+    const localRight = frame.binormal.clone();
+    localRight.applyAxisAngle(localForward, bankAngle).normalize();
+    
+    const localUp = frame.normal.clone();
+    localUp.applyAxisAngle(localForward, bankAngle).normalize();
     
     // Construct base rotation matrix and quaternion from basis vectors
     const orientMat = new THREE.Matrix4().makeBasis(localRight, localUp, localForward);
@@ -2773,8 +2778,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     botCar.position.copy(botPt.clone().add(botBinormal.clone().multiplyScalar(state.botLane)));
     botCar.position.y += 0.35;
     const botForward = botTangent.clone().normalize();
-    const botRight = botBinormal.clone().normalize();
-    const botUp = botFrame.normal.clone().normalize();
+    const botRight = botFrame.binormal.clone();
+    botRight.applyAxisAngle(botForward, botBankAngle).normalize();
+    const botUp = botFrame.normal.clone();
+    botUp.applyAxisAngle(botForward, botBankAngle).normalize();
     const botOrientMat = new THREE.Matrix4().makeBasis(botRight, botUp, botForward);
     botCar.quaternion.setFromRotationMatrix(botOrientMat);
 
@@ -2809,8 +2816,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     bot2Car.position.copy(bot2Pt.clone().add(bot2Binormal.clone().multiplyScalar(state.bot2Lane)));
     bot2Car.position.y += 0.35;
     const bot2Forward = bot2Tangent.clone().normalize();
-    const bot2Right = bot2Binormal.clone().normalize();
-    const bot2Up = bot2Frame.normal.clone().normalize();
+    const bot2Right = bot2Frame.binormal.clone();
+    bot2Right.applyAxisAngle(bot2Forward, bot2BankAngle).normalize();
+    const bot2Up = bot2Frame.normal.clone();
+    bot2Up.applyAxisAngle(bot2Forward, bot2BankAngle).normalize();
     const bot2OrientMat = new THREE.Matrix4().makeBasis(bot2Right, bot2Up, bot2Forward);
     bot2Car.quaternion.setFromRotationMatrix(bot2OrientMat);
 
@@ -2845,8 +2854,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     bot3Car.position.copy(bot3Pt.clone().add(bot3Binormal.clone().multiplyScalar(state.bot3Lane)));
     bot3Car.position.y += 0.35;
     const bot3Forward = bot3Tangent.clone().normalize();
-    const bot3Right = bot3Binormal.clone().normalize();
-    const bot3Up = bot3Frame.normal.clone().normalize();
+    const bot3Right = bot3Frame.binormal.clone();
+    bot3Right.applyAxisAngle(bot3Forward, bot3BankAngle).normalize();
+    const bot3Up = bot3Frame.normal.clone();
+    bot3Up.applyAxisAngle(bot3Forward, bot3BankAngle).normalize();
     const bot3OrientMat = new THREE.Matrix4().makeBasis(bot3Right, bot3Up, bot3Forward);
     bot3Car.quaternion.setFromRotationMatrix(bot3OrientMat);
 
@@ -2904,8 +2915,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       tc.mesh.position.copy(tcPt.clone().add(tcBinormal.clone().multiplyScalar(tc.lane * 12.0))); // spread wider on 36 road
       tc.mesh.position.y += 0.35;
       const tcForward = tcTangent.clone().normalize();
-      const tcRight = tcBinormal.clone().normalize();
-      const tcUp = tcFrame.normal.clone().normalize();
+      const tcRight = tcFrame.binormal.clone();
+      tcRight.applyAxisAngle(tcForward, tcBankAngle).normalize();
+      const tcUp = tcFrame.normal.clone();
+      tcUp.applyAxisAngle(tcForward, tcBankAngle).normalize();
       const tcOrientMat = new THREE.Matrix4().makeBasis(tcRight, tcUp, tcForward);
       tc.mesh.quaternion.setFromRotationMatrix(tcOrientMat);
 
