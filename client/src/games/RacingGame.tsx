@@ -1485,7 +1485,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const binormal = frame.binormal;
       
       const side = Math.random() > 0.5 ? 1 : -1;
-      const offset = binormal.clone().multiplyScalar(side * (12 + Math.random() * 25));
+      const offset = binormal.clone().multiplyScalar(side * (21.5 + Math.random() * 25));
       const pos = pt.clone().add(offset);
 
       const terrY = getTerrainHeight(pos.x, pos.z);
