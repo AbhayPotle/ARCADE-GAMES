@@ -223,6 +223,33 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
           onComplete(20, winnerId === 'draw' ? undefined : 'bot-id');
         }, 2000);
       }
+    } else {
+      // Bot has no legal moves remaining!
+      const botColor = myColorRef.current === 'w' ? 'b' : 'w';
+      const isCheck = isKingInCheck(botColor, boardRef.current);
+      const winnerId = isCheck ? currentUser.id : 'draw';
+      
+      setGameOver(true);
+      gameOverRef.current = true;
+      
+      if (isCheck) {
+        setBattleLogs(prev => [...prev.slice(-5), `🏆 CHECKMATE! You won the battle!`]);
+      } else {
+        setBattleLogs(prev => [...prev.slice(-5), `🤝 STALEMATE! The grid is locked in a draw.`]);
+      }
+
+      socketService.emit('game_completed', {
+        roomId: matchData.roomId,
+        winnerId: winnerId === 'draw' ? undefined : winnerId,
+        scores: matchData.players.map((p: any) => ({
+          userId: p.userId,
+          score: winnerId === 'draw' ? 50 : (p.userId === winnerId ? 100 : 20)
+        }))
+      });
+
+      setTimeout(() => {
+        onComplete(winnerId === currentUser.id ? 100 : 20, winnerId === 'draw' ? undefined : winnerId);
+      }, 2000);
     }
   };
 
