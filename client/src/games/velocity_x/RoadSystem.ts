@@ -154,6 +154,14 @@ export class RoadSystem {
     const roadIndices: number[] = [];
     const roadUvs: number[] = [];
 
+    const curbGeometry = new THREE.BufferGeometry();
+    const curbVertices: number[] = [];
+    const curbColors: number[] = [];
+    const curbIndices: number[] = [];
+
+    const curbHeight = 0.22;
+    const curbWidth = 0.55;
+
     for (let i = 0; i <= roadSegmentsCount; i++) {
       const t = i / roadSegmentsCount;
       const frame = this.getTrackFrame(t);
@@ -167,6 +175,9 @@ export class RoadSystem {
 
       const binormal = frame.binormal.clone();
       binormal.applyAxisAngle(tangent, bankAngle);
+      
+      const normal = frame.normal.clone();
+      normal.applyAxisAngle(tangent, bankAngle);
 
       const vL = pt.clone().add(binormal.clone().multiplyScalar(-roadWidth / 2));
       const vR = pt.clone().add(binormal.clone().multiplyScalar(roadWidth / 2));
@@ -182,6 +193,51 @@ export class RoadSystem {
         roadIndices.push(row, row + 1, row + 2);
         roadIndices.push(row + 1, row + 3, row + 2);
       }
+
+      // --- 3D Concrete Curbs ---
+      const c0 = vL.clone();
+      const c1 = vL.clone().add(normal.clone().multiplyScalar(curbHeight));
+      const c2 = vL.clone().add(normal.clone().multiplyScalar(curbHeight)).add(binormal.clone().multiplyScalar(-curbWidth));
+      const c3 = vL.clone().add(binormal.clone().multiplyScalar(-curbWidth));
+
+      const d0 = vR.clone();
+      const d1 = vR.clone().add(normal.clone().multiplyScalar(curbHeight));
+      const d2 = vR.clone().add(normal.clone().multiplyScalar(curbHeight)).add(binormal.clone().multiplyScalar(curbWidth));
+      const d3 = vR.clone().add(binormal.clone().multiplyScalar(curbWidth));
+
+      curbVertices.push(c0.x, c0.y, c0.z); // 0
+      curbVertices.push(c1.x, c1.y, c1.z); // 1
+      curbVertices.push(c2.x, c2.y, c2.z); // 2
+      curbVertices.push(c3.x, c3.y, c3.z); // 3
+
+      curbVertices.push(d0.x, d0.y, d0.z); // 4
+      curbVertices.push(d1.x, d1.y, d1.z); // 5
+      curbVertices.push(d2.x, d2.y, d2.z); // 6
+      curbVertices.push(d3.x, d3.y, d3.z); // 7
+
+      const isRed = Math.floor(i / 2) % 2 === 0;
+      const color = isRed ? [0.92, 0.16, 0.16] : [0.94, 0.94, 0.94];
+
+      for (let v = 0; v < 8; v++) {
+        curbColors.push(color[0], color[1], color[2]);
+      }
+
+      if (i < roadSegmentsCount) {
+        const base = i * 8;
+        curbIndices.push(base + 0, base + 1, base + 8);
+        curbIndices.push(base + 1, base + 9, base + 8);
+        curbIndices.push(base + 1, base + 2, base + 9);
+        curbIndices.push(base + 2, base + 10, base + 9);
+        curbIndices.push(base + 2, base + 3, base + 10);
+        curbIndices.push(base + 3, base + 11, base + 10);
+
+        curbIndices.push(base + 4, base + 12, base + 5);
+        curbIndices.push(base + 5, base + 12, base + 13);
+        curbIndices.push(base + 5, base + 6, base + 13);
+        curbIndices.push(base + 6, base + 14, base + 13);
+        curbIndices.push(base + 6, base + 14, base + 7);
+        curbIndices.push(base + 7, base + 14, base + 15);
+      }
     }
 
     roadGeometry.setAttribute('position', new THREE.Float32BufferAttribute(roadVertices, 3));
@@ -191,64 +247,134 @@ export class RoadSystem {
 
     const roadMesh = new THREE.Mesh(roadGeometry, roadMat);
     roadMesh.receiveShadow = true;
+    roadMesh.castShadow = true;
     scene.add(roadMesh);
+
+    curbGeometry.setAttribute('position', new THREE.Float32BufferAttribute(curbVertices, 3));
+    curbGeometry.setAttribute('color', new THREE.Float32BufferAttribute(curbColors, 3));
+    curbGeometry.setIndex(curbIndices);
+    curbGeometry.computeVertexNormals();
+
+    const curbMat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.52,
+      metalness: 0.18
+    });
+    const curbMesh = new THREE.Mesh(curbGeometry, curbMat);
+    curbMesh.receiveShadow = true;
+    curbMesh.castShadow = true;
+    scene.add(curbMesh);
+
     return roadMesh;
   }
 
   buildCheckpoints(scene: THREE.Scene, roadWidth: number) {
     const checkpointMilestones = [0.25, 0.50, 0.75];
-    checkpointMilestones.forEach((tVal) => {
+    checkpointMilestones.forEach((tVal, idx) => {
       const frame = this.getTrackFrame(tVal);
       const archPt = frame.pt;
       const archTangent = frame.tangent;
       const archBinormal = frame.binormal;
       
       const archGroup = new THREE.Group();
-      const pillarGeom = new THREE.BoxGeometry(1.2, 9.0, 1.2);
-      const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1d212a, metalness: 0.9, roughness: 0.15 });
       
-      const leftPillar = new THREE.Mesh(pillarGeom, pillarMat);
-      leftPillar.position.set(-20.2, 4.5, 0);
-      leftPillar.castShadow = true;
-      archGroup.add(leftPillar);
-      
-      const rightPillar = new THREE.Mesh(pillarGeom, pillarMat);
-      rightPillar.position.set(20.2, 4.5, 0);
-      rightPillar.castShadow = true;
-      archGroup.add(rightPillar);
-      
-      const crossbarGeom = new THREE.BoxGeometry(41.6, 1.0, 1.6);
-      const crossbar = new THREE.Mesh(crossbarGeom, pillarMat);
-      crossbar.position.set(0, 9.0, 0);
-      crossbar.castShadow = true;
-      archGroup.add(crossbar);
-      
-      const boardGeom = new THREE.BoxGeometry(6.5, 0.7, 0.45);
-      const boardMat = new THREE.MeshStandardMaterial({
-        color: 0x113e19,
-        metalness: 0.1,
-        roughness: 0.8
+      const trussMat = new THREE.MeshStandardMaterial({
+        color: 0x5c5f66,
+        metalness: 0.94,
+        roughness: 0.22
       });
-      const checkpointBoard = new THREE.Mesh(boardGeom, boardMat);
-      checkpointBoard.position.set(0, 10.15, 0);
-      archGroup.add(checkpointBoard);
-      
-      const ringGeom = new THREE.BoxGeometry(1.36, 0.18, 1.36);
-      const ringMat = new THREE.MeshStandardMaterial({
-        color: 0xf5c500,
-        metalness: 0.2,
-        roughness: 0.5
+
+      const addStrut = (g: THREE.Group, x1: number, y1: number, z1: number, x2: number, y2: number, z2: number, radius: number = 0.1) => {
+        const p1 = new THREE.Vector3(x1, y1, z1);
+        const p2 = new THREE.Vector3(x2, y2, z2);
+        const dist = p1.distanceTo(p2);
+        const geom = new THREE.CylinderGeometry(radius, radius, dist, 5);
+        const mesh = new THREE.Mesh(geom, trussMat);
+        mesh.position.copy(p1).add(p2).multiplyScalar(0.5);
+        mesh.lookAt(p2);
+        mesh.rotateX(Math.PI / 2);
+        mesh.castShadow = true;
+        g.add(mesh);
+      };
+
+      // Left and right truss towers
+      [-20.2, 20.2].forEach((xOffset) => {
+        const w = 0.45;
+        const h = 9.0;
+        addStrut(archGroup, xOffset - w, 0, -w, xOffset - w, h, -w, 0.08);
+        addStrut(archGroup, xOffset + w, 0, -w, xOffset + w, h, -w, 0.08);
+        addStrut(archGroup, xOffset - w, 0,  w, xOffset - w, h,  w, 0.08);
+        addStrut(archGroup, xOffset + w, 0,  w, xOffset + w, h,  w, 0.08);
+
+        for (let y = 0; y < h; y += 1.5) {
+          addStrut(archGroup, xOffset - w, y, -w, xOffset + w, y + 1.5, -w, 0.04);
+          addStrut(archGroup, xOffset - w, y,  w, xOffset + w, y + 1.5,  w, 0.04);
+          addStrut(archGroup, xOffset - w, y, -w, xOffset - w, y + 1.5,  w, 0.04);
+          addStrut(archGroup, xOffset + w, y, -w, xOffset + w, y + 1.5,  w, 0.04);
+        }
       });
-      for (let y = 1; y <= 3; y++) {
-        const ringL = new THREE.Mesh(ringGeom, ringMat);
-        ringL.position.set(-20.2, y * 2.2, 0);
-        archGroup.add(ringL);
-        
-        const ringR = new THREE.Mesh(ringGeom, ringMat);
-        ringR.position.set(20.2, y * 2.2, 0);
-        archGroup.add(ringR);
+
+      // Horizontal beam truss
+      const cy = 9.0;
+      const cw = 0.4;
+      addStrut(archGroup, -20.2, cy - cw, -cw, 20.2, cy - cw, -cw, 0.08);
+      addStrut(archGroup, -20.2, cy + cw, -cw, 20.2, cy + cw, -cw, 0.08);
+      addStrut(archGroup, -20.2, cy - cw,  cw, 20.2, cy - cw,  cw, 0.08);
+      addStrut(archGroup, -20.2, cy + cw,  cw, 20.2, cy + cw,  cw, 0.08);
+
+      for (let x = -19.2; x < 20.2; x += 2.0) {
+        addStrut(archGroup, x - 1, cy - cw, -cw, x + 1, cy + cw, -cw, 0.04);
+        addStrut(archGroup, x - 1, cy - cw,  cw, x + 1, cy + cw,  cw, 0.04);
+        addStrut(archGroup, x, cy - cw, -cw, x, cy - cw, cw, 0.04);
+        addStrut(archGroup, x, cy + cw, -cw, x, cy + cw, cw, 0.04);
       }
+
+      // Digital sign board
+      const boardGeom = new THREE.BoxGeometry(9.0, 1.6, 0.35);
+      const boardFrameGeom = new THREE.BoxGeometry(9.4, 2.0, 0.45);
+      const frameMat = new THREE.MeshStandardMaterial({ color: 0x15171a, metalness: 0.85, roughness: 0.12 });
       
+      const frameMesh = new THREE.Mesh(boardFrameGeom, frameMat);
+      frameMesh.position.set(0, 9.8, 0);
+      frameMesh.castShadow = true;
+      archGroup.add(frameMesh);
+
+      const signCanvas = document.createElement('canvas');
+      signCanvas.width = 256;
+      signCanvas.height = 64;
+      const sCtx = signCanvas.getContext('2d');
+      if (sCtx) {
+        sCtx.fillStyle = '#0a0b0d';
+        sCtx.fillRect(0, 0, 256, 64);
+        sCtx.fillStyle = '#ffaa00';
+        sCtx.shadowColor = '#ff8800';
+        sCtx.shadowBlur = 4;
+        sCtx.font = 'bold 22px Courier New, monospace';
+        sCtx.textAlign = 'center';
+        sCtx.textBaseline = 'middle';
+        sCtx.fillText(`CHECKPOINT ${idx + 1}`, 128, 32);
+      }
+      const signTex = new THREE.CanvasTexture(signCanvas);
+      const signMat = new THREE.MeshStandardMaterial({
+        map: signTex,
+        emissiveMap: signTex,
+        emissive: new THREE.Color(0xff8800),
+        emissiveIntensity: 0.85,
+        roughness: 0.28,
+        metalness: 0.1
+      });
+
+      const boardMesh = new THREE.Mesh(boardGeom, signMat);
+      boardMesh.position.set(0, 9.8, 0.1);
+      archGroup.add(boardMesh);
+
+      const spot = new THREE.SpotLight(0xffea85, 3.5, 12, 0.72, 0.5, 1);
+      spot.position.set(0, 8.8, 0.2);
+      spot.target.position.set(0, 0, 0.2);
+      spot.castShadow = false;
+      archGroup.add(spot);
+      archGroup.add(spot.target);
+
       archGroup.position.copy(archPt);
       
       const archForward = archTangent.clone().normalize();

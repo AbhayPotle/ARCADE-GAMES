@@ -451,7 +451,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
     renderer.setSize(width, height);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
     
@@ -487,58 +487,182 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     }
 
     // Build road textures and meshes
-    const createAsphaltTexture = () => {
-      if (typeof document === 'undefined') return null;
-      const canvas = document.createElement('canvas');
-      canvas.width = 512;
-      canvas.height = 1024;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return null;
-
-      ctx.fillStyle = '#1e2126';
-      ctx.fillRect(0, 0, 512, 1024);
-
-      // Noise grain
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
-      for (let g = 0; g < 15000; g++) {
-        const gx = Math.random() * 512;
-        const gy = Math.random() * 1024;
-        ctx.fillRect(gx, gy, 1.5, 1.5);
+    const createRoadTextures = () => {
+      if (typeof window === 'undefined') return { map: null, normalMap: null, roughnessMap: null };
+      const width = 512;
+      const height = 1024;
+      
+      const diffCanvas = document.createElement('canvas');
+      diffCanvas.width = width;
+      diffCanvas.height = height;
+      const diffCtx = diffCanvas.getContext('2d');
+      if (!diffCtx) return { map: null, normalMap: null, roughnessMap: null };
+      
+      diffCtx.fillStyle = '#2c2f35';
+      diffCtx.fillRect(0, 0, width, height);
+      
+      const heightMap = new Uint8Array(width * height);
+      for (let i = 0; i < heightMap.length; i++) {
+        heightMap[i] = 127 + Math.floor(Math.random() * 20);
       }
-
-      // Yellow double center line
-      ctx.fillStyle = '#ffcc00';
-      ctx.fillRect(250, 0, 4, 1024);
-      ctx.fillRect(258, 0, 4, 1024);
-
-      // White dash lanes splits
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-      for (let y = 0; y < 1024; y += 96) {
-        ctx.fillRect(128, y, 3, 40);
-        ctx.fillRect(384, y, 3, 40);
+      
+      for (let s = 0; s < 30000; s++) {
+        const sx = Math.floor(Math.random() * width);
+        const sy = Math.floor(Math.random() * height);
+        const radius = 1 + Math.random() * 1.5;
+        const brightness = -18 + Math.random() * 36;
+        
+        diffCtx.fillStyle = `rgb(${44 + brightness}, ${46 + brightness}, ${50 + brightness})`;
+        diffCtx.beginPath();
+        diffCtx.arc(sx, sy, radius, 0, Math.PI * 2);
+        diffCtx.fill();
+        
+        const idx = sy * width + sx;
+        if (idx >= 0 && idx < heightMap.length) {
+          heightMap[idx] = Math.max(0, Math.min(255, heightMap[idx] + brightness));
+        }
       }
-
-      // Emissive neon shoulders
-      ctx.fillStyle = '#00f0ff';
-      ctx.fillRect(0, 0, 6, 1024);
-      ctx.fillStyle = '#e91e63';
-      ctx.fillRect(506, 0, 6, 1024);
-
-      return canvas;
+      
+      diffCtx.strokeStyle = '#1a1c1e';
+      diffCtx.lineWidth = 1.0;
+      for (let c = 0; c < 8; c++) {
+        let cx = Math.random() * width;
+        let cy = Math.random() * height;
+        diffCtx.beginPath();
+        diffCtx.moveTo(cx, cy);
+        for (let seg = 0; seg < 4; seg++) {
+          cx += -12 + Math.random() * 24;
+          cy += 15 + Math.random() * 30;
+          diffCtx.lineTo(cx, cy);
+          const idx = Math.floor(cy % height) * width + Math.floor(cx % width);
+          if (idx >= 0 && idx < heightMap.length) {
+            heightMap[idx] = 30;
+          }
+        }
+        diffCtx.stroke();
+      }
+      
+      diffCtx.strokeStyle = 'rgba(235, 235, 235, 0.7)';
+      diffCtx.lineWidth = 5.5;
+      diffCtx.setLineDash([110, 15]);
+      diffCtx.beginPath();
+      diffCtx.moveTo(8, 0); diffCtx.lineTo(8, height);
+      diffCtx.moveTo(width - 8, 0); diffCtx.lineTo(width - 8, height);
+      diffCtx.stroke();
+      
+      diffCtx.strokeStyle = '#e2a138';
+      diffCtx.lineWidth = 3.2;
+      diffCtx.setLineDash([]);
+      diffCtx.beginPath();
+      diffCtx.moveTo(250, 0); diffCtx.lineTo(250, height);
+      diffCtx.moveTo(262, 0); diffCtx.lineTo(262, height);
+      diffCtx.stroke();
+      
+      diffCtx.strokeStyle = 'rgba(235, 235, 235, 0.6)';
+      diffCtx.lineWidth = 2.8;
+      diffCtx.setLineDash([25, 75]);
+      diffCtx.beginPath();
+      diffCtx.moveTo(128, 0); diffCtx.lineTo(128, height);
+      diffCtx.moveTo(384, 0); diffCtx.lineTo(384, height);
+      diffCtx.stroke();
+      
+      diffCtx.strokeStyle = 'rgba(10, 10, 10, 0.18)';
+      diffCtx.lineWidth = 12;
+      diffCtx.setLineDash([]);
+      for (let s = 0; s < 2; s++) {
+        let sx = Math.random() * width;
+        let sy = Math.random() * height;
+        diffCtx.beginPath();
+        diffCtx.moveTo(sx, sy);
+        diffCtx.bezierCurveTo(sx + 40, sy + 120, sx - 20, sy + 250, sx + 15, sy + 400);
+        diffCtx.stroke();
+      }
+      
+      const normCanvas = document.createElement('canvas');
+      normCanvas.width = width;
+      normCanvas.height = height;
+      const normCtx = normCanvas.getContext('2d');
+      if (!normCtx) return { map: new THREE.CanvasTexture(diffCanvas), normalMap: null, roughnessMap: null };
+      
+      const normImgData = normCtx.createImageData(width, height);
+      const normData = normImgData.data;
+      const bumpStrength = 2.5;
+      
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const idx = y * width + x;
+          const hL = heightMap[y * width + Math.max(0, x - 1)];
+          const hR = heightMap[y * width + Math.min(width - 1, x + 1)];
+          const hU = heightMap[Math.max(0, y - 1) * width + x];
+          const hD = heightMap[Math.min(height - 1, y + 1) * width + x];
+          
+          const dX = (hR - hL) / 255.0 * bumpStrength;
+          const dY = (hD - hU) / 255.0 * bumpStrength;
+          const len = Math.sqrt(dX * dX + dY * dY + 1.0);
+          const nx = dX / len;
+          const ny = dY / len;
+          const nz = 1.0 / len;
+          
+          const pixelIdx = idx * 4;
+          normData[pixelIdx] = Math.round((nx * 0.5 + 0.5) * 255);
+          normData[pixelIdx + 1] = Math.round((ny * 0.5 + 0.5) * 255);
+          normData[pixelIdx + 2] = Math.round((nz * 0.5 + 0.5) * 255);
+          normData[pixelIdx + 3] = 255;
+        }
+      }
+      normCtx.putImageData(normImgData, 0, 0);
+      
+      const roughCanvas = document.createElement('canvas');
+      roughCanvas.width = width;
+      roughCanvas.height = height;
+      const roughCtx = roughCanvas.getContext('2d');
+      if (!roughCtx) return { map: new THREE.CanvasTexture(diffCanvas), normalMap: new THREE.CanvasTexture(normCanvas), roughnessMap: null };
+      
+      roughCtx.fillStyle = '#b8b8b8';
+      roughCtx.fillRect(0, 0, width, height);
+      
+      roughCtx.fillStyle = '#686868';
+      roughCtx.fillRect(0, 0, 16, height);
+      roughCtx.fillRect(width - 16, 0, 16, height);
+      roughCtx.fillRect(245, 0, 24, height);
+      for (let y = 0; y < height; y += 100) {
+        roughCtx.fillRect(124, y, 10, 45);
+        roughCtx.fillRect(380, y, 10, 45);
+      }
+      
+      roughCtx.fillStyle = '#585858';
+      for (let s = 0; s < 2; s++) {
+        let sx = Math.random() * width;
+        let sy = Math.random() * height;
+        roughCtx.lineWidth = 12;
+        roughCtx.beginPath();
+        roughCtx.moveTo(sx, sy);
+        roughCtx.bezierCurveTo(sx + 40, sy + 120, sx - 20, sy + 250, sx + 15, sy + 400);
+        roughCtx.stroke();
+      }
+      
+      const map = new THREE.CanvasTexture(diffCanvas);
+      const normalMap = new THREE.CanvasTexture(normCanvas);
+      const roughnessMap = new THREE.CanvasTexture(roughCanvas);
+      
+      [map, normalMap, roughnessMap].forEach(tex => {
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(1, 48);
+      });
+      
+      return { map, normalMap, roughnessMap };
     };
 
-    const asphaltCanvas = createAsphaltTexture();
-    const roadTexture = asphaltCanvas ? new THREE.CanvasTexture(asphaltCanvas) : null;
-    if (roadTexture) {
-      roadTexture.wrapS = THREE.RepeatWrapping;
-      roadTexture.wrapT = THREE.RepeatWrapping;
-      roadTexture.repeat.set(1, 48);
-    }
+    const { map, normalMap, roughnessMap } = createRoadTextures();
 
     const roadMat = new THREE.MeshStandardMaterial({
-      map: roadTexture,
-      roughness: 0.28,
-      metalness: 0.72
+      map: map || undefined,
+      normalMap: normalMap || undefined,
+      normalScale: new THREE.Vector2(0.85, 0.85),
+      roughnessMap: roughnessMap || undefined,
+      roughness: 1.0,
+      metalness: 0.15
     });
 
     roadSystem.buildRoadMesh(scene, roadWidth, roadMat);
@@ -610,6 +734,55 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const playerController = new VehicleController(selectedPaint, activeCar.id);
     playerCarGroup.add(playerController.mesh);
 
+    // Helper to apply realistic visual shaders to GLTF supercar models
+    const applyRealisticCarMaterials = (model: THREE.Group, paintColor: string) => {
+      model.traverse((node) => {
+        if (node instanceof THREE.Mesh) {
+          node.castShadow = true;
+          node.receiveShadow = true;
+          const name = node.name.toLowerCase();
+          
+          if (name.includes('body') || name.includes('paint') || name.includes('exterior') || name.includes('car_body')) {
+            node.material = new THREE.MeshPhysicalMaterial({
+              color: new THREE.Color(paintColor),
+              metalness: 0.94,
+              roughness: 0.08,
+              clearcoat: 1.0,
+              clearcoatRoughness: 0.03
+            });
+          } else if (name.includes('glass') || name.includes('window') || name.includes('windshield') || name.includes('canopy')) {
+            node.material = new THREE.MeshPhysicalMaterial({
+              color: 0x1a2b3c,
+              transparent: true,
+              opacity: 0.45,
+              roughness: 0.02,
+              metalness: 0.1,
+              transmission: 0.9,
+              thickness: 0.5
+            });
+          } else if (name.includes('rim') || name.includes('spoke') || name.includes('chrome') || name.includes('wheel_rim')) {
+            node.material = new THREE.MeshStandardMaterial({
+              color: 0xe0e6ed,
+              metalness: 0.98,
+              roughness: 0.06
+            });
+          } else if (name.includes('tire') || name.includes('rubber') || name.includes('tyre')) {
+            node.material = new THREE.MeshStandardMaterial({
+              color: 0x181a1d,
+              roughness: 0.85,
+              metalness: 0.05
+            });
+          } else if (name.includes('brake') || name.includes('disc') || name.includes('caliper')) {
+            node.material = new THREE.MeshStandardMaterial({
+              color: name.includes('caliper') ? 0xdd0808 : 0x7a828a,
+              metalness: 0.88,
+              roughness: 0.2
+            });
+          }
+        }
+      });
+    };
+
     gltfLoader.load(
       carUrl,
       (gltf) => {
@@ -617,22 +790,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const loadedModel = gltf.scene;
         loadedModel.scale.setScalar(0.7);
         loadedModel.rotation.y = Math.PI;
-        
-        loadedModel.traverse((node) => {
-          if (node instanceof THREE.Mesh) {
-            node.castShadow = true;
-            node.receiveShadow = true;
-            if (node.name.toLowerCase().includes('body') || node.name.toLowerCase().includes('paint') || node.name.toLowerCase().includes('exterior')) {
-              node.material = new THREE.MeshPhysicalMaterial({
-                color: new THREE.Color(selectedPaint),
-                metalness: 0.95,
-                roughness: 0.08,
-                clearcoat: 1.0,
-                clearcoatRoughness: 0.03
-              });
-            }
-          }
-        });
+        applyRealisticCarMaterials(loadedModel, selectedPaint);
         playerCarGroup.add(loadedModel);
       },
       undefined,
@@ -654,22 +812,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const loadedModel = gltf.scene;
         loadedModel.scale.setScalar(0.7);
         loadedModel.rotation.y = Math.PI;
-        
-        loadedModel.traverse((node) => {
-          if (node instanceof THREE.Mesh) {
-            node.castShadow = true;
-            node.receiveShadow = true;
-            if (node.name.toLowerCase().includes('body') || node.name.toLowerCase().includes('paint') || node.name.toLowerCase().includes('exterior')) {
-              node.material = new THREE.MeshPhysicalMaterial({
-                color: new THREE.Color('#ff0055'),
-                metalness: 0.95,
-                roughness: 0.08,
-                clearcoat: 1.0,
-                clearcoatRoughness: 0.03
-              });
-            }
-          }
-        });
+        applyRealisticCarMaterials(loadedModel, '#ff0055');
         botCar.add(loadedModel);
       },
       undefined,
@@ -690,21 +833,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const loadedModel = gltf.scene.clone();
         loadedModel.scale.setScalar(0.7);
         loadedModel.rotation.y = Math.PI;
-        loadedModel.traverse((node) => {
-          if (node instanceof THREE.Mesh) {
-            node.castShadow = true;
-            node.receiveShadow = true;
-            if (node.name.toLowerCase().includes('body') || node.name.toLowerCase().includes('paint') || node.name.toLowerCase().includes('exterior')) {
-              node.material = new THREE.MeshPhysicalMaterial({
-                color: new THREE.Color('#00ccff'),
-                metalness: 0.95,
-                roughness: 0.08,
-                clearcoat: 1.0,
-                clearcoatRoughness: 0.03
-              });
-            }
-          }
-        });
+        applyRealisticCarMaterials(loadedModel, '#00ccff');
         bot2Car.add(loadedModel);
       },
       undefined,
@@ -723,21 +852,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const loadedModel = gltf.scene.clone();
         loadedModel.scale.setScalar(0.7);
         loadedModel.rotation.y = Math.PI;
-        loadedModel.traverse((node) => {
-          if (node instanceof THREE.Mesh) {
-            node.castShadow = true;
-            node.receiveShadow = true;
-            if (node.name.toLowerCase().includes('body') || node.name.toLowerCase().includes('paint') || node.name.toLowerCase().includes('exterior')) {
-              node.material = new THREE.MeshPhysicalMaterial({
-                color: new THREE.Color('#ff00aa'),
-                metalness: 0.95,
-                roughness: 0.08,
-                clearcoat: 1.0,
-                clearcoatRoughness: 0.03
-              });
-            }
-          }
-        });
+        applyRealisticCarMaterials(loadedModel, '#ff00aa');
         bot3Car.add(loadedModel);
       },
       undefined,

@@ -5,92 +5,105 @@ import { RoadSystem } from './RoadSystem';
 export class EnvironmentSystem {
   roadSystem: RoadSystem;
 
+  skyscraperMaterials: THREE.MeshStandardMaterial[] = [];
+
   constructor(roadSystem: RoadSystem) {
     this.roadSystem = roadSystem;
+    this.initSkyscraperMaterials();
+  }
+
+  private createFacadeTexture(winColor: number): THREE.Texture {
+    if (typeof window === 'undefined') return new THREE.Texture();
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return new THREE.Texture();
+
+    ctx.fillStyle = '#11141a';
+    ctx.fillRect(0, 0, 128, 512);
+
+    ctx.fillStyle = '#222730';
+    ctx.fillRect(0, 0, 8, 512);
+    ctx.fillRect(60, 0, 8, 512);
+    ctx.fillRect(120, 0, 8, 512);
+
+    const hexColorStr = '#' + new THREE.Color(winColor).getHexString();
+    
+    for (let y = 10; y < 512; y += 12) {
+      ctx.fillStyle = '#171a22';
+      ctx.fillRect(0, y - 2, 128, 3);
+      
+      ctx.fillStyle = hexColorStr;
+      for (let x = 12; x < 120; x += 16) {
+        if (x !== 60 && x !== 60 - 16) {
+          if (Math.random() > 0.35) {
+            ctx.fillRect(x, y, 8, 6);
+          }
+        }
+      }
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(3, 12);
+    return tex;
+  }
+
+  private initSkyscraperMaterials() {
+    const winColors = [0x90caf9, 0xffe082, 0xa5d6a7, 0xef9a9a, 0xe0e0e0];
+    winColors.forEach((colorVal) => {
+      const tex = this.createFacadeTexture(colorVal);
+      const mat = new THREE.MeshStandardMaterial({
+        map: tex,
+        emissiveMap: tex,
+        emissive: new THREE.Color(colorVal),
+        emissiveIntensity: 1.0,
+        roughness: 0.28,
+        metalness: 0.72
+      });
+      this.skyscraperMaterials.push(mat);
+    });
   }
 
   createHighDetailSkyscraper(pos: THREE.Vector3, height: number): THREE.Group {
     const skyscraper = new THREE.Group();
 
-    // Randomize futuristic skyscraper structural parameters
-    const floorsCount = Math.floor(height / 4.5);
-    const w1 = 8 + Math.random() * 12;
-    const d1 = 8 + Math.random() * 12;
+    const w1 = 9 + Math.random() * 11;
+    const d1 = 9 + Math.random() * 11;
 
     const baseGeom = new THREE.BoxGeometry(w1, 6.0, d1);
-    const baseMat = new THREE.MeshStandardMaterial({ color: 0x11131a, roughness: 0.7, metalness: 0.8 });
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x14171f, roughness: 0.65, metalness: 0.8 });
     const baseMesh = new THREE.Mesh(baseGeom, baseMat);
     baseMesh.position.y = 3.0;
     baseMesh.castShadow = true;
     baseMesh.receiveShadow = true;
     skyscraper.add(baseMesh);
 
-    // Office panels and window lighting geometries
-    const winWidth = 0.5;
-    const winHeight = 0.8;
-    const winColors = [0x90caf9, 0xfff59d, 0xa5d6a7, 0xef9a9a, 0xeeeeee];
-    const windowMaterial = new THREE.MeshBasicMaterial({
-      color: winColors[Math.floor(Math.random() * winColors.length)],
-      transparent: true,
-      opacity: 0.85
-    });
-
-    const windowGeom = new THREE.BoxGeometry(winWidth, winHeight, 0.05);
-
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1d212b, roughness: 0.5, metalness: 0.8 });
-
-    const w2 = w1 - 1.2;
-    const d2 = d1 - 1.2;
+    const w2 = w1 - 1.0;
+    const d2 = d1 - 1.0;
     const bodyGeom = new THREE.BoxGeometry(w2, height - 6.0, d2);
-    const bodyMesh = new THREE.Mesh(bodyGeom, pillarMat);
+    
+    // Choose a random window light color material
+    const matIdx = Math.floor(Math.random() * this.skyscraperMaterials.length);
+    const bodyMesh = new THREE.Mesh(bodyGeom, this.skyscraperMaterials[matIdx]);
     bodyMesh.position.y = 6.0 + (height - 6.0) / 2;
     bodyMesh.castShadow = true;
     bodyMesh.receiveShadow = true;
     skyscraper.add(bodyMesh);
 
-    // Procedural office window meshes
-    for (let f = 1; f < floorsCount; f++) {
-      const floorY = 6.0 + f * 4.5;
-      if (Math.random() > 0.3) {
-        // Front and back panels windows
-        for (let x = -w2 / 2 + 1.2; x <= w2 / 2 - 1.2; x += 2.2) {
-          if (Math.random() > 0.45) {
-            const winF = new THREE.Mesh(windowGeom, windowMaterial);
-            winF.position.set(x, floorY, d2 / 2 + 0.02);
-            skyscraper.add(winF);
-
-            const winB = winF.clone();
-            winB.position.z = -d2 / 2 - 0.02;
-            skyscraper.add(winB);
-          }
-        }
-        // Left and right panels windows
-        for (let z = -d2 / 2 + 1.2; z <= d2 / 2 - 1.2; z += 2.2) {
-          if (Math.random() > 0.45) {
-            const winL = new THREE.Mesh(windowGeom, windowMaterial);
-            winL.position.set(-w2 / 2 - 0.02, floorY, z);
-            winL.rotation.y = Math.PI / 2;
-            skyscraper.add(winL);
-
-            const winR = winL.clone();
-            winR.position.x = w2 / 2 + 0.02;
-            skyscraper.add(winR);
-          }
-        }
-      }
-    }
-
-    // Spire spire tips on top of the skyscraper
-    const spireH = 8.0 + Math.random() * 25.0;
-    const spireGeom = new THREE.CylinderGeometry(0.04, 0.25, spireH, 8);
+    // Spire
+    const spireH = 8.0 + Math.random() * 20.0;
+    const spireGeom = new THREE.CylinderGeometry(0.04, 0.22, spireH, 8);
     const spire = new THREE.Mesh(spireGeom, baseMat);
     spire.position.y = height + spireH / 2;
     spire.castShadow = true;
     skyscraper.add(spire);
 
-    // Red hazard flashing warning beacon light on spire tip
-    const beaconGeom = new THREE.SphereGeometry(0.35, 8, 8);
-    const beaconMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    // Warning beacon
+    const beaconGeom = new THREE.SphereGeometry(0.3, 8, 8);
+    const beaconMat = new THREE.MeshBasicMaterial({ color: 0xff0808 });
     const beacon = new THREE.Mesh(beaconGeom, beaconMat);
     beacon.name = 'warning_beacon';
     beacon.position.y = height + spireH;
