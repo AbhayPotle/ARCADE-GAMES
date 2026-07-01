@@ -166,7 +166,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     collisionShake: 0,
     gameOver: false,
     countdownActive: false,
-    transmissionMode: 'auto' as 'auto' | 'manual'
+    transmissionMode: 'auto' as 'auto' | 'manual',
+    lightningActive: false,
+    lightningTimer: 0
   });
 
   // Three.js instances ref
@@ -685,8 +687,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     // 1. Scene, Camera, WebGLRenderer Setup
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x4f8bb5);
-    scene.fog = new THREE.FogExp2(scene.background, 0.0035);
+    const bgHex = activeEvent.timeOfDay === 'sunset' ? 0x1e0e22 : (activeEvent.timeOfDay === 'night' ? 0x060614 : 0x4f8bb5);
+    scene.background = new THREE.Color(bgHex);
+    const fogDensity = activeEvent.weather === 'fog' ? 0.015 : (activeEvent.weather === 'storm' ? 0.009 : 0.0035);
+    scene.fog = new THREE.FogExp2(scene.background, fogDensity);
 
     // Dynamic Spherical Equirectangular Reflections using local 8K cyberpunk backdrop
     const textureLoader = new THREE.TextureLoader();
@@ -887,6 +891,15 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     sun.shadow.camera.top = 60;
     sun.shadow.camera.bottom = -60;
     scene.add(sun);
+    threeRef.current.sun = sun;
+    threeRef.current.scene = scene;
+
+    // Secondary warm magenta fill light for Sunset Neon Sprint (simulates city glow)
+    if (activeEvent.id === 'neon_sprint') {
+      const sun2 = new THREE.DirectionalLight(0xff00bb, 0.45);
+      sun2.position.set(-100, 80, -50);
+      scene.add(sun2);
+    }
 
     // 3. Volumetric Sun Shafts (God Rays radiating from sun direction)
     const shaftGeom = new THREE.CylinderGeometry(0.1, 45, 180, 8, 1, true);
@@ -1474,11 +1487,28 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
       const terrY = getTerrainHeight(pos.x, pos.z);
 
-      if (false) {
-        const h = 25 + Math.random() * 65;
+      const isCityEvent = activeEvent.id === 'neon_sprint' || activeEvent.id === 'storm_escape';
+      if (isCityEvent) {
+        const h = 35 + Math.random() * 85;
         const skyscraper = createHighDetailSkyscraper(pos, h);
         skyscraper.position.y = terrY - 1.5;
         scene.add(skyscraper);
+      } else if (activeEvent.id === 'canyon_jump' && Math.random() > 0.4) {
+        // Red Canyon Boulders
+        const rockGeom = new THREE.DodecahedronGeometry(3.0 + Math.random() * 8.0, 1);
+        const rockMat = new THREE.MeshStandardMaterial({
+          color: 0xc65a3b, // red sandstone canyon color
+          roughness: 0.9,
+          metalness: 0.05
+        });
+        const rock = new THREE.Mesh(rockGeom, rockMat);
+        rock.scale.set(1.0 + Math.random() * 0.4, 1.8 + Math.random() * 1.6, 1.0 + Math.random() * 0.4); // irregular tall formations
+        rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+        rock.position.copy(pos);
+        rock.position.y = terrY - 0.5;
+        rock.castShadow = true;
+        rock.receiveShadow = true;
+        scene.add(rock);
       } else {
         // Multi-layered organic pine trees
         const treeGroup = new THREE.Group();
@@ -2266,6 +2296,41 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const bankAngle = Math.max(-0.35, Math.min(0.35, curvature * 14.0));
     let binormal = frame.binormal.clone();
     binormal.applyAxisAngle(tangent, bankAngle);
+
+    // Lightning flash logic for storm challenge
+    if (activeEvent.id === 'storm_escape') {
+      const sun = threeRef.current.lights?.sun;
+      if (sun) {
+        if (Math.random() > 0.994 && !state.lightningActive) {
+          state.lightningActive = true;
+          state.lightningTimer = 0.12 + Math.random() * 0.15;
+          audioSynth.playError(); // play thud crash SFX as thunder clap
+        }
+
+        if (state.lightningActive) {
+          state.lightningTimer -= dt;
+          if (state.lightningTimer <= 0) {
+            state.lightningActive = false;
+            // Restore night lighting levels
+            sun.intensity = 0.15;
+            sun.color.setHex(0xffffff);
+            scene.fog.color.setHex(0x060614);
+            if (scene.background instanceof THREE.Color) {
+              scene.background.setHex(0x060614);
+            }
+          } else {
+            // Flash intensity and white fog/sky color
+            const intensity = 3.5 + Math.random() * 2.0;
+            sun.intensity = intensity;
+            sun.color.setHex(0xddeeff); // cool lightning blue
+            scene.fog.color.setHex(0xeef6ff);
+            if (scene.background instanceof THREE.Color) {
+              scene.background.setHex(0xeef6ff);
+            }
+          }
+        }
+      }
+    }
 
     // A. Dynamic Weather/Rain Updates
     const isPlayerInTunnel = playerT >= 0.55 && playerT <= 0.72;
