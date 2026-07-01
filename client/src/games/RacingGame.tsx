@@ -104,6 +104,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   const [hudStuntMsg, setHudStuntMsg] = useState<string>('');
   const [hudStuntTimer, setHudStuntTimer] = useState<number>(0);
   
+  const [transmissionMode, setTransmissionMode] = useState<'auto' | 'manual'>('auto');
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [endTotalScore, setEndTotalScore] = useState<number>(0);
   const [endWinnerId, setEndWinnerId] = useState<string>('');
@@ -164,7 +165,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     steerPitch: 0,
     collisionShake: 0,
     gameOver: false,
-    countdownActive: false
+    countdownActive: false,
+    transmissionMode: 'auto' as 'auto' | 'manual'
   });
 
   // Three.js instances ref
@@ -561,6 +563,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     setGamePhase('countdown');
     setCountdownNum(3);
     stateRef.current.countdownActive = true;
+    stateRef.current.transmissionMode = transmissionMode;
 
     // Start the 3D Engine Frame loops immediately!
     startRacingEngine();
@@ -2307,6 +2310,22 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // Acceleration & Speed
     const maxSpeedLimit = activeCar.maxSpeed * nosSpdMult + (engineLvl - 1) * 6;
     const accelRate = activeCar.accel * (state.isNosActive ? 2.0 : 1.0);
+    
+    // Torque bogging physics in manual transmission
+    const gearNum = typeof state.gear === 'number' ? state.gear : 1;
+    const gearMax = maxSpeedLimit * [0.15, 0.32, 0.52, 0.72, 0.88, 1.0][gearNum - 1];
+    const gearMin = gearNum === 1 ? 0 : maxSpeedLimit * [0.15, 0.32, 0.52, 0.72, 0.88, 1.0][gearNum - 2];
+    const estimatedRpm = 1000 + ((state.speed - gearMin) / Math.max(1, gearMax - gearMin)) * 7000;
+    let torqueFactor = 1.0;
+    if (state.transmissionMode === 'manual') {
+      if (estimatedRpm < 2200) {
+        torqueFactor = Math.max(0.18, (estimatedRpm - 400) / 1800);
+      } else if (estimatedRpm > 7200) {
+        torqueFactor = Math.max(0.4, 1.0 - (estimatedRpm - 7200) / 1800);
+      }
+    }
+    const finalAccelRate = accelRate * torqueFactor;
+
     const speedSensitiveFactor = Math.max(0.32, 1.0 - Math.abs(state.speed) / 130);
     const handlingRate = activeCar.handling * speedSensitiveFactor * (state.isDrifting ? activeCar.driftGrip : 1.0) * (1.0 + (tiresLvl - 1) * 0.12);
 
@@ -2345,10 +2364,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
     } else if (state.isDrifting) {
       if (accelInput) {
-        state.speed += accelRate * dt * 0.35;
+        state.speed += finalAccelRate * dt * 0.35;
         state.speed -= 3.5 * dt;
       } else if (brakeInput) {
-        state.speed -= accelRate * dt * 1.2;
+        state.speed -= finalAccelRate * dt * 1.2;
       } else {
         state.speed -= 7.5 * dt;
       }
@@ -2358,14 +2377,14 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       // Normal driving (forward, stationary, or reverse)
       if (state.speed >= 0) {
         if (accelInput) {
-          state.speed += accelRate * dt;
+          state.speed += finalAccelRate * dt;
           if (state.speed > maxSpeedLimit) state.speed = maxSpeedLimit;
         } else if (brakeInput) {
           // If speed is 0 or very small, holding brake transitions into reverse
           if (state.speed <= 0.5) {
-            state.speed -= accelRate * dt * 0.45;
+            state.speed -= finalAccelRate * dt * 0.45;
           } else {
-            state.speed -= accelRate * dt * 1.8;
+            state.speed -= finalAccelRate * dt * 1.8;
           }
         } else {
           // Passive rolling drag
@@ -2376,11 +2395,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         // Reversing (state.speed < 0)
         if (accelInput) {
           // Accelerator acts as brake in reverse
-          state.speed += accelRate * dt * 1.8;
+          state.speed += finalAccelRate * dt * 1.8;
           if (state.speed > 0) state.speed = 0;
         } else if (brakeInput) {
           // Brake acts as accelerator in reverse
-          state.speed -= accelRate * dt * 0.45;
+          state.speed -= finalAccelRate * dt * 0.45;
           if (state.speed < -20) state.speed = -20;
         } else {
           // Passive rolling drag in reverse (towards 0)
@@ -3039,20 +3058,25 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     } else {
       let gearNum = typeof state.gear === 'number' ? state.gear : 1;
       let nextGearNum = gearNum;
-      if (speedKphVal > 25 && gearNum === 1) nextGearNum = 2;
-      else if (speedKphVal > 60 && gearNum === 2) nextGearNum = 3;
-      else if (speedKphVal > 110 && gearNum === 3) nextGearNum = 4;
-      else if (speedKphVal > 165 && gearNum === 4) nextGearNum = 5;
-      else if (speedKphVal > 230 && gearNum === 5) nextGearNum = 6;
-      else if (speedKphVal < 18 && gearNum === 2) nextGearNum = 1;
-      else if (speedKphVal < 50 && gearNum === 3) nextGearNum = 2;
-      else if (speedKphVal < 90 && gearNum === 4) nextGearNum = 3;
-      else if (speedKphVal < 140 && gearNum === 5) nextGearNum = 4;
-      else if (speedKphVal < 200 && gearNum === 6) nextGearNum = 5;
+      
+      if (state.transmissionMode === 'manual') {
+        nextGearNum = gearNum;
+      } else {
+        if (speedKphVal > 25 && gearNum === 1) nextGearNum = 2;
+        else if (speedKphVal > 60 && gearNum === 2) nextGearNum = 3;
+        else if (speedKphVal > 110 && gearNum === 3) nextGearNum = 4;
+        else if (speedKphVal > 165 && gearNum === 4) nextGearNum = 5;
+        else if (speedKphVal > 230 && gearNum === 5) nextGearNum = 6;
+        else if (speedKphVal < 18 && gearNum === 2) nextGearNum = 1;
+        else if (speedKphVal < 50 && gearNum === 3) nextGearNum = 2;
+        else if (speedKphVal < 90 && gearNum === 4) nextGearNum = 3;
+        else if (speedKphVal < 140 && gearNum === 5) nextGearNum = 4;
+        else if (speedKphVal < 200 && gearNum === 6) nextGearNum = 5;
 
-      if (nextGearNum !== gearNum) {
-        state.gear = nextGearNum;
-        audioSynth.playGearShift();
+        if (nextGearNum !== gearNum) {
+          state.gear = nextGearNum;
+          audioSynth.playGearShift();
+        }
       }
       nextGear = nextGearNum;
 
@@ -3061,7 +3085,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       calculatedRpm = 1000 + Math.round(((state.speed - gearMin) / Math.max(1, gearMax - gearMin)) * 7000);
     }
     
-    if (calculatedRpm > 8000) calculatedRpm = 8000;
+    // Rev-limiter ignition-cut bounce physics at 8000 RPM
+    if (calculatedRpm >= 8000) {
+      calculatedRpm = 7820 + Math.round(Math.sin(Date.now() * 0.07) * 180);
+      state.speed = Math.max(0, state.speed - 3.8 * dt);
+    }
 
     setHudRpm(calculatedRpm);
     setHudGear(nextGear);
@@ -3133,6 +3161,34 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           stateRef.current.cameraMode === 'far' ? 'hood' :
           stateRef.current.cameraMode === 'hood' ? 'cockpit' : 'chase';
       }
+      
+      // Manual Gear Shifting (Q to shift down, E to shift up)
+      if (stateRef.current.transmissionMode === 'manual' && !stateRef.current.gameOver && !stateRef.current.countdownActive) {
+        let currentGear = stateRef.current.gear;
+        if (k === 'q') {
+          // Shift Down
+          if (typeof currentGear === 'number') {
+            if (currentGear > 1) {
+              stateRef.current.gear = currentGear - 1;
+              audioSynth.playGearShift();
+            } else if (stateRef.current.speed <= 2.5) {
+              stateRef.current.gear = 'R';
+              audioSynth.playGearShift();
+            }
+          }
+        }
+        if (k === 'e') {
+          // Shift Up
+          if (typeof currentGear === 'number') {
+            if (currentGear < 6) {
+              stateRef.current.gear = currentGear + 1;
+              audioSynth.playGearShift();
+            }
+          } else if (currentGear === 'R') {
+            stateRef.current.gear = 1;
+            audioSynth.playGearShift();
+          }
+        }
 
       // Reset vehicle positioning (R key)
       if (k === 'r') {
