@@ -1546,17 +1546,17 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1d212a, metalness: 0.9, roughness: 0.15 });
       
       const leftPillar = new THREE.Mesh(pillarGeom, pillarMat);
-      leftPillar.position.set(-18.5, 4.5, 0);
+      leftPillar.position.set(-20.2, 4.5, 0);
       leftPillar.castShadow = true;
       archGroup.add(leftPillar);
       
       const rightPillar = new THREE.Mesh(pillarGeom, pillarMat);
-      rightPillar.position.set(18.5, 4.5, 0);
+      rightPillar.position.set(20.2, 4.5, 0);
       rightPillar.castShadow = true;
       archGroup.add(rightPillar);
       
       // Crossbar overhead beam
-      const crossbarGeom = new THREE.BoxGeometry(38.2, 1.0, 1.6);
+      const crossbarGeom = new THREE.BoxGeometry(41.6, 1.0, 1.6);
       const crossbar = new THREE.Mesh(crossbarGeom, pillarMat);
       crossbar.position.set(0, 9.0, 0);
       crossbar.castShadow = true;
@@ -1582,11 +1582,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       });
       for (let y = 1; y <= 3; y++) {
         const ringL = new THREE.Mesh(ringGeom, ringMat);
-        ringL.position.set(-18.5, y * 2.2, 0);
+        ringL.position.set(-20.2, y * 2.2, 0);
         archGroup.add(ringL);
         
         const ringR = new THREE.Mesh(ringGeom, ringMat);
-        ringR.position.set(18.5, y * 2.2, 0);
+        ringR.position.set(20.2, y * 2.2, 0);
         archGroup.add(ringR);
       }
       
@@ -1594,7 +1594,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       
       const archForward = archTangent.clone().normalize();
       const archRight = archBinormal.clone().normalize();
-      const archUp = new THREE.Vector3().crossVectors(archForward, archRight).normalize();
+      const archUp = frame.normal.clone().normalize();
       const archOrientMat = new THREE.Matrix4().makeBasis(archRight, archUp, archForward);
       archGroup.quaternion.setFromRotationMatrix(archOrientMat);
       
@@ -1766,7 +1766,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
       // --- Street Lamps ---
       // Place street lamps every 12 segments (~60 meters) alternating left and right
-      if (i % 12 === 0) {
+      if (i % 12 === 0 && i !== 0 && i !== 300) {
         const isLeft = (i / 12) % 2 === 0;
         const binorm = isLeft ? binormal1.clone().multiplyScalar(-shoulderOffset - 0.8) : binormal1.clone().multiplyScalar(shoulderOffset + 0.8);
         const lampPos = pt1.clone().add(binorm);
@@ -1830,13 +1830,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // 8.6. Build Bridge Structures and Tunnel Enclosures
     const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x455a64, roughness: 0.8, metalness: 0.1 });
     const pillarGeom = new THREE.CylinderGeometry(1.5, 1.8, 45, 8);
-    const crossBeamGeom = new THREE.BoxGeometry(26, 2, 3);
-    const bridgeArchGeom = new THREE.TorusGeometry(14, 0.5, 8, 30, Math.PI); // arch above road
+    const crossBeamGeom = new THREE.BoxGeometry(41.2, 2, 3);
+    const bridgeArchGeom = new THREE.TorusGeometry(21.0, 0.5, 8, 30, Math.PI); // arch above road
 
     const tunnelWallMat = new THREE.MeshStandardMaterial({ color: 0x263238, roughness: 0.9, metalness: 0.1 });
     const tunnelLeftGeom = new THREE.BoxGeometry(1.2, 8.5, 4.2);
     const tunnelRightGeom = new THREE.BoxGeometry(1.2, 8.5, 4.2);
-    const tunnelCeilingGeom = new THREE.BoxGeometry(25.6, 1.2, 4.2);
+    const tunnelCeilingGeom = new THREE.BoxGeometry(39.2, 1.2, 4.2);
     const tunnelLightGeom = new THREE.BoxGeometry(0.8, 0.15, 3.8);
     const tunnelLightMat = new THREE.MeshBasicMaterial({ color: 0xffea85 });
 
@@ -1867,12 +1867,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           const bridgeGroup = new THREE.Group();
 
           const pillarL = new THREE.Mesh(pillarGeom, bridgeMat);
-          pillarL.position.set(-12.5, -22.5, 0);
+          pillarL.position.set(-19.5, -22.5, 0);
           pillarL.castShadow = true;
           bridgeGroup.add(pillarL);
 
           const pillarR = new THREE.Mesh(pillarGeom, bridgeMat);
-          pillarR.position.set(12.5, -22.5, 0);
+          pillarR.position.set(19.5, -22.5, 0);
           pillarR.castShadow = true;
           bridgeGroup.add(pillarR);
 
@@ -1900,13 +1900,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const tunnelGroup = new THREE.Group();
 
         const wallL = new THREE.Mesh(tunnelLeftGeom, tunnelWallMat);
-        wallL.position.set(-11.8, 3.85, 0);
+        wallL.position.set(-18.6, 3.85, 0);
         wallL.castShadow = true;
         wallL.receiveShadow = true;
         tunnelGroup.add(wallL);
 
         const wallR = new THREE.Mesh(tunnelRightGeom, tunnelWallMat);
-        wallR.position.set(11.8, 3.85, 0);
+        wallR.position.set(18.6, 3.85, 0);
         wallR.castShadow = true;
         wallR.receiveShadow = true;
         tunnelGroup.add(wallR);
