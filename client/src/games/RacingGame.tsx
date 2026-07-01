@@ -299,6 +299,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     shellGeometry.center();
     shellGeometry.rotateY(Math.PI / 2);
     const shellMesh = new THREE.Mesh(shellGeometry, bodyMat);
+    if (modelId === 'sentinel') {
+      shellMesh.scale.set(0.65, 1.0, 1.0); // narrow F1 style body shell
+    }
     shellMesh.castShadow = true;
     shellMesh.receiveShadow = true;
     carGroup.add(shellMesh);
@@ -372,6 +375,15 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     wingMesh.position.set(0, 0.28, 0); // local offset
     wingMesh.castShadow = true;
     spoilerGroup.add(wingMesh);
+
+    // Double-deck spoiler wing for Vortex model
+    if (modelId === 'vortex') {
+      const wingGeom2 = new THREE.BoxGeometry(2.45, 0.03, 0.55);
+      const wingMesh2 = new THREE.Mesh(wingGeom2, carbonMat);
+      wingMesh2.position.set(0, 0.48, -0.08);
+      wingMesh2.castShadow = true;
+      spoilerGroup.add(wingMesh2);
+    }
 
     const strutGeom = new THREE.BoxGeometry(0.06, 0.45, 0.12);
     const strutMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.95 });
@@ -486,11 +498,12 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const caliperGeom = new THREE.BoxGeometry(0.12, 0.22, 0.26);
     const caliperMat = new THREE.MeshStandardMaterial({ color: 0xff0800, roughness: 0.2 });
 
+    const wX = modelId === 'sentinel' ? 1.28 : 1.05;
     const wheelOffsets = [
-      { x: -1.05, y: -0.1, z: 1.3, name: 'FL' },
-      { x: 1.05, y: -0.1, z: 1.3, name: 'FR' },
-      { x: -1.05, y: -0.1, z: -1.3, name: 'RL' },
-      { x: 1.05, y: -0.1, z: -1.3, name: 'RR' }
+      { x: -wX, y: -0.1, z: 1.3, name: 'FL' },
+      { x: wX, y: -0.1, z: 1.3, name: 'FR' },
+      { x: -wX, y: -0.1, z: -1.3, name: 'RL' },
+      { x: wX, y: -0.1, z: -1.3, name: 'RR' }
     ];
 
     wheelOffsets.forEach((offset, idx) => {
@@ -535,6 +548,63 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
       carGroup.add(wheelHub);
     });
+
+    // Custom detailing package upgrades per model
+    if (modelId === 'sentinel') {
+      // F1 front wing
+      const frontWingGeom = new THREE.BoxGeometry(2.5, 0.05, 0.45);
+      const frontWing = new THREE.Mesh(frontWingGeom, carbonMat);
+      frontWing.position.set(0, -0.12, 2.05);
+      frontWing.castShadow = true;
+      carGroup.add(frontWing);
+      
+      // Exposed front wishbone control arms
+      const armGeom = new THREE.CylinderGeometry(0.025, 0.025, 0.85, 6);
+      armGeom.rotateZ(Math.PI / 2);
+      const armFL = new THREE.Mesh(armGeom, carbonMat);
+      armFL.position.set(-0.75, -0.1, 1.3);
+      armFL.rotation.y = 0.25;
+      const armFR = armFL.clone();
+      armFR.position.x = 0.75;
+      armFR.rotation.y = -0.25;
+      carGroup.add(armFL, armFR);
+    } else if (modelId === 'intercept') {
+      // LMP1 aerodynamic center stabilizing fin
+      const centerFinGeom = new THREE.BoxGeometry(0.04, 0.65, 1.5);
+      const centerFin = new THREE.Mesh(centerFinGeom, carbonMat);
+      centerFin.position.set(0, 0.62, -0.9);
+      centerFin.castShadow = true;
+      carGroup.add(centerFin);
+      
+      // Carbon fiber side skirts splitters
+      const skirtGeom = new THREE.BoxGeometry(2.32, 0.04, 2.6);
+      const skirt = new THREE.Mesh(skirtGeom, carbonMat);
+      skirt.position.set(0, -0.15, 0);
+      skirt.castShadow = true;
+      carGroup.add(skirt);
+    } else if (modelId === 'vortex') {
+      // Bumper Canards/Winglets
+      const canardGeom = new THREE.BoxGeometry(0.35, 0.02, 0.25);
+      canardGeom.rotateY(0.4);
+      const canardL = new THREE.Mesh(canardGeom, carbonMat);
+      canardL.position.set(-1.12, 0.05, 1.95);
+      canardL.rotation.z = -0.25;
+      const canardR = canardL.clone();
+      canardR.position.x = 1.12;
+      canardR.rotation.z = 0.25;
+      canardL.castShadow = true;
+      canardR.castShadow = true;
+      carGroup.add(canardL, canardR);
+      
+      // Hood vents
+      const ventHoleGeom = new THREE.BoxGeometry(0.42, 0.02, 0.55);
+      const ventHoleL = new THREE.Mesh(ventHoleGeom, carbonMat);
+      ventHoleL.position.set(-0.45, 0.22, 1.15);
+      ventHoleL.rotation.x = 0.25;
+      const ventHoleR = ventHoleL.clone();
+      ventHoleR.position.x = 0.45;
+      carGroup.add(ventHoleL, ventHoleR);
+    }
 
     return carGroup;
   };
