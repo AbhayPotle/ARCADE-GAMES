@@ -32,7 +32,7 @@ export const HUD: React.FC<HUDProps> = ({
       {/* Top Panel stats */}
       <div className="flex justify-between items-start w-full">
         <div className="glass-panel p-2 border-neon-cyan/20 rounded flex flex-col space-y-1">
-          <span className="text-neon-cyan font-bold tracking-widest text-[8px] uppercase">// telemetry</span>
+          <span className="text-neon-cyan font-bold tracking-widest text-[8px] uppercase">{"// telemetry"}</span>
           <span className="text-[14px] text-white font-orbitron font-bold">POS: {hudPosition} / 4</span>
           <span className="text-[9px] text-gray-400 font-mono">Progress: {hudProgress}%</span>
           <canvas 
@@ -42,31 +42,31 @@ export const HUD: React.FC<HUDProps> = ({
             className="w-[120px] h-[120px] bg-black/40 border border-neon-cyan/20 rounded mt-1" 
           />
         </div>
-
+ 
         {/* Stunt popups notifier */}
         {hudStuntTimer > 0 && (
           <div className="glass-panel border-neon-yellow/30 bg-neon-yellow/10 text-neon-yellow text-xs font-orbitron font-bold uppercase px-4 py-2 rounded animate-bounce self-center">
             {hudStuntMsg}
           </div>
         )}
-
+ 
         <div className="glass-panel p-2 border-neon-cyan/20 rounded flex flex-col items-end space-y-1">
-          <span className="text-neon-magenta font-bold tracking-widest text-[8px] uppercase">// sector logs</span>
+          <span className="text-neon-magenta font-bold tracking-widest text-[8px] uppercase">{"// sector logs"}</span>
           <span className="text-[14px] text-white font-bold font-orbitron">{hudTimer}s</span>
           <span className="text-gray-400 font-mono">Score: {hudScore} pts</span>
         </div>
       </div>
-
+ 
       {/* Controls helper panel */}
       <div className="self-center glass-panel px-4 py-1.5 border-white/5 rounded text-[9px] text-gray-400 bg-black/60">
         [WASD/Arrows]: Steer | [Space/Shift]: Nitro NOS | [C]: Swap Camera modes
       </div>
-
+ 
       {/* Bottom Panel cockpit dials */}
       <div className="flex justify-between items-end w-full">
         {/* Speed Dial */}
         <div className="glass-panel p-2 border-neon-cyan/20 rounded flex flex-col space-y-1">
-          <span className="text-neon-cyan font-bold uppercase tracking-wider text-[8px]">// kph</span>
+          <span className="text-neon-cyan font-bold uppercase tracking-wider text-[8px]">{"// kph"}</span>
           <div className="flex items-baseline space-x-1">
             <span className="text-2xl font-orbitron font-black text-white">{hudSpeed}</span>
             <span className="text-[8px] text-gray-400">KM/H</span>
@@ -78,10 +78,10 @@ export const HUD: React.FC<HUDProps> = ({
             />
           </div>
         </div>
-
+ 
         {/* Gear & RPM Dial */}
         <div className="flex flex-col items-center space-y-1 glass-panel px-3 py-1.5 border-neon-yellow/20 rounded">
-          <span className="text-neon-yellow text-[8px] font-bold uppercase tracking-wider">// engine status</span>
+          <span className="text-neon-yellow text-[8px] font-bold uppercase tracking-wider">{"// engine status"}</span>
           <div className="text-xl font-orbitron font-black text-neon-yellow">
             GEAR {hudGear}
           </div>
@@ -95,10 +95,10 @@ export const HUD: React.FC<HUDProps> = ({
             />
           </div>
         </div>
-
+ 
         {/* NOS Tank Dial */}
         <div className="glass-panel p-2 border-neon-cyan/20 rounded flex flex-col space-y-1 items-end">
-          <span className="text-neon-cyan font-bold uppercase tracking-wider text-[8px]">// nos boost</span>
+          <span className="text-neon-cyan font-bold uppercase tracking-wider text-[8px]">{"// nos boost"}</span>
           <div className="flex items-baseline space-x-1">
             <span className="text-2xl font-orbitron font-black text-neon-cyan">{hudNos}%</span>
           </div>

@@ -35,9 +35,9 @@ export class AIController {
     const botFrameNext = this.roadSystem.getTrackFrame(botTNext);
     const botCurvature = botTangent.clone().cross(botFrameNext.tangent).y;
     const botBankAngle = Math.max(-0.35, Math.min(0.35, botCurvature * 14.0));
-    let botBinormal = botFrame.binormal.clone();
+    const botBinormal = botFrame.binormal.clone();
     botBinormal.applyAxisAngle(botTangent, botBankAngle);
-
+ 
     // AI steering adjustments to avoid player overlap
     const distToPlayer = Math.abs(state.botDist - state.playerDist);
     if (distToPlayer < 12) {
@@ -53,7 +53,7 @@ export class AIController {
     botUp.applyAxisAngle(botForward, botBankAngle).normalize();
     const botOrientMat = new THREE.Matrix4().makeBasis(botRight, botUp, botForward);
     botCar.quaternion.setFromRotationMatrix(botOrientMat);
-
+ 
     // Spoiler animation
     const botSpoiler = botCar.getObjectByName('spoiler_group');
     if (botSpoiler) {
@@ -63,7 +63,7 @@ export class AIController {
       botSpoiler.position.y += (targetY - botSpoiler.position.y) * dt * 8;
       botSpoiler.rotation.x += (targetRotX - botSpoiler.rotation.x) * dt * 8;
     }
-
+ 
     // --- Rival 2 ---
     state.bot2Speed = 36 + (difficulty === 'Hard' ? 10 : difficulty === 'Expert' ? 14 : 0) + Math.cos(playerT * 8) * 6;
     state.bot2Dist += state.bot2Speed * dt;
@@ -80,11 +80,11 @@ export class AIController {
     const bot2FrameNext = this.roadSystem.getTrackFrame(bot2TNext);
     const bot2Curvature = bot2Tangent.clone().cross(bot2FrameNext.tangent).y;
     const bot2BankAngle = Math.max(-0.35, Math.min(0.35, bot2Curvature * 14.0));
-    let bot2Binormal = bot2Frame.binormal.clone();
+    const bot2Binormal = bot2Frame.binormal.clone();
     bot2Binormal.applyAxisAngle(bot2Tangent, bot2BankAngle);
     bot2Car.position.copy(bot2Pt.clone().add(bot2Binormal.clone().multiplyScalar(state.bot2Lane)));
     bot2Car.position.y += 0.35;
-
+ 
     const bot2Forward = bot2Tangent.clone().normalize();
     const bot2Right = bot2Frame.binormal.clone();
     bot2Right.applyAxisAngle(bot2Forward, bot2BankAngle).normalize();
@@ -92,7 +92,7 @@ export class AIController {
     bot2Up.applyAxisAngle(bot2Forward, bot2BankAngle).normalize();
     const bot2OrientMat = new THREE.Matrix4().makeBasis(bot2Right, bot2Up, bot2Forward);
     bot2Car.quaternion.setFromRotationMatrix(bot2OrientMat);
-
+ 
     const bot2Spoiler = bot2Car.getObjectByName('spoiler_group');
     if (bot2Spoiler) {
       const speedRatio = Math.min(1.0, state.bot2Speed / 55);
@@ -101,7 +101,7 @@ export class AIController {
       bot2Spoiler.position.y += (targetY - bot2Spoiler.position.y) * dt * 8;
       bot2Spoiler.rotation.x += (targetRotX - bot2Spoiler.rotation.x) * dt * 8;
     }
-
+ 
     // --- Rival 3 ---
     state.bot3Speed = 34 + (difficulty === 'Hard' ? 8 : difficulty === 'Expert' ? 12 : 0) + Math.sin(playerT * 6) * 5;
     state.bot3Dist += state.bot3Speed * dt;
@@ -118,7 +118,7 @@ export class AIController {
     const bot3FrameNext = this.roadSystem.getTrackFrame(bot3TNext);
     const bot3Curvature = bot3Tangent.clone().cross(bot3FrameNext.tangent).y;
     const bot3BankAngle = Math.max(-0.35, Math.min(0.35, bot3Curvature * 14.0));
-    let bot3Binormal = bot3Frame.binormal.clone();
+    const bot3Binormal = bot3Frame.binormal.clone();
     bot3Binormal.applyAxisAngle(bot3Tangent, bot3BankAngle);
     bot3Car.position.copy(bot3Pt.clone().add(bot3Binormal.clone().multiplyScalar(state.bot3Lane)));
     bot3Car.position.y += 0.35;

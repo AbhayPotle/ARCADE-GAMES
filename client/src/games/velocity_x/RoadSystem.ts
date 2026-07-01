@@ -14,8 +14,8 @@ export class RoadSystem {
       
       const factorX = 350 + Math.cos(angle * 2) * 80 + Math.sin(angle * 3) * 30;
       const factorZ = 280 + Math.sin(angle * 2) * 60 + Math.cos(angle * 4) * 20;
-      let x = Math.cos(angle) * factorX;
-      let z = Math.sin(angle) * factorZ;
+      const x = Math.cos(angle) * factorX;
+      const z = Math.sin(angle) * factorZ;
       
       let y = Math.sin(angle * 3) * 14;
       
@@ -165,7 +165,7 @@ export class RoadSystem {
       const curvature = tangent.clone().cross(frameNext.tangent).y;
       const bankAngle = Math.max(-0.35, Math.min(0.35, curvature * 14.0));
 
-      let binormal = frame.binormal.clone();
+      const binormal = frame.binormal.clone();
       binormal.applyAxisAngle(tangent, bankAngle);
 
       const vL = pt.clone().add(binormal.clone().multiplyScalar(-roadWidth / 2));
@@ -350,10 +350,10 @@ export class RoadSystem {
       const curvature2 = tangent2.clone().cross(frame2Next.tangent).y;
       const bankAngle2 = Math.max(-0.35, Math.min(0.35, curvature2 * 14.0));
 
-      let binormal1 = frame1.binormal.clone();
+      const binormal1 = frame1.binormal.clone();
       binormal1.applyAxisAngle(tangent1, bankAngle1);
-
-      let binormal2 = frame2.binormal.clone();
+ 
+      const binormal2 = frame2.binormal.clone();
       binormal2.applyAxisAngle(tangent2, bankAngle2);
 
       const shoulderOffset = 18.3;

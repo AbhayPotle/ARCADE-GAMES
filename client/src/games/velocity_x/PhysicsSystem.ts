@@ -215,7 +215,7 @@ export class PhysicsSystem {
       const tcCurvature = tcTangent.clone().cross(tcFrameNext.tangent).y;
       const tcBankAngle = Math.max(-0.35, Math.min(0.35, tcCurvature * 14.0));
 
-      let tcBinormal = tcFrame.binormal.clone();
+      const tcBinormal = tcFrame.binormal.clone();
       tcBinormal.applyAxisAngle(tcTangent, tcBankAngle);
 
       tc.mesh.position.copy(tcPt.clone().add(tcBinormal.clone().multiplyScalar(tc.lane * 12.0)));

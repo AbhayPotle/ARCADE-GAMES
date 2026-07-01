@@ -747,7 +747,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     // Headlights
     const headlightsL = new THREE.SpotLight(0xffffff, 20.0, 55, 0.45, 0.8, 1);
     headlightsL.position.set(-0.8, 0.25, 2.2);
-    headlightsL.castShadow = true;
+    headlightsL.castShadow = false;
     playerCarGroup.add(headlightsL);
 
     const headlightsR = headlightsL.clone();
