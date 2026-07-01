@@ -157,7 +157,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     slipstreamActive: false,
     lastExhaustTime: 0,
     crashCooldown: 0,
-    gear: 1,
+    gear: 1 as number | string,
     rpm: 1000,
     steerAngle: 0,
     steerYaw: 0,
@@ -3259,6 +3259,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
             audioSynth.playGearShift();
           }
         }
+      }
 
       // Reset vehicle positioning (R key)
       if (k === 'r') {
