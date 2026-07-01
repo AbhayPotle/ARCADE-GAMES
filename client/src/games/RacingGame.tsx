@@ -891,8 +891,6 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     sun.shadow.camera.top = 60;
     sun.shadow.camera.bottom = -60;
     scene.add(sun);
-    threeRef.current.sun = sun;
-    threeRef.current.scene = scene;
 
     // Secondary warm magenta fill light for Sunset Neon Sprint (simulates city glow)
     if (activeEvent.id === 'neon_sprint') {
