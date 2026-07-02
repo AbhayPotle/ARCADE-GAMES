@@ -171,7 +171,7 @@ export class RoadSystem {
       const tNext = (i + 1) / roadSegmentsCount;
       const frameNext = this.getTrackFrame(tNext);
       const curvature = tangent.clone().cross(frameNext.tangent).y;
-      const bankAngle = Math.max(-0.35, Math.min(0.35, curvature * 14.0));
+      const bankAngle = 0;
 
       const binormal = frame.binormal.clone();
       binormal.applyAxisAngle(tangent, bankAngle);
@@ -469,12 +469,12 @@ export class RoadSystem {
       const t1Next = (i + 1) / segments;
       const frame1Next = this.getTrackFrame(t1Next);
       const curvature1 = tangent1.clone().cross(frame1Next.tangent).y;
-      const bankAngle1 = Math.max(-0.35, Math.min(0.35, curvature1 * 14.0));
+      const bankAngle1 = 0;
 
       const t2Next = ((i + 1) / segments + 0.002) % 1.0;
       const frame2Next = this.getTrackFrame(t2Next);
       const curvature2 = tangent2.clone().cross(frame2Next.tangent).y;
-      const bankAngle2 = Math.max(-0.35, Math.min(0.35, curvature2 * 14.0));
+      const bankAngle2 = 0;
 
       const binormal1 = frame1.binormal.clone();
       binormal1.applyAxisAngle(tangent1, bankAngle1);

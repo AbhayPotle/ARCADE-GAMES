@@ -1039,7 +1039,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       const playerTNext = (playerT + 0.002) % 1.0;
       const frameNext = roadSystem.getTrackFrame(playerTNext);
       const curvature = tangent.clone().cross(frameNext.tangent).y;
-      const bankAngle = Math.max(-0.35, Math.min(0.35, curvature * 14.0));
+      const bankAngle = 0;
 
       let binormal = frame.binormal.clone();
       binormal.applyAxisAngle(tangent, bankAngle);

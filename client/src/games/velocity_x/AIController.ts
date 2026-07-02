@@ -34,7 +34,7 @@ export class AIController {
     const botTNext = (botT + 0.002) % 1.0;
     const botFrameNext = this.roadSystem.getTrackFrame(botTNext);
     const botCurvature = botTangent.clone().cross(botFrameNext.tangent).y;
-    const botBankAngle = Math.max(-0.35, Math.min(0.35, botCurvature * 14.0));
+    const botBankAngle = 0;
     const botBinormal = botFrame.binormal.clone();
     botBinormal.applyAxisAngle(botTangent, botBankAngle);
  
@@ -79,7 +79,7 @@ export class AIController {
     const bot2TNext = (bot2T + 0.002) % 1.0;
     const bot2FrameNext = this.roadSystem.getTrackFrame(bot2TNext);
     const bot2Curvature = bot2Tangent.clone().cross(bot2FrameNext.tangent).y;
-    const bot2BankAngle = Math.max(-0.35, Math.min(0.35, bot2Curvature * 14.0));
+    const bot2BankAngle = 0;
     const bot2Binormal = bot2Frame.binormal.clone();
     bot2Binormal.applyAxisAngle(bot2Tangent, bot2BankAngle);
     bot2Car.position.copy(bot2Pt.clone().add(bot2Binormal.clone().multiplyScalar(state.bot2Lane)));
@@ -117,7 +117,7 @@ export class AIController {
     const bot3TNext = (bot3T + 0.002) % 1.0;
     const bot3FrameNext = this.roadSystem.getTrackFrame(bot3TNext);
     const bot3Curvature = bot3Tangent.clone().cross(bot3FrameNext.tangent).y;
-    const bot3BankAngle = Math.max(-0.35, Math.min(0.35, bot3Curvature * 14.0));
+    const bot3BankAngle = 0;
     const bot3Binormal = bot3Frame.binormal.clone();
     bot3Binormal.applyAxisAngle(bot3Tangent, bot3BankAngle);
     bot3Car.position.copy(bot3Pt.clone().add(bot3Binormal.clone().multiplyScalar(state.bot3Lane)));

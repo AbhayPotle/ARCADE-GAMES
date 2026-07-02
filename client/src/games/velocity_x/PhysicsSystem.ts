@@ -213,7 +213,7 @@ export class PhysicsSystem {
       const tcTNext = (tcT + 0.002) % 1.0;
       const tcFrameNext = this.roadSystem.getTrackFrame(tcTNext);
       const tcCurvature = tcTangent.clone().cross(tcFrameNext.tangent).y;
-      const tcBankAngle = Math.max(-0.35, Math.min(0.35, tcCurvature * 14.0));
+      const tcBankAngle = 0;
 
       const tcBinormal = tcFrame.binormal.clone();
       tcBinormal.applyAxisAngle(tcTangent, tcBankAngle);
