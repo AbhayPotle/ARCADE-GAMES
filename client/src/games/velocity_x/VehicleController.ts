@@ -275,6 +275,11 @@ export class VehicleController {
     mirrorR.rotation.y = Math.PI;
     carGroup.add(mirrorL, mirrorR);
 
+    // Neon underglow light projecting onto the road deck
+    const underglowLight = new THREE.PointLight(new THREE.Color(paintColor), 3.0, 5.0);
+    underglowLight.position.set(0, -0.22, 0);
+    carGroup.add(underglowLight);
+
     // 10. High-detail wheels
     const tyreGeom = new THREE.CylinderGeometry(0.5, 0.5, 0.44, 24);
     tyreGeom.rotateZ(Math.PI / 2);

@@ -983,6 +983,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         state.driftAngle += (0 - state.driftAngle) * dt * 12.0;
       }
 
+      // Smooth visual steering nose-pivot rotation (prevents flat sliding feel)
+      const targetSteerYaw = (steerLeft ? -0.15 : steerRight ? 0.15 : 0) * Math.min(1.0, Math.abs(state.speed) / 8.0);
+      state.steerYaw += (targetSteerYaw - state.steerYaw) * dt * 8.0;
+
       // Airborne check triggers
       const playerTVal = state.playerDist / state.trackLength;
       if (activeEvent.id === 'canyon_jump' && !state.airborne) {
@@ -1064,9 +1068,13 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           const spinQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), state.spinAngle);
           const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), state.rollAngle);
           baseQuat.multiply(spinQuat).multiply(rollQuat);
-        } else if (state.driftAngle !== 0) {
-          const yawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), state.driftAngle);
-          baseQuat.multiply(yawQuat);
+        } else {
+          // Combine drifting yaw angle and steering pivot yaw angle
+          const totalYaw = state.driftAngle + state.steerYaw;
+          if (totalYaw !== 0) {
+            const yawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), totalYaw);
+            baseQuat.multiply(yawQuat);
+          }
         }
         playerCar.quaternion.copy(baseQuat);
 
