@@ -977,10 +977,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       // Drift physics key pressed check
       state.isDrifting = (steerLeft || steerRight) && brakeInput && state.speed > 16;
       if (state.isDrifting) {
-        state.driftAngle += (steerLeft ? 0.38 : -0.38 - state.driftAngle) * dt * 4.5;
+        state.driftAngle += ((steerLeft ? 0.38 : -0.38) - state.driftAngle) * dt * 4.5;
         state.driftScore += Math.round(state.speed * dt * 10);
       } else {
-        state.driftAngle += (0 - state.driftAngle) * dt * 6.5;
+        state.driftAngle += (0 - state.driftAngle) * dt * 12.0;
       }
 
       // Airborne check triggers

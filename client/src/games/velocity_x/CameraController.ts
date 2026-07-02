@@ -37,9 +37,9 @@ export class CameraController {
     );
 
     // Dynamic FOV calculations
-    const baseFov = state.isNosActive ? 82 : 65;
+    const baseFov = state.isNosActive ? 72 : 56;
     const speedRatio = Math.max(0, Math.min(1.0, Math.abs(state.speed) / maxSpeedLimit));
-    const targetFov = baseFov + speedRatio * 16.0;
+    const targetFov = baseFov + speedRatio * 14.0;
     this.camera.fov += (targetFov - this.camera.fov) * originalDt * 6;
     this.camera.updateProjectionMatrix();
 
@@ -48,29 +48,29 @@ export class CameraController {
     if (state.gameOver) {
       // Orbital victory sweep
       const orbitAngle = Date.now() * 0.0006;
-      const orbitRadius = 10.0;
+      const orbitRadius = 8.0;
       this.camera.position.x = finalPos.x + Math.sin(orbitAngle) * orbitRadius;
       this.camera.position.z = finalPos.z + Math.cos(orbitAngle) * orbitRadius;
-      this.camera.position.y = finalPos.y + 2.8;
+      this.camera.position.y = finalPos.y + 2.0;
       this.camera.lookAt(finalPos);
     } else if (state.cameraMode === 'chase') {
-      camOffset.copy(tangent).multiplyScalar(-8.5).add(binormal.clone().multiplyScalar(state.playerLane * 0.4));
-      camOffset.y += 2.8;
+      camOffset.copy(tangent).multiplyScalar(-5.6).add(binormal.clone().multiplyScalar(state.playerLane * 0.4));
+      camOffset.y += 2.0;
       
       const targetCamPos = finalPos.clone().add(camOffset);
       this.camera.position.lerp(targetCamPos, dt * 8.5);
-      this.camera.position.y = Math.max(pt.y + 1.2, this.camera.position.y);
+      this.camera.position.y = Math.max(pt.y + 1.0, this.camera.position.y);
       this.camera.position.add(shakeOffset);
 
       this.camera.lookAt(lookTarget);
       this.camera.rotateZ(state.driftAngle * 0.22);
     } else if (state.cameraMode === 'far') {
-      camOffset.copy(tangent).multiplyScalar(-14).add(binormal.clone().multiplyScalar(state.playerLane * 0.3));
-      camOffset.y += 4.5;
+      camOffset.copy(tangent).multiplyScalar(-10.2).add(binormal.clone().multiplyScalar(state.playerLane * 0.3));
+      camOffset.y += 3.2;
       
       const targetCamPos = finalPos.clone().add(camOffset);
       this.camera.position.lerp(targetCamPos, dt * 6.5);
-      this.camera.position.y = Math.max(pt.y + 1.2, this.camera.position.y);
+      this.camera.position.y = Math.max(pt.y + 1.0, this.camera.position.y);
       this.camera.position.add(shakeOffset);
 
       this.camera.lookAt(lookTarget);
