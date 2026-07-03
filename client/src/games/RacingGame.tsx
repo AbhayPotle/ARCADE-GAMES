@@ -190,7 +190,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     skidmarks: THREE.Line[];
     roadMesh: THREE.Mesh | null;
     warpLines: THREE.LineSegments | null;
-    lights: { sun: THREE.DirectionalLight | null; headlights: THREE.SpotLight | null; headlightsRight: THREE.SpotLight | null; taillights: THREE.PointLight | null }
+    lights: { sun: THREE.DirectionalLight | null; headlights: THREE.SpotLight | null; headlightsRight: THREE.SpotLight | null; taillights: THREE.PointLight | null };
+    lastSkidLeft: THREE.Vector3 | null;
+    lastSkidRight: THREE.Vector3 | null;
   }>({
     scene: null,
     camera: null,
@@ -206,7 +208,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     skidmarks: [],
     roadMesh: null,
     warpLines: null,
-    lights: { sun: null, headlights: null, headlightsRight: null, taillights: null }
+    lights: { sun: null, headlights: null, headlightsRight: null, taillights: null },
+    lastSkidLeft: null,
+    lastSkidRight: null
   });
 
   const purchaseCar = (car: CarConfig, idx: number) => {
@@ -915,7 +919,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       skidmarks: [],
       roadMesh: null,
       warpLines,
-      lights: { sun, headlights: headlightsL, headlightsRight: headlightsR, taillights: taillightGlow }
+      lights: { sun, headlights: headlightsL, headlightsRight: headlightsR, taillights: taillightGlow },
+      lastSkidLeft: null,
+      lastSkidRight: null
     };
 
     // Instantiate modular controllers
@@ -1212,6 +1218,52 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           posAttr.setXYZ(nextIdx, finalPos.x - tangent.x * 2.2, finalPos.y + 0.1, finalPos.z - tangent.z * 2.2);
         }
         posAttr.needsUpdate = true;
+      }
+
+      // 6.5. Trailing Skidmarks when drifting or locking wheels
+      if (playerCar && state.isDrifting && state.speed > 8) {
+        const wl = playerCar.position.clone()
+          .add(binormal.clone().multiplyScalar(-1.25))
+          .add(tangent.clone().multiplyScalar(-1.3));
+        const wr = playerCar.position.clone()
+          .add(binormal.clone().multiplyScalar(1.25))
+          .add(tangent.clone().multiplyScalar(-1.3));
+        
+        const lastL = threeRef.current.lastSkidLeft;
+        const lastR = threeRef.current.lastSkidRight;
+        
+        const skidMat = new THREE.LineBasicMaterial({
+          color: 0x16171b,
+          transparent: true,
+          opacity: 0.65
+        });
+        
+        if (lastL && lastR) {
+          const geomL = new THREE.BufferGeometry().setFromPoints([lastL, wl]);
+          const lineL = new THREE.Line(geomL, skidMat);
+          scene.add(lineL);
+          threeRef.current.skidmarks.push(lineL);
+          
+          const geomR = new THREE.BufferGeometry().setFromPoints([lastR, wr]);
+          const lineR = new THREE.Line(geomR, skidMat);
+          scene.add(lineR);
+          threeRef.current.skidmarks.push(lineR);
+        }
+        
+        threeRef.current.lastSkidLeft = wl;
+        threeRef.current.lastSkidRight = wr;
+        
+        // Dynamic cleanup of old skidmarks to prevent WebGL memory leak
+        while (threeRef.current.skidmarks.length > 200) {
+          const oldLine = threeRef.current.skidmarks.shift();
+          if (oldLine) {
+            scene.remove(oldLine);
+            oldLine.geometry.dispose();
+          }
+        }
+      } else {
+        threeRef.current.lastSkidLeft = null;
+        threeRef.current.lastSkidRight = null;
       }
 
       // 7. Update adaptive camera
