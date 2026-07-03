@@ -56,6 +56,8 @@ const CAREER_EVENTS: CareerEvent[] = [
   { id: 'storm_escape', name: 'Electro Storm Challenge', trackName: 'Metropolitan Rain Ring', description: 'Survive lightning strikes, wet reflections, and heavy storms.', rewardCoins: 450, rewardXp: 500, difficulty: 'Expert', weather: 'storm', timeOfDay: 'night' }
 ];
 
+let cachedRoadTextures: { map: THREE.Texture; normalMap: THREE.Texture; roughnessMap: THREE.Texture } | null = null;
+
 export default function VelocityX({ matchData, currentUser, onComplete }: RacingGameProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const minimapCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -488,6 +490,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
     // Build road textures and meshes
     const createRoadTextures = () => {
+      if (cachedRoadTextures) return cachedRoadTextures;
       if (typeof window === 'undefined') return { map: null, normalMap: null, roughnessMap: null };
       const width = 512;
       const height = 1024;
@@ -651,7 +654,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         tex.repeat.set(1, 48);
       });
       
-      return { map, normalMap, roughnessMap };
+      cachedRoadTextures = { map, normalMap, roughnessMap };
+      return cachedRoadTextures;
     };
 
     const { map, normalMap, roughnessMap } = createRoadTextures();
@@ -955,6 +959,42 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           const finalPos = playerCar.position;
           cameraController.update(dt, originalDt, state, finalPos, finalPos, new THREE.Vector3(0, 0, 1), new THREE.Vector3(1, 0, 0), activeCar.maxSpeed);
         }
+        composer.render();
+        requestAnimationFrame(animate);
+        return;
+      }
+
+      if (state.countdownActive) {
+        // Lock player vehicle and stats static at start line
+        state.speed = 0;
+        state.rpm = 1000;
+        state.gear = 1;
+        state.driftAngle = 0;
+        state.steerYaw = 0;
+        state.playerDist = 0;
+        state.playerLane = 0;
+        
+        // Lock rival bot distances at start line positions
+        state.botDist = 40;
+        state.bot2Dist = 20;
+        state.bot3Dist = 0;
+        
+        const playerT = 0;
+        const frame = roadSystem.getTrackFrame(playerT);
+        if (playerCar) {
+          playerCar.position.copy(frame.pt).add(frame.binormal.clone().multiplyScalar(state.playerLane));
+          playerCar.position.y += 0.35;
+          
+          const orientMat = new THREE.Matrix4().makeBasis(frame.binormal, frame.normal, frame.tangent);
+          playerCar.quaternion.setFromRotationMatrix(orientMat);
+          playerController.updateVisuals(dt, state, false);
+        }
+        
+        // Let camera track static starting grid position smoothly
+        if (playerCar) {
+          cameraController.update(dt, originalDt, state, playerCar.position, playerCar.position, frame.tangent, frame.binormal, activeCar.maxSpeed);
+        }
+        
         composer.render();
         requestAnimationFrame(animate);
         return;
