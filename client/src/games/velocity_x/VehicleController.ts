@@ -10,6 +10,8 @@ export class VehicleController {
     this.modelId = modelId;
     this.paintColor = paintColor;
     this.mesh = this.createProceduralCar(paintColor, modelId);
+    this.mesh.rotation.y = -Math.PI / 2;
+    this.mesh.scale.setScalar(1.25);
   }
 
   private createProceduralCar(paintColor: string, modelId: string): THREE.Group {
