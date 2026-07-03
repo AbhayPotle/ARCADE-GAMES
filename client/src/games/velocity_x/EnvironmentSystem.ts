@@ -4,8 +4,10 @@ import { RoadSystem } from './RoadSystem';
 
 export class EnvironmentSystem {
   roadSystem: RoadSystem;
-
   skyscraperMaterials: THREE.MeshStandardMaterial[] = [];
+  
+  rainParticles: THREE.Points | null = null;
+  rainGeometry: THREE.BufferGeometry | null = null;
 
   constructor(roadSystem: RoadSystem) {
     this.roadSystem = roadSystem;
@@ -177,6 +179,69 @@ export class EnvironmentSystem {
         scene.add(treeGroup);
       }
     }
+
+    // Spawn floating cyberpunk hover drones with underglow lights near segments
+    const isCityEvent = activeEventId === 'neon_sprint' || activeEventId === 'storm_escape';
+    if (isCityEvent) {
+      for (let d = 0; d < 8; d++) {
+        const droneGroup = new THREE.Group();
+        droneGroup.name = `hover_drone_${d}`;
+        
+        const dBody = new THREE.Mesh(
+          new THREE.BoxGeometry(0.8, 0.16, 0.8),
+          new THREE.MeshStandardMaterial({ color: 0x1d1e22, metalness: 0.95, roughness: 0.05 })
+        );
+        dBody.castShadow = true;
+        droneGroup.add(dBody);
+        
+        const eyeColor = d % 2 === 0 ? 0x00f3ff : 0xff0055;
+        const dLight = new THREE.Mesh(
+          new THREE.SphereGeometry(0.12, 8, 8),
+          new THREE.MeshBasicMaterial({ color: eyeColor })
+        );
+        dLight.position.set(0, 0, -0.4);
+        droneGroup.add(dLight);
+        
+        const underglow = new THREE.PointLight(eyeColor, 3.0, 7.0);
+        underglow.position.set(0, -0.3, 0);
+        droneGroup.add(underglow);
+        
+        const droneT = 0.12 + d * 0.11;
+        const dFrame = this.roadSystem.getTrackFrame(droneT);
+        droneGroup.position.copy(dFrame.pt);
+        droneGroup.position.y += 7.0 + Math.random() * 3.5;
+        
+        scene.add(droneGroup);
+      }
+    }
+
+    // Spawn real-time volumetric rain particles for weather events
+    if (activeEventId === 'storm_escape' || activeEventId === 'neon_sprint') {
+      const particleCount = 2000;
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(particleCount * 3);
+      
+      for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 120;
+        positions[i * 3 + 1] = Math.random() * 45;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 120;
+      }
+      
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      
+      const material = new THREE.PointsMaterial({
+        color: 0x82b1ff,
+        size: 0.15,
+        transparent: true,
+        opacity: 0.55,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      
+      this.rainParticles = new THREE.Points(geometry, material);
+      this.rainGeometry = geometry;
+      scene.add(this.rainParticles);
+    }
   }
 
   updateSkyAndStorm(
@@ -236,6 +301,39 @@ export class EnvironmentSystem {
             scene.background.setHex(0xeef6ff);
           }
         }
+      }
+    }
+
+    // 4. Update volumetric falling rain particles relative to player vehicle location
+    if (this.rainParticles && this.rainGeometry) {
+      const positions = this.rainGeometry.attributes.position.array as Float32Array;
+      const pCount = positions.length / 3;
+      
+      for (let i = 0; i < pCount; i++) {
+        // Fall downwards dynamically
+        positions[i * 3 + 1] -= dt * 38.0;
+        
+        // Reset particles that hit the ground level back to the sky ceiling
+        if (positions[i * 3 + 1] < 0) {
+          positions[i * 3 + 1] = 45.0;
+        }
+      }
+      
+      // Center rain emitter coordinates to track the player vehicle smoothly
+      const playerCar = scene.getObjectByName('playerCarGroup') || scene.getObjectByName('carGroup');
+      if (playerCar) {
+        this.rainParticles.position.set(playerCar.position.x, 0, playerCar.position.z);
+      }
+      
+      this.rainGeometry.attributes.position.needsUpdate = true;
+    }
+
+    // 5. Animate cyberpunk hover drones (smooth bobbing floating motions)
+    for (let d = 0; d < 8; d++) {
+      const drone = scene.getObjectByName(`hover_drone_${d}`);
+      if (drone) {
+        drone.position.y += Math.sin(Date.now() * 0.0028 + d) * 0.012;
+        drone.rotation.y += dt * 0.45;
       }
     }
   }
