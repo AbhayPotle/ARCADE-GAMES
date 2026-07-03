@@ -3,6 +3,7 @@ import { GameState } from './state';
 
 export class CameraController {
   camera: THREE.PerspectiveCamera;
+  currentRoll: number = 0;
 
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
@@ -20,28 +21,39 @@ export class CameraController {
   ) {
     this.camera.up.set(0, 1, 0);
 
+    // Dynamic look-ahead target that peers deeper into corners based on steering angle
     const lookTarget = pt.clone()
-      .add(tangent.clone().multiplyScalar(16.0))
-      .add(binormal.clone().multiplyScalar(-state.steerAngle * 2.8));
+      .add(tangent.clone().multiplyScalar(22.0))
+      .add(binormal.clone().multiplyScalar(-state.steerAngle * 4.5));
 
-    // Dynamic collision screenshake
+    // Dynamic collision screenshake & NOS high-speed vibration
     if (state.collisionShake > 0) {
       state.collisionShake -= dt * 2.2;
       if (state.collisionShake < 0) state.collisionShake = 0;
     }
-    const shake = state.collisionShake;
+    
+    let activeShake = state.collisionShake;
+    if (state.isNosActive && state.speed > 30) {
+      // Simulate extreme speed engine vibration
+      activeShake += 0.06 + Math.sin(performance.now() * 0.08) * 0.04;
+    }
+
     const shakeOffset = new THREE.Vector3(
-      (Math.random() - 0.5) * shake,
-      (Math.random() - 0.5) * shake,
-      (Math.random() - 0.5) * shake
+      (Math.random() - 0.5) * activeShake,
+      (Math.random() - 0.5) * activeShake,
+      (Math.random() - 0.5) * activeShake
     );
 
-    // Dynamic FOV calculations
-    const baseFov = state.isNosActive ? 72 : 56;
+    // Dynamic FOV calculations (creates massive sense of speed with NOS active)
+    const baseFov = state.isNosActive ? 78 : 58;
     const speedRatio = Math.max(0, Math.min(1.0, Math.abs(state.speed) / maxSpeedLimit));
-    const targetFov = baseFov + speedRatio * 14.0;
-    this.camera.fov += (targetFov - this.camera.fov) * originalDt * 6;
+    const targetFov = baseFov + speedRatio * 20.0;
+    this.camera.fov += (targetFov - this.camera.fov) * originalDt * 6.5;
     this.camera.updateProjectionMatrix();
+
+    // Smooth turn leaning / camera roll to simulate centrifugal G-force on the driver
+    const targetRoll = -state.steerYaw * 0.5 + state.driftAngle * 0.28;
+    this.currentRoll += (targetRoll - this.currentRoll) * dt * 5.0;
 
     const camOffset = new THREE.Vector3();
 
@@ -63,7 +75,7 @@ export class CameraController {
       this.camera.position.add(shakeOffset);
 
       this.camera.lookAt(lookTarget);
-      this.camera.rotateZ(state.driftAngle * 0.22);
+      this.camera.rotateZ(this.currentRoll);
     } else if (state.cameraMode === 'far') {
       camOffset.copy(tangent).multiplyScalar(-10.2).add(binormal.clone().multiplyScalar(state.playerLane * 0.3));
       camOffset.y += 3.2;
@@ -74,19 +86,21 @@ export class CameraController {
       this.camera.position.add(shakeOffset);
 
       this.camera.lookAt(lookTarget);
-      this.camera.rotateZ(state.driftAngle * 0.16);
+      this.camera.rotateZ(this.currentRoll);
     } else if (state.cameraMode === 'hood') {
       camOffset.copy(tangent).multiplyScalar(1.2);
       camOffset.y += 0.6;
       
       this.camera.position.copy(finalPos).add(camOffset).add(shakeOffset);
       this.camera.lookAt(lookTarget);
+      this.camera.rotateZ(this.currentRoll * 0.4);
     } else if (state.cameraMode === 'cockpit') {
       camOffset.copy(tangent).multiplyScalar(-0.1);
       camOffset.y += 0.55;
       
       this.camera.position.copy(finalPos).add(camOffset).add(shakeOffset);
       this.camera.lookAt(lookTarget);
+      this.camera.rotateZ(this.currentRoll * 0.5);
     }
   }
 }
