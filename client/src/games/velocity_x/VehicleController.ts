@@ -10,7 +10,7 @@ export class VehicleController {
     this.modelId = modelId;
     this.paintColor = paintColor;
     this.mesh = this.createProceduralCar(paintColor, modelId);
-    this.mesh.rotation.y = Math.PI / 2;
+    this.mesh.rotation.y = 0;
     this.mesh.scale.setScalar(1.25);
   }
 
