@@ -37,18 +37,6 @@ export const GAMES: GameCatalogItem[] = [
     accentColor: 'neon-magenta',
   },
   {
-    id: 'velocity_x',
-    title: 'Velocity X',
-    description: 'High-speed top-down racing across a neon skyline. Upgrade your grid engine, navigate dynamic storms, and drift around tight curves.',
-    category: 'Racing',
-    players: '1-4 Players',
-    difficulty: 'Medium',
-    status: 'playable',
-    icon: '🏎️',
-    bannerGradient: 'from-emerald-500 to-teal-950',
-    accentColor: 'neon-green',
-  },
-  {
     id: 'truck_empire',
     title: 'Truck Empire Simulator',
     description: 'Logistics cargo simulation in the Desert Empire waste. Carry heavy loads over dune vectors, manage fuel, and invest coins in cargo upgrades.',

@@ -249,8 +249,7 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
     : GAMES.filter(g => g.category === selectedCategory);
 
   // Playlists
-  const multiplayerArenaGames = GAMES.filter(g => ['chess', 'carrom', 'velocity_x', 'typing_warriors'].includes(g.id));
-  const racingHubGames = GAMES.filter(g => ['velocity_x'].includes(g.id));
+  const multiplayerArenaGames = GAMES.filter(g => ['chess', 'carrom', 'typing_warriors'].includes(g.id));
   const eduHubGames = GAMES.filter(g => g.category === 'Educational Games');
 
   return (
@@ -473,31 +472,7 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
             </div>
           </div>
 
-          {/* Racing Hub Playlist */}
-          <div className="space-y-4 pt-4 border-t border-white/5">
-            <h3 className="text-lg font-extrabold font-orbitron tracking-wider text-white flex items-center space-x-2">
-              <span className="text-neon-green">//</span>
-              <span>VECTOR RACING HUB</span>
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {racingHubGames.map(game => (
-                <div
-                  key={game.id}
-                  onClick={() => onSelectGame(game.id)}
-                  className="p-3 bg-cyber-dark/80 border border-neon-green/20 hover:border-neon-green rounded-lg cursor-pointer transition-all flex flex-col justify-between h-28"
-                >
-                  <div className="flex justify-between items-start">
-                    <span className="text-2xl">{game.icon}</span>
-                    <span className="text-[8px] font-orbitron bg-neon-green/10 text-neon-green px-1 rounded">SPEED</span>
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold font-orbitron text-white leading-tight">{game.title}</h4>
-                    <p className="text-[9px] text-gray-500 font-mono mt-0.5">{game.players}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+
 
         </div>
 
@@ -532,7 +507,6 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
                 <option value="typing_warriors">TYPING WARRIORS</option>
                 <option value="chess">CHESS LEGENDS</option>
                 <option value="carrom">CARROM MASTERS</option>
-                <option value="velocity_x">VELOCITY X</option>
               </select>
             </div>
 

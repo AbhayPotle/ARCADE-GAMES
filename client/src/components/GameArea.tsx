@@ -45,10 +45,6 @@ export default function GameArea({ gameId, currentUser, onBackToDashboard }: Gam
           'bot-id': { progress: 0, wpm: 0, accuracy: 100 }
         }
       };
-    } else if (gameId === 'velocity_x') {
-      initialGameState = {
-        players: {}
-      };
     }
 
     const mockMatchData = {

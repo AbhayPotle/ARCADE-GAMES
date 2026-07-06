@@ -194,15 +194,15 @@ class ApiService {
 
     if (endpoint === '/tournaments') {
       return [
-        { id: 'tour_1', name: 'Cyber Cup Racing', gameId: 'velocity_x', status: 'active', entryFee: 25, prizePool: 250 },
-        { id: 'tour_2', name: 'Board Chess Masters', gameId: 'chess', status: 'active', entryFee: 15, prizePool: 150 }
+        { id: 'tour_1', name: 'Board Chess Masters', gameId: 'chess', status: 'active', entryFee: 15, prizePool: 150 },
+        { id: 'tour_2', name: 'Carrom Ocean Masters', gameId: 'carrom', status: 'active', entryFee: 10, prizePool: 100 }
       ];
     }
 
     if (endpoint.includes('/join')) {
       const user = getLocalUser();
       const tourId = endpoint.split('/')[2];
-      const fee = tourId === 'tour_1' ? 25 : 15;
+      const fee = tourId === 'tour_1' ? 15 : 10;
       if (user.coins < fee) {
         throw new Error('Insufficient credits in node matrix');
       }

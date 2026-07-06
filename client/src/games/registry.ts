@@ -1,7 +1,6 @@
 import React from 'react';
 import ChessLegends from './ChessGame';
 import CarromMasters from './CarromGame';
-import VelocityX from './RacingGame';
 import TypingWarriors from './TypingGame';
 
 export interface GameRegistryItem {
@@ -44,19 +43,6 @@ export const GAME_REGISTRY: Record<string, GameRegistryItem> = {
     bannerImage: '/carrom_banner.png',
     accentColor: 'neon-magenta',
     component: CarromMasters
-  },
-  velocity_x: {
-    id: 'velocity_x',
-    title: 'Velocity X',
-    description: 'High-speed top-down racing across a neon skyline. Guide your steering vehicle through rain and storms, and compete against the AI bot.',
-    category: 'Racing',
-    players: '1-2 Players',
-    difficulty: 'Medium',
-    icon: '🏎️',
-    bannerGradient: 'from-emerald-500 to-teal-950',
-    bannerImage: '/velocity_x_banner.png',
-    accentColor: 'neon-green',
-    component: VelocityX
   },
   typing_warriors: {
     id: 'typing_warriors',
