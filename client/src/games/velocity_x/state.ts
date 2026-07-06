@@ -48,4 +48,6 @@ export interface GameState {
   transmissionMode: 'auto' | 'manual';
   lightningActive: boolean;
   lightningTimer: number;
+  suspensionOffset: number;
+  suspensionVelocity: number;
 }

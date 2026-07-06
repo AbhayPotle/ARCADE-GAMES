@@ -179,7 +179,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     countdownActive: false,
     transmissionMode: 'auto',
     lightningActive: false,
-    lightningTimer: 0
+    lightningTimer: 0,
+    suspensionOffset: 0,
+    suspensionVelocity: 0
   });
 
   const threeRef = useRef<{
@@ -1148,7 +1150,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       // Drift physics key pressed check
       state.isDrifting = (steerLeft || steerRight) && brakeInput && state.speed > 16;
       if (state.isDrifting) {
-        state.driftAngle += ((steerLeft ? 0.38 : -0.38) - state.driftAngle) * dt * 4.5;
+        state.driftAngle += ((steerLeft ? 0.05 : -0.05) - state.driftAngle) * dt * 4.5;
         state.driftScore += Math.round(state.speed * dt * 10);
       } else {
         state.driftAngle += (0 - state.driftAngle) * dt * 12.0;
@@ -1163,11 +1165,10 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       if (activeEvent.id === 'canyon_jump' && !state.airborne) {
         const isNearRamp = [0.28, 0.58, 0.88].some(rampT => Math.abs(playerTVal - rampT) < 0.008);
         if (isNearRamp && state.speed > 35) {
-          state.airborne = true;
-          state.airHeight = 1.0;
-          state.airVelocityY = state.speed * 0.32;
+          state.suspensionVelocity += 16.0; // Trigger a strong suspension bounce instead of floating in the air
+          state.collisionShake = 0.22;
           audioSynth.playGearShift();
-          setStuntNotification('JUMP LAUNCH DETECTED!');
+          setStuntNotification('RAMP IMPACT ABSORPTION!');
         }
       }
 
@@ -1223,7 +1224,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       
       if (playerCar) {
         playerCar.position.copy(finalPos);
-        playerCar.position.y += 0.35 + state.airHeight;
+        playerCar.position.y += 0.35 + state.airHeight + state.suspensionOffset;
 
         // Orient vehicle transform bases
         const localForward = tangent.clone().normalize();
@@ -1235,17 +1236,11 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const orientMat = new THREE.Matrix4().makeBasis(localRight, localUp, localForward);
         const baseQuat = new THREE.Quaternion().setFromRotationMatrix(orientMat);
 
-        if (state.airborne) {
-          const spinQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), state.spinAngle);
-          const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), state.rollAngle);
-          baseQuat.multiply(spinQuat).multiply(rollQuat);
-        } else {
-          // Combine drifting yaw angle and steering pivot yaw angle
-          const totalYaw = state.driftAngle + state.steerYaw;
-          if (totalYaw !== 0) {
-            const yawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), totalYaw);
-            baseQuat.multiply(yawQuat);
-          }
+        // Combine drifting yaw angle and steering pivot yaw angle
+        const totalYaw = state.driftAngle + state.steerYaw;
+        if (totalYaw !== 0) {
+          const yawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), totalYaw);
+          baseQuat.multiply(yawQuat);
         }
         playerCar.quaternion.copy(baseQuat);
 

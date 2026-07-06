@@ -49,9 +49,12 @@ export class PhysicsSystem {
       }
     }
 
-    // 2. Main Speed Acceleration / Deceleration
+    // 2. Main Speed Acceleration / Deceleration with Aerodynamic Drag
+    const dragCoeff = 0.00018; // Drag proportional to speed squared
+    const dragForce = dragCoeff * state.speed * state.speed;
+
     if (state.airborne) {
-      state.speed -= 1.8 * dt;
+      state.speed -= (2.5 + dragForce) * dt;
       if (state.speed < 12) state.speed = 12;
     } else if (state.crashCooldown > 0) {
       state.crashCooldown -= dt;
@@ -62,12 +65,12 @@ export class PhysicsSystem {
       }
     } else if (state.isDrifting) {
       if (accelInput) {
-        state.speed += finalAccelRate * dt * 0.35;
-        state.speed -= 3.5 * dt;
+        state.speed += (finalAccelRate * 0.35 - dragForce) * dt;
+        state.speed -= 4.5 * dt;
       } else if (brakeInput) {
-        state.speed -= finalAccelRate * dt * 1.2;
+        state.speed -= (finalAccelRate * 1.5 + dragForce) * dt;
       } else {
-        state.speed -= 7.5 * dt;
+        state.speed -= (9.5 + dragForce) * dt;
       }
       if (state.speed > maxSpeedLimit * 0.85) state.speed = maxSpeedLimit * 0.85;
       if (state.speed < 0) state.speed = 0;
@@ -76,50 +79,52 @@ export class PhysicsSystem {
       if (state.speed >= 0) {
         if (accelInput) {
           if (state.transmissionMode === 'manual' && state.gear === 'R') {
-            state.speed = Math.max(0, state.speed - finalAccelRate * dt * 1.8);
+            state.speed = Math.max(0, state.speed - finalAccelRate * dt * 2.2);
           } else {
-            state.speed += finalAccelRate * dt;
+            // Accelerate minus aerodynamic drag force
+            state.speed += (finalAccelRate - dragForce) * dt;
             if (state.speed > maxSpeedLimit) state.speed = maxSpeedLimit;
           }
         } else if (brakeInput) {
           const canReverse = state.transmissionMode === 'auto' || state.gear === 'R';
           if (state.speed <= 0.5) {
             if (canReverse) {
-              state.speed -= finalAccelRate * dt * 0.45;
+              state.speed -= finalAccelRate * dt * 0.55;
             } else {
               state.speed = 0;
             }
           } else {
-            state.speed -= finalAccelRate * dt * 1.8;
+            state.speed -= (finalAccelRate * 2.2 + dragForce) * dt;
           }
         } else {
-          state.speed -= 4.5 * dt;
+          // Rolling resistance / natural engine braking friction
+          state.speed -= (6.5 + state.speed * 0.05) * dt;
           if (state.speed < 0) state.speed = 0;
         }
       } else {
         // Reversing
         if (accelInput) {
-          state.speed += finalAccelRate * dt * 1.8;
+          state.speed += (finalAccelRate * 2.2) * dt;
           if (state.speed > 0) state.speed = 0;
         } else if (brakeInput) {
           const canReverse = state.transmissionMode === 'auto' || state.gear === 'R';
           if (canReverse) {
-            state.speed -= finalAccelRate * dt * 0.45;
+            state.speed -= finalAccelRate * dt * 0.55;
             if (state.speed < -20) state.speed = -20;
           } else {
-            state.speed += finalAccelRate * dt * 1.8;
+            state.speed += (finalAccelRate * 2.2) * dt;
             if (state.speed > 0) state.speed = 0;
           }
         } else {
-          state.speed += 4.5 * dt;
+          state.speed += 6.5 * dt;
           if (state.speed > 0) state.speed = 0;
         }
       }
     }
 
-    // 3. Lane Steering controls
+    // 3. Improved Lane Steering sensitivity
     const maxLaneOffset = 17.0;
-    const steerSpeedFactor = Math.max(0.4, Math.min(2.0, Math.abs(state.speed) * 0.075 + 0.35));
+    const steerSpeedFactor = Math.max(0.75, Math.min(2.2, Math.abs(state.speed) * 0.05 + 0.65));
     if (!state.airborne) {
       const isReversing = state.speed < -1.0;
       const steerDirection = isReversing ? -1 : 1;
@@ -134,33 +139,29 @@ export class PhysicsSystem {
       state.playerLane = Math.max(-maxLaneOffset, Math.min(maxLaneOffset, state.playerLane));
     }
 
-    // 4. Airborne jump mechanics
-    if (state.airborne) {
-      state.airVelocityY -= 35 * dt; // Gravity acceleration
-      state.airHeight += state.airVelocityY * dt;
+    // 4. Glued-to-Road Airborne Constraint (constrain floating/tilting/flipping)
+    state.airborne = false;
+    state.airHeight = 0;
+    state.airVelocityY = 0;
+    state.spinAngle = 0;
+    state.rollAngle = 0;
 
-      // Stunt spins and rolls
-      if (steerLeft || steerRight) {
-        if (state.isDrifting) {
-          state.rollAngle += Math.PI * dt * 2.2;
-          setStuntNotification('BARREL ROLL! +1000 PTS');
-          state.stuntScore += 10;
-        } else {
-          state.spinAngle += Math.PI * dt * 2.0;
-          setStuntNotification('360° SPIN! +500 PTS');
-          state.stuntScore += 5;
-        }
-      }
+    // 5. Spring suspension physics (Hooke's Law spring-damper: F = -k*x - c*v)
+    const k = 175.0; // Spring stiffness
+    const c = 11.5;  // Damping coefficient
+    const springForce = -k * state.suspensionOffset - c * state.suspensionVelocity;
 
-      if (state.airHeight <= 0) {
-        state.airHeight = 0;
-        state.airborne = false;
-        state.spinAngle = 0;
-        state.rollAngle = 0;
-        state.landingCompression = 0.45;
-        audioSynth.playStart(); // Landing thump
-      }
+    // Slight chassis dip/squat under acceleration and braking
+    let targetPitchOffset = 0;
+    if (accelInput && state.speed < maxSpeedLimit) {
+      targetPitchOffset = 0.04;
+    } else if (brakeInput && state.speed > 0) {
+      targetPitchOffset = -0.07;
     }
+
+    const finalSpringForce = springForce + targetPitchOffset * k;
+    state.suspensionVelocity += finalSpringForce * dt;
+    state.suspensionOffset += state.suspensionVelocity * dt;
   }
 
   checkPlayerToBotCollisions(
@@ -188,8 +189,14 @@ export class PhysicsSystem {
         state.speed = Math.max(18, state.speed * 0.72);
 
         bObj.speed = Math.max(15, bObj.speed * 0.75);
-        const pushSide = bObj.lane > state.playerLane ? 1.8 : -1.8;
-        bObj.lane = Math.max(-9.5, Math.min(9.5, bObj.lane + pushSide));
+
+        // Anti-clipping repulsion impulses
+        const pushSide = bObj.lane > state.playerLane ? 1.6 : -1.6;
+        state.playerLane = Math.max(-16.0, Math.min(16.0, state.playerLane - pushSide * 0.5));
+        bObj.lane = Math.max(-9.5, Math.min(9.5, bObj.lane + pushSide * 0.5));
+
+        // suspension spring compression bump on hit
+        state.suspensionVelocity += 4.5;
       }
     });
   }
@@ -239,9 +246,15 @@ export class PhysicsSystem {
         state.speed = Math.max(16, state.speed * 0.55);
         
         tc.speed = Math.max(8, tc.speed * 0.5);
-        const pushSide = tc.lane > state.playerLane ? 1.5 : -1.5;
-        tc.lane = Math.max(-1.0, Math.min(1.0, tc.lane + (pushSide > 0 ? 0.35 : -0.35)));
+
+        // Anti-clipping repulsion impulses
+        const pushSide = (tc.lane * 12.0) > state.playerLane ? 1.6 : -1.6;
+        state.playerLane = Math.max(-16.0, Math.min(16.0, state.playerLane - pushSide * 0.8));
+        tc.lane = Math.max(-1.0, Math.min(1.0, tc.lane + (pushSide > 0 ? 0.25 : -0.25)));
         tc.dist += 14;
+
+        // suspension spring compression bump on hit
+        state.suspensionVelocity += 6.5;
       }
     });
   }
