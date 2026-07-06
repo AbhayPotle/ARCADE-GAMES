@@ -757,12 +757,30 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const exhaustAlpha = new Float32Array(exhaustCount);
     exhaustGeom.setAttribute('position', new THREE.BufferAttribute(exhaustPos, 3));
     exhaustGeom.setAttribute('alpha', new THREE.BufferAttribute(exhaustAlpha, 1));
+    // Procedural soft radial gradient texture for realistic exhaust smoke/steam
+    const createSmokeTexture = (): THREE.Texture => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d')!;
+      const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+      grad.addColorStop(0.35, 'rgba(240, 240, 240, 0.45)');
+      grad.addColorStop(1, 'rgba(240, 240, 240, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 64, 64);
+      const tex = new THREE.CanvasTexture(canvas);
+      return tex;
+    };
+
     const exhaustMat = new THREE.PointsMaterial({
-      color: 0xff4500,
-      size: 0.6,
+      color: 0xdddddd, // Soft grey/white realistic exhaust steam
+      size: 1.3,
+      map: createSmokeTexture(),
       transparent: true,
-      opacity: 0.7,
-      blending: THREE.AdditiveBlending
+      opacity: 0.55,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
     });
     const exhaustParticles = new THREE.Points(exhaustGeom, exhaustMat);
     scene.add(exhaustParticles);
@@ -911,6 +929,47 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const headlightsR = headlightsL.clone();
     headlightsR.position.x = 0.8;
     playerCarGroup.add(headlightsR);
+
+    // Volumetric Headlight Beams (twin soft-white forward projecting cones)
+    const lightConeGeom = new THREE.ConeGeometry(0.85, 16.0, 16, 1, true);
+    lightConeGeom.rotateX(-Math.PI / 2);
+    lightConeGeom.translate(0, 0, 8.0); // align pointing forward along +Z
+
+    const headlightConeMat = new THREE.ShaderMaterial({
+      uniforms: {
+        color: { value: new THREE.Color(0xfff2df) } // Realistic warm white headlight color
+      },
+      vertexShader: `
+        varying vec3 vPosition;
+        void main() {
+          vPosition = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vPosition;
+        uniform vec3 color;
+        void main() {
+          // Length is 16.0. Position Z spans from 0.0 to 16.0.
+          float depthFactor = clamp((16.0 - vPosition.z) / 16.0, 0.0, 1.0);
+          float radialFactor = 1.0 - clamp(length(vPosition.xy) / (0.85 * (vPosition.z / 16.0) + 0.05), 0.0, 1.0);
+          float opacity = depthFactor * radialFactor * 0.18;
+          gl_FragColor = vec4(color, opacity);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
+    const volBeamL = new THREE.Mesh(lightConeGeom, headlightConeMat);
+    volBeamL.position.set(-0.8, 0.25, 2.2);
+    playerCarGroup.add(volBeamL);
+
+    const volBeamR = volBeamL.clone();
+    volBeamR.position.x = 0.8;
+    playerCarGroup.add(volBeamR);
 
     const taillightGlow = new THREE.PointLight(0xff0000, 1.2, 5);
     taillightGlow.position.set(0, 0.2, -2.2);
@@ -1225,14 +1284,14 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         const pMat = exhaustParticles.material as THREE.PointsMaterial;
 
         if (state.isNosActive) {
-          pMat.color.setHex(0x00d2ff);
-          pMat.size = 0.55;
+          pMat.color.setHex(0xf5f6fa); // Hot white-grey steam
+          pMat.size = 1.25;
         } else if (state.isDrifting) {
-          pMat.color.setHex(0xe0e0e0);
-          pMat.size = 0.85;
+          pMat.color.setHex(0xd8d8d8); // Thick grey tyre friction smoke
+          pMat.size = 1.5;
         } else if (Math.abs(state.playerLane) >= 16.6 && state.speed > 8) {
-          pMat.color.setHex(0xffaa00);
-          pMat.size = 0.7;
+          pMat.color.setHex(0xc2a679); // Realistic dirt/sand dust cloud
+          pMat.size = 1.4;
         } else {
           pMat.size = 0.01;
         }
