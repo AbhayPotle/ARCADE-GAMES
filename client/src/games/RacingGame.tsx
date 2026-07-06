@@ -851,14 +851,35 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       });
     };
 
+    // Helper to find and register GLTF wheels for rotation and steering animation
+    const registerGltfWheels = (carGroup: THREE.Group, model: THREE.Group) => {
+      const wheels: THREE.Object3D[] = [];
+      const frontWheels: THREE.Object3D[] = [];
+      model.traverse((node) => {
+        const name = node.name.toLowerCase();
+        if (name.includes('wheel') && (name.includes('l') || name.includes('r'))) {
+          // Select only the top-most wheel hub group to rotate the entire assembly
+          if (node.parent && !node.parent.name.toLowerCase().includes('wheel')) {
+            wheels.push(node);
+            if (name.includes('f')) {
+              frontWheels.push(node);
+            }
+          }
+        }
+      });
+      (carGroup as any).gltfWheels = wheels;
+      (carGroup as any).gltfFrontWheels = frontWheels;
+    };
+
     gltfLoader.load(
       carUrl,
       (gltf) => {
         playerCarGroup.remove(playerController.mesh);
         const loadedModel = gltf.scene;
         loadedModel.scale.setScalar(1.25);
-        loadedModel.rotation.y = 0;
+        loadedModel.rotation.y = -Math.PI / 2; // Point straight forward along Z-axis
         applyRealisticCarMaterials(loadedModel, selectedPaint);
+        registerGltfWheels(playerCarGroup, loadedModel);
         playerCarGroup.add(loadedModel);
       },
       undefined,
@@ -879,8 +900,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         botCar.remove(botController.mesh);
         const loadedModel = gltf.scene;
         loadedModel.scale.setScalar(1.25);
-        loadedModel.rotation.y = 0;
+        loadedModel.rotation.y = -Math.PI / 2;
         applyRealisticCarMaterials(loadedModel, '#ff0055');
+        registerGltfWheels(botCar, loadedModel);
         botCar.add(loadedModel);
       },
       undefined,
@@ -900,8 +922,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         bot2Car.remove(bot2Controller.mesh);
         const loadedModel = gltf.scene.clone();
         loadedModel.scale.setScalar(1.25);
-        loadedModel.rotation.y = 0;
+        loadedModel.rotation.y = -Math.PI / 2;
         applyRealisticCarMaterials(loadedModel, '#00ccff');
+        registerGltfWheels(bot2Car, loadedModel);
         bot2Car.add(loadedModel);
       },
       undefined,
@@ -919,8 +942,9 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         bot3Car.remove(bot3Controller.mesh);
         const loadedModel = gltf.scene.clone();
         loadedModel.scale.setScalar(1.25);
-        loadedModel.rotation.y = 0;
+        loadedModel.rotation.y = -Math.PI / 2;
         applyRealisticCarMaterials(loadedModel, '#ff00aa');
+        registerGltfWheels(bot3Car, loadedModel);
         bot3Car.add(loadedModel);
       },
       undefined,
@@ -1131,7 +1155,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       }
 
       // Smooth visual steering nose-pivot rotation (prevents flat sliding feel)
-      const targetSteerYaw = (steerLeft ? -0.15 : steerRight ? 0.15 : 0) * Math.min(1.0, Math.abs(state.speed) / 8.0);
+      const targetSteerYaw = (steerLeft ? 0.15 : steerRight ? -0.15 : 0) * Math.min(1.0, Math.abs(state.speed) / 8.0);
       state.steerYaw += (targetSteerYaw - state.steerYaw) * dt * 8.0;
 
       // Airborne check triggers
@@ -1227,6 +1251,20 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
 
         // Update player visuals (spoilers, wheels, exhausts, lights)
         playerController.updateVisuals(dt, state, brakeInput);
+
+        // Animate GLTF loaded wheels for player
+        const pWheels = (playerCarGroup as any).gltfWheels;
+        if (pWheels) {
+          pWheels.forEach((w: THREE.Object3D) => {
+            w.rotation.x += state.speed * dt * 0.45;
+          });
+        }
+        const pFrontWheels = (playerCarGroup as any).gltfFrontWheels;
+        if (pFrontWheels) {
+          pFrontWheels.forEach((w: THREE.Object3D) => {
+            w.rotation.y = state.steerAngle * 0.45;
+          });
+        }
       }
 
       // 4. Update AI Bots
@@ -1241,6 +1279,30 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
           activeEvent.difficulty,
           triggerGameFinished
         );
+
+        // Animate GLTF loaded wheels for bots
+        const botsList = [
+          { group: threeRef.current.botCar, speed: state.botSpeed },
+          { group: threeRef.current.bot2Car, speed: state.bot2Speed },
+          { group: threeRef.current.bot3Car, speed: state.bot3Speed }
+        ];
+        botsList.forEach((b) => {
+          if (b.group) {
+            const bWheels = (b.group as any).gltfWheels;
+            if (bWheels) {
+              bWheels.forEach((w: THREE.Object3D) => {
+                w.rotation.x += b.speed * dt * 0.45;
+              });
+            }
+            const bFrontWheels = (b.group as any).gltfFrontWheels;
+            if (bFrontWheels) {
+              bFrontWheels.forEach((w: THREE.Object3D) => {
+                // Bots steer slightly into curves dynamically
+                w.rotation.y = Math.sin(performance.now() * 0.005) * 0.1;
+              });
+            }
+          }
+        });
       }
 
       // 5. Collision checking
