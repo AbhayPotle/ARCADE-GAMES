@@ -565,27 +565,7 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
         {/* RIGHT AREA: Opponent avatar, Chessboard Canvas, HUD logs */}
         <main className="flex-1 h-full p-4 flex flex-col items-center justify-center relative overflow-hidden min-w-0">
           
-          {/* Opponent Profile HUD Banner (Centered above the canvas) */}
-          <div className="w-full max-w-[min(400px,92vw,50vh)] mb-2.5 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF6B6B] to-[#8a2be2] border-2 border-white/30 flex items-center justify-center text-lg">
-                🤖
-              </div>
-              <div>
-                <p className="text-xs font-bold text-white font-orbitron tracking-wider">A.I. CHESS_BOT</p>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
-                  <span className="text-[9px] text-[#4ECDC4] font-bold uppercase tracking-widest">
-                    {difficulty.toUpperCase()} MODE
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="px-3 py-1 rounded bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-[10px] uppercase font-orbitron tracking-widest animate-pulse">
-              CYBER_BOARD
-            </div>
-          </div>
+
 
           {/* Blinking Check Warnings */}
           {isPlayerInCheck && (

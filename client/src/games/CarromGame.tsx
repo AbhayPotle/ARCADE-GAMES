@@ -2076,6 +2076,27 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
                   {skin}
                 </button>
               ))}
+          </div>
+        </div>
+
+        {/* Bot Difficulty Setting */}
+          <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <h5 className="font-orbitron font-bold text-[10px] text-gray-400 tracking-wider uppercase">// BOT DIFFICULTY</h5>
+            <div className="flex gap-1 justify-between w-full">
+              {(['easy', 'medium', 'hard'] as const).map(diff => (
+                <button
+                  key={diff}
+                  disabled={isStrikerFlicked}
+                  onClick={() => { audioSynth.playClick(); setDifficulty(diff); difficultyRef.current = diff; }}
+                  className={`flex-1 py-2 rounded-lg text-[9px] uppercase font-bold border transition-all cursor-pointer text-center ${
+                    difficulty === diff
+                      ? 'bg-[#FFD93D] text-black border-[#FFD93D] shadow-[0_0_8px_rgba(255,217,61,0.4)]'
+                      : 'bg-black/40 text-gray-300 border-white/10 hover:bg-[#FFD93D] hover:text-black hover:border-[#FFD93D]'
+                  } disabled:opacity-50`}
+                >
+                  {diff}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -2186,27 +2207,6 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
                 />
               </div>
             )}
-
-            {/* Bottom HUD: Bot Difficulty List */}
-            <div className="flex items-center justify-between p-1.5 rounded-xl bg-white/5 border border-white/10">
-              <span className="text-[9px] font-bold text-gray-400 font-orbitron uppercase tracking-widest ml-1">Bot Diff:</span>
-              <div className="flex gap-1">
-                {(['easy', 'medium', 'hard'] as const).map(diff => (
-                  <button
-                    key={diff}
-                    disabled={isStrikerFlicked}
-                    onClick={() => { audioSynth.playClick(); setDifficulty(diff); difficultyRef.current = diff; }}
-                    className={`px-3 py-1 rounded-lg text-[9px] uppercase font-bold border transition-all cursor-pointer ${
-                      difficulty === diff
-                        ? 'bg-[#FFD93D] text-black border-[#FFD93D] shadow-[0_0_8px_rgba(255,217,61,0.4)]'
-                        : 'bg-black/40 text-gray-300 border-white/10 hover:bg-[#FFD93D] hover:text-black hover:border-[#FFD93D] hover:shadow-[0_0_8px_rgba(255,217,61,0.3)]'
-                    } disabled:opacity-50`}
-                  >
-                    {diff}
-                  </button>
-                ))}
-              </div>
-            </div>
 
           </div>
 
