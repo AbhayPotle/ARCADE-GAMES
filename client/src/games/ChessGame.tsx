@@ -388,8 +388,8 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
       case 'neon':
       default:
         return isDark
-          ? 'bg-gradient-to-br from-indigo-950/40 to-purple-950/60 border border-purple-500/10 text-white'
-          : 'bg-gradient-to-br from-slate-900/40 to-slate-950/60 border border-cyan-500/10 text-white';
+          ? 'bg-gradient-to-br from-fuchsia-950/20 via-purple-950/45 to-indigo-950/35 border border-purple-500/30 text-white'
+          : 'bg-gradient-to-br from-indigo-950/30 via-slate-900/50 to-slate-950/40 border border-cyan-500/30 text-white';
     }
   };
 
@@ -430,15 +430,29 @@ export default function ChessLegends({ matchData, currentUser, onComplete }: Che
             };
       case 'neon':
       default:
-        return isWhite
-          ? {
-              color: '#00f0ff',
-              textShadow: '0 0 7px #00f0ff, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000',
-            }
-          : {
-              color: '#ff007f',
-              textShadow: '0 0 7px #ff007f, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000',
-            };
+        {
+          const isPawn = piece && piece.toLowerCase() === 'p';
+          if (isPawn) {
+            return isWhite
+              ? {
+                  color: '#fffb00',
+                  textShadow: '0 0 8px #fffb00, 0 0 3px #00f0ff, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000',
+                }
+              : {
+                  color: '#fffb00',
+                  textShadow: '0 0 8px #fffb00, 0 0 3px #ff007f, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000',
+                };
+          }
+          return isWhite
+            ? {
+                color: '#00f0ff',
+                textShadow: '0 0 7px #00f0ff, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000',
+              }
+            : {
+                color: '#ff007f',
+                textShadow: '0 0 7px #ff007f, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000',
+              };
+        }
     }
   };
 
