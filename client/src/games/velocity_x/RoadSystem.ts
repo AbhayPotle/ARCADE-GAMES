@@ -368,7 +368,7 @@ export class RoadSystem {
       boardMesh.position.set(0, 9.8, 0.1);
       archGroup.add(boardMesh);
 
-      const spot = new THREE.SpotLight(0xffea85, 3.5, 12, 0.72, 0.5, 1);
+      const spot = new THREE.SpotLight(0xffeed6, 3.5, 12, 0.72, 0.5, 1);
       spot.position.set(0, 8.8, 0.2);
       spot.target.position.set(0, 0, 0.2);
       spot.castShadow = false;
@@ -433,7 +433,7 @@ export class RoadSystem {
     const tunnelRightGeom = new THREE.BoxGeometry(1.2, 8.5, 4.2);
     const tunnelCeilingGeom = new THREE.BoxGeometry(39.2, 1.2, 4.2);
     const tunnelLightGeom = new THREE.BoxGeometry(0.8, 0.15, 3.8);
-    const tunnelLightMat = new THREE.MeshBasicMaterial({ color: 0xffea85 });
+    const tunnelLightMat = new THREE.MeshBasicMaterial({ color: 0xfff2df });
 
     const lampPoleGeom = new THREE.CylinderGeometry(0.14, 0.18, 7.0, 8);
     const lampArmGeom = new THREE.CylinderGeometry(0.08, 0.08, 2.5, 6);
@@ -444,13 +444,32 @@ export class RoadSystem {
     const coneGeom = new THREE.ConeGeometry(3.5, 7.0, 16, 1, true);
     coneGeom.translate(0, -3.5, 0);
     coneGeom.rotateX(Math.PI / 2);
-    const coneMat = new THREE.MeshBasicMaterial({
-      color: 0xffea85,
+    const coneMat = new THREE.ShaderMaterial({
+      uniforms: {
+        color: { value: new THREE.Color(0xffd180) } // Realistic warm halogen amber
+      },
+      vertexShader: `
+        varying vec3 vPosition;
+        void main() {
+          vPosition = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vPosition;
+        uniform vec3 color;
+        void main() {
+          // Length along Z is 7.0. Position Z spans from -7.0 to 0.0.
+          float lengthFactor = clamp((vPosition.z + 7.0) / 7.0, 0.0, 1.0);
+          float radialFactor = 1.0 - clamp(length(vPosition.xy) / (3.5 * lengthFactor + 0.1), 0.0, 1.0);
+          float opacity = lengthFactor * radialFactor * 0.15;
+          gl_FragColor = vec4(color, opacity);
+        }
+      `,
       transparent: true,
-      opacity: 0.12,
       blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      depthWrite: false
+      depthWrite: false,
+      side: THREE.DoubleSide
     });
 
     const segments = 300;
