@@ -32,3 +32,6 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Local Netlify folder
+.netlify
