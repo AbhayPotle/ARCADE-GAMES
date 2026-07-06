@@ -79,7 +79,6 @@ export class EnvironmentSystem {
     const baseMat = new THREE.MeshStandardMaterial({ color: 0x14171f, roughness: 0.65, metalness: 0.8 });
     const baseMesh = new THREE.Mesh(baseGeom, baseMat);
     baseMesh.position.y = 3.0;
-    baseMesh.castShadow = true;
     baseMesh.receiveShadow = true;
     skyscraper.add(baseMesh);
 
@@ -91,7 +90,6 @@ export class EnvironmentSystem {
     const matIdx = Math.floor(Math.random() * this.skyscraperMaterials.length);
     const bodyMesh = new THREE.Mesh(bodyGeom, this.skyscraperMaterials[matIdx]);
     bodyMesh.position.y = 6.0 + (height - 6.0) / 2;
-    bodyMesh.castShadow = true;
     bodyMesh.receiveShadow = true;
     skyscraper.add(bodyMesh);
 
@@ -100,7 +98,6 @@ export class EnvironmentSystem {
     const spireGeom = new THREE.CylinderGeometry(0.04, 0.22, spireH, 8);
     const spire = new THREE.Mesh(spireGeom, baseMat);
     spire.position.y = height + spireH / 2;
-    spire.castShadow = true;
     skyscraper.add(spire);
 
     // Warning beacon
@@ -154,14 +151,12 @@ export class EnvironmentSystem {
         rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
         rock.position.copy(pos);
         rock.position.y = terrY - 0.5;
-        rock.castShadow = true;
         rock.receiveShadow = true;
         scene.add(rock);
       } else {
         const treeGroup = new THREE.Group();
         const trunk = new THREE.Mesh(trunkGeom, trunkMat);
         trunk.position.y = 0.6;
-        trunk.castShadow = true;
         treeGroup.add(trunk);
 
         for (let l = 0; l < 3; l++) {
@@ -169,7 +164,6 @@ export class EnvironmentSystem {
           leaves.position.y = 1.8 + l * 1.3;
           leaves.scale.setScalar(1.0 - l * 0.26);
           leaves.rotation.y = Math.random() * Math.PI;
-          leaves.castShadow = true;
           treeGroup.add(leaves);
         }
 
@@ -191,7 +185,6 @@ export class EnvironmentSystem {
           new THREE.BoxGeometry(0.8, 0.16, 0.8),
           new THREE.MeshStandardMaterial({ color: 0x1d1e22, metalness: 0.95, roughness: 0.05 })
         );
-        dBody.castShadow = true;
         droneGroup.add(dBody);
         
         const eyeColor = d % 2 === 0 ? 0x00f3ff : 0xff0055;

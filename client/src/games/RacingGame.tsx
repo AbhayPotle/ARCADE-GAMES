@@ -62,21 +62,28 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
   const mountRef = useRef<HTMLDivElement | null>(null);
   const minimapCanvasRef = useRef<HTMLCanvasElement | null>(null);
   
-  const [coins, setCoins] = useState<number>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('arcade_coins');
-      return stored ? parseInt(stored) : (currentUser?.coins || 100);
-    }
-    return 100;
-  });
+  const [coins, setCoins] = useState<number>(100);
+  const [unlockedCars, setUnlockedCars] = useState<string[]>(['sentinel']);
 
-  const [unlockedCars, setUnlockedCars] = useState<string[]>(() => {
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('arcade_unlocked_cars');
-      return stored ? JSON.parse(stored) : ['sentinel'];
+      const storedCoins = localStorage.getItem('arcade_coins');
+      if (storedCoins) {
+        setCoins(parseInt(storedCoins));
+      } else if (currentUser?.coins) {
+        setCoins(currentUser.coins);
+      }
+      
+      const storedCars = localStorage.getItem('arcade_unlocked_cars');
+      if (storedCars) {
+        try {
+          setUnlockedCars(JSON.parse(storedCars));
+        } catch (e) {
+          console.error(e);
+        }
+      }
     }
-    return ['sentinel'];
-  });
+  }, [currentUser]);
 
   const CAR_MODELS: CarConfig[] = [
     { id: 'sentinel', name: 'Vulcan Sentinel', emoji: '🏎️', maxSpeed: 105, accel: 15, handling: 2.2, driftGrip: 0.85, cost: 0, unlocked: true, desc: 'Balanced handling, perfect for learning curved entries.' },
@@ -850,7 +857,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         playerCarGroup.remove(playerController.mesh);
         const loadedModel = gltf.scene;
         loadedModel.scale.setScalar(1.25);
-        loadedModel.rotation.y = Math.PI / 2;
+        loadedModel.rotation.y = Math.PI;
         applyRealisticCarMaterials(loadedModel, selectedPaint);
         playerCarGroup.add(loadedModel);
       },
@@ -872,7 +879,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         botCar.remove(botController.mesh);
         const loadedModel = gltf.scene;
         loadedModel.scale.setScalar(1.25);
-        loadedModel.rotation.y = Math.PI / 2;
+        loadedModel.rotation.y = Math.PI;
         applyRealisticCarMaterials(loadedModel, '#ff0055');
         botCar.add(loadedModel);
       },
@@ -893,7 +900,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         bot2Car.remove(bot2Controller.mesh);
         const loadedModel = gltf.scene.clone();
         loadedModel.scale.setScalar(1.25);
-        loadedModel.rotation.y = Math.PI / 2;
+        loadedModel.rotation.y = Math.PI;
         applyRealisticCarMaterials(loadedModel, '#00ccff');
         bot2Car.add(loadedModel);
       },
@@ -912,7 +919,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         bot3Car.remove(bot3Controller.mesh);
         const loadedModel = gltf.scene.clone();
         loadedModel.scale.setScalar(1.25);
-        loadedModel.rotation.y = Math.PI / 2;
+        loadedModel.rotation.y = Math.PI;
         applyRealisticCarMaterials(loadedModel, '#ff00aa');
         bot3Car.add(loadedModel);
       },

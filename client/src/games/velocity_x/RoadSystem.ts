@@ -336,7 +336,6 @@ export class RoadSystem {
       
       const frameMesh = new THREE.Mesh(boardFrameGeom, frameMat);
       frameMesh.position.set(0, 9.8, 0);
-      frameMesh.castShadow = true;
       archGroup.add(frameMesh);
 
       const signCanvas = document.createElement('canvas');
@@ -517,7 +516,6 @@ export class RoadSystem {
       const postL = new THREE.Mesh(postGeom, postMat);
       postL.position.copy(posLeft1).add(postUp.clone().multiplyScalar(0.6));
       postL.quaternion.copy(postQuat);
-      postL.castShadow = true;
       scene.add(postL);
 
       const distL = posLeft1.distanceTo(posLeft2);
@@ -529,21 +527,18 @@ export class RoadSystem {
       beamL.position.copy(midL).add(postUp.clone().multiplyScalar(0.75));
       beamL.scale.set(1.0, 1.0, distL);
       beamL.quaternion.setFromRotationMatrix(beamOrientMatL);
-      beamL.castShadow = true;
       scene.add(beamL);
 
       const beamL2 = new THREE.Mesh(beamGeom, beamMat);
       beamL2.position.copy(midL).add(postUp.clone().multiplyScalar(0.42));
       beamL2.scale.set(1.0, 1.0, distL);
       beamL2.quaternion.setFromRotationMatrix(beamOrientMatL);
-      beamL2.castShadow = true;
       scene.add(beamL2);
 
       // --- Right Guardrail ---
       const postR = new THREE.Mesh(postGeom, postMat);
       postR.position.copy(posRight1).add(postUp.clone().multiplyScalar(0.6));
       postR.quaternion.copy(postQuat);
-      postR.castShadow = true;
       scene.add(postR);
 
       const distR = posRight1.distanceTo(posRight2);
@@ -555,14 +550,12 @@ export class RoadSystem {
       beamR.position.copy(midR).add(postUp.clone().multiplyScalar(0.75));
       beamR.scale.set(1.0, 1.0, distR);
       beamR.quaternion.setFromRotationMatrix(beamOrientMatR);
-      beamR.castShadow = true;
       scene.add(beamR);
 
       const beamR2 = new THREE.Mesh(beamGeom, beamMat);
       beamR2.position.copy(midR).add(postUp.clone().multiplyScalar(0.42));
       beamR2.scale.set(1.0, 1.0, distR);
       beamR2.quaternion.setFromRotationMatrix(beamOrientMatR);
-      beamR2.castShadow = true;
       scene.add(beamR2);
 
       // --- Street Lamps ---
@@ -574,7 +567,6 @@ export class RoadSystem {
         const lampGroup = new THREE.Group();
         const pole = new THREE.Mesh(lampPoleGeom, lampPoleMat);
         pole.position.y = 3.5;
-        pole.castShadow = true;
         lampGroup.add(pole);
 
         const arm = new THREE.Mesh(lampArmGeom, lampPoleMat);
@@ -635,17 +627,14 @@ export class RoadSystem {
 
         const pillarL = new THREE.Mesh(pillarGeom, bridgeMat);
         pillarL.position.set(-19.5, -22.5, 0);
-        pillarL.castShadow = true;
         bridgeGroup.add(pillarL);
 
         const pillarR = new THREE.Mesh(pillarGeom, bridgeMat);
         pillarR.position.set(19.5, -22.5, 0);
-        pillarR.castShadow = true;
         bridgeGroup.add(pillarR);
 
         const beam = new THREE.Mesh(crossBeamGeom, bridgeMat);
         beam.position.set(0, -1.2, 0);
-        beam.castShadow = true;
         bridgeGroup.add(beam);
 
         const arch = new THREE.Mesh(bridgeArchGeom, bridgeMat);
@@ -666,19 +655,16 @@ export class RoadSystem {
 
         const wallL = new THREE.Mesh(tunnelLeftGeom, tunnelWallMat);
         wallL.position.set(-18.6, 3.85, 0);
-        wallL.castShadow = true;
         wallL.receiveShadow = true;
         tunnelGroup.add(wallL);
 
         const wallR = new THREE.Mesh(tunnelRightGeom, tunnelWallMat);
         wallR.position.set(18.6, 3.85, 0);
-        wallR.castShadow = true;
         wallR.receiveShadow = true;
         tunnelGroup.add(wallR);
 
         const ceiling = new THREE.Mesh(tunnelCeilingGeom, tunnelWallMat);
         ceiling.position.set(0, 8.0, 0);
-        ceiling.castShadow = true;
         ceiling.receiveShadow = true;
         tunnelGroup.add(ceiling);
 
