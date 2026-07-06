@@ -48,8 +48,17 @@ export class RoadSystem {
       const pt = this.trackCurve.getPointAt(t);
       const tangent = this.trackCurve.getTangentAt(t).normalize();
       
-      const right = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+      let right = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+      if (right.lengthSq() < 0.001) {
+        right.set(1, 0, 0); // fallback if tangent is vertical
+      }
       const up = new THREE.Vector3().crossVectors(right, tangent).normalize();
+      
+      // Ensure the up vector always faces generally upwards (preventing flips)
+      if (up.y < 0) {
+        up.multiplyScalar(-1);
+        right.multiplyScalar(-1);
+      }
       
       this.roadSamples.push({
         pt: pt,
@@ -71,11 +80,33 @@ export class RoadSystem {
     const s1 = this.roadSamples[index];
     const s2 = this.roadSamples[nextIndex];
     
+    const pt = new THREE.Vector3().lerpVectors(s1.pt, s2.pt, alpha);
+    const tangent = new THREE.Vector3().lerpVectors(s1.tangent, s2.tangent, alpha).normalize();
+    
+    // Look ahead slightly to compute local curvature for banking
+    const tNext = (normalizedT + 0.003) % 1.0;
+    const indexNext = Math.floor(tNext * sampleCount) % sampleCount;
+    const indexNext2 = (indexNext + 1) % sampleCount;
+    const alphaNext = (tNext * sampleCount) - Math.floor(tNext * sampleCount);
+    const s1Next = this.roadSamples[indexNext];
+    const s2Next = this.roadSamples[indexNext2];
+    const tangentNext = new THREE.Vector3().lerpVectors(s1Next.tangent, s2Next.tangent, alphaNext).normalize();
+    
+    // Curvature determines smooth banking proportional to the turn intensity
+    const curvature = tangent.clone().cross(tangentNext).y;
+    const bankAngle = Math.max(-0.22, Math.min(0.22, curvature * 22.0));
+    
+    const normal = new THREE.Vector3().lerpVectors(s1.normal, s2.normal, alpha).normalize();
+    normal.applyAxisAngle(tangent, bankAngle);
+    
+    const binormal = new THREE.Vector3().lerpVectors(s1.binormal, s2.binormal, alpha).normalize();
+    binormal.applyAxisAngle(tangent, bankAngle);
+    
     return {
-      pt: new THREE.Vector3().lerpVectors(s1.pt, s2.pt, alpha),
-      tangent: new THREE.Vector3().lerpVectors(s1.tangent, s2.tangent, alpha).normalize(),
-      normal: new THREE.Vector3().lerpVectors(s1.normal, s2.normal, alpha).normalize(),
-      binormal: new THREE.Vector3().lerpVectors(s1.binormal, s2.binormal, alpha).normalize()
+      pt,
+      tangent,
+      normal,
+      binormal
     };
   }
 
@@ -168,16 +199,8 @@ export class RoadSystem {
       const pt = frame.pt;
       const tangent = frame.tangent;
       
-      const tNext = (i + 1) / roadSegmentsCount;
-      const frameNext = this.getTrackFrame(tNext);
-      const curvature = tangent.clone().cross(frameNext.tangent).y;
-      const bankAngle = 0;
-
-      const binormal = frame.binormal.clone();
-      binormal.applyAxisAngle(tangent, bankAngle);
-      
-      const normal = frame.normal.clone();
-      normal.applyAxisAngle(tangent, bankAngle);
+      const binormal = frame.binormal;
+      const normal = frame.normal;
 
       const vL = pt.clone().add(binormal.clone().multiplyScalar(-roadWidth / 2));
       const vR = pt.clone().add(binormal.clone().multiplyScalar(roadWidth / 2));
@@ -484,21 +507,8 @@ export class RoadSystem {
       const tangent1 = frame1.tangent;
       const tangent2 = frame2.tangent;
 
-      const t1Next = (i + 1) / segments;
-      const frame1Next = this.getTrackFrame(t1Next);
-      const curvature1 = tangent1.clone().cross(frame1Next.tangent).y;
-      const bankAngle1 = 0;
-
-      const t2Next = ((i + 1) / segments + 0.002) % 1.0;
-      const frame2Next = this.getTrackFrame(t2Next);
-      const curvature2 = tangent2.clone().cross(frame2Next.tangent).y;
-      const bankAngle2 = 0;
-
-      const binormal1 = frame1.binormal.clone();
-      binormal1.applyAxisAngle(tangent1, bankAngle1);
- 
-      const binormal2 = frame2.binormal.clone();
-      binormal2.applyAxisAngle(tangent2, bankAngle2);
+      const binormal1 = frame1.binormal;
+      const binormal2 = frame2.binormal;
 
       const shoulderOffset = 18.3;
       const posLeft1 = pt1.clone().add(binormal1.clone().multiplyScalar(-shoulderOffset));
