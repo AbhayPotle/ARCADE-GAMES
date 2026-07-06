@@ -2103,19 +2103,19 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
         </aside>
 
         {/* RIGHT AREA: Opponent avatar, Carrom Board Canvas, Bottom controls */}
-        <main className="flex-1 h-full p-4 flex flex-col items-center justify-center relative overflow-hidden min-w-0">
+        <main className="flex-1 h-full p-2.5 md:p-4 flex flex-col items-center justify-center relative overflow-hidden min-w-0">
           
           {/* Opponent Profile HUD Banner (Centered above the canvas) */}
-          <div className="w-full max-w-[min(340px,90vw,45vh)] mb-1.5 p-1.5 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between shadow-lg shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="w-6.5 h-6.5 rounded-full bg-gradient-to-tr from-[#FF6B6B] to-[#8a2be2] border border-white/20 flex items-center justify-center text-sm animate-pulse">
+          <div className="w-full max-w-[min(560px,94vw,65vh)] mb-2 p-2 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between shadow-lg shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#FF6B6B] to-[#8a2be2] border border-white/20 flex items-center justify-center text-base animate-pulse">
                 🤖
               </div>
               <div>
-                <p className="text-[10px] font-bold text-white font-orbitron tracking-wider leading-none mb-0.5">A.I. CYBER_BOT</p>
+                <p className="text-xs font-bold text-white font-orbitron tracking-wider leading-none mb-1">A.I. CYBER_BOT</p>
                 <div className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
-                  <span className="text-[8px] text-[#4ECDC4] font-bold uppercase tracking-widest leading-none">
+                  <span className="text-[9px] text-[#4ECDC4] font-bold uppercase tracking-widest leading-none">
                     {botPlayState === 'idle' ? 'connected' : `${botPlayState}...`}
                   </span>
                 </div>
@@ -2123,21 +2123,21 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
             </div>
 
             {/* Score Register Panel */}
-            <div className="flex items-center gap-2.5 text-right">
+            <div className="flex items-center gap-3 text-right">
               <div className="text-center font-mono">
-                <p className="text-[7px] text-gray-400 leading-none">IVORY (WHITE)</p>
-                <p className="text-xs font-bold text-[#FFD93D] leading-none mt-0.5">{scores.white}</p>
+                <p className="text-[8px] text-gray-400 leading-none">IVORY (WHITE)</p>
+                <p className="text-xs font-bold text-[#FFD93D] leading-none mt-1">{scores.white}</p>
               </div>
-              <div className="h-4.5 w-px bg-white/15" />
+              <div className="h-5.5 w-px bg-white/15" />
               <div className="text-center font-mono">
-                <p className="text-[7px] text-gray-400 leading-none">PURPLE (BLACK)</p>
-                <p className="text-xs font-bold text-[#6C63FF] leading-none mt-0.5">{scores.black}</p>
+                <p className="text-[8px] text-gray-400 leading-none">PURPLE (BLACK)</p>
+                <p className="text-xs font-bold text-[#6C63FF] leading-none mt-1">{scores.black}</p>
               </div>
             </div>
           </div>
 
           {/* Board Canvas Wrapper with Floating Score Popups Container */}
-          <div className="relative w-[min(340px,90vw,45vh)] h-[min(340px,90vw,45vh)] flex justify-center shrink-0">
+          <div className="relative w-[min(560px,94vw,65vh)] h-[min(560px,94vw,65vh)] flex justify-center shrink-0">
             <canvas
               ref={canvasRef}
               width={BOARD_SIZE}
@@ -2165,7 +2165,7 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
           </div>
 
           {/* Bottom Game Controls */}
-          <div className="w-full max-w-[min(340px,90vw,45vh)] mt-1.5 flex flex-col gap-1.5 shrink-0">
+          <div className="w-full max-w-[min(560px,94vw,65vh)] mt-2 flex flex-col gap-2 shrink-0">
             
             {/* Strike Power/Force Indicator during active aiming */}
             {isAiming && (
@@ -2209,17 +2209,17 @@ export default function CarromMasters({ matchData, currentUser, onComplete }: Ca
             )}
 
             {/* Bottom HUD: Bot Difficulty List */}
-            <div className="flex items-center justify-between p-1 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-[8px] font-bold text-gray-400 font-orbitron uppercase tracking-wider ml-1">Bot Diff:</span>
+            <div className="flex items-center justify-between p-1.5 rounded-xl bg-white/5 border border-white/10">
+              <span className="text-[9px] font-bold text-gray-400 font-orbitron uppercase tracking-widest ml-1">Bot Diff:</span>
               <div className="flex gap-1">
                 {(['easy', 'medium', 'hard'] as const).map(diff => (
                   <button
                     key={diff}
                     disabled={isStrikerFlicked}
                     onClick={() => { audioSynth.playClick(); setDifficulty(diff); difficultyRef.current = diff; }}
-                    className={`px-2 py-0.5 rounded text-[8px] uppercase font-bold border transition-all cursor-pointer ${
+                    className={`px-3 py-1 rounded-lg text-[9px] uppercase font-bold border transition-all cursor-pointer ${
                       difficulty === diff
-                        ? 'bg-[#FFD93D] text-black border-[#FFD93D] shadow-[0_0_6px_rgba(255,217,61,0.4)]'
+                        ? 'bg-[#FFD93D] text-black border-[#FFD93D] shadow-[0_0_8px_rgba(255,217,61,0.4)]'
                         : 'bg-black/40 text-gray-300 border-white/10 hover:bg-[#FFD93D] hover:text-black hover:border-[#FFD93D]'
                     } disabled:opacity-50`}
                   >
