@@ -146,9 +146,7 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
   
   // Custom states
   const [carouselIndex, setCarouselIndex] = useState(0);
-  const [showShopModal, setShowShopModal] = useState(false);
   const [dailyClaimMsg, setDailyClaimMsg] = useState('');
-  const [upgrades, setUpgrades] = useState<Record<string, number>>({ engine: 1, tires: 1, stability: 1 });
 
   const categories = ['All', 'Board Games', 'Racing', 'Educational Games', 'Puzzle Games', 'Sports', 'Strategy', 'Multiplayer Battle Games'];
   const featuredGames = GAMES.slice(0, 4); // First 4 are featured
@@ -176,9 +174,6 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
     try {
       const res = await api.getUserProfile(currentUser.id);
       setProfileData(res);
-      if (res?.profile?.upgrades) {
-        setUpgrades(res.profile.upgrades);
-      }
     } catch (err) {
       console.error(err);
     }
@@ -231,18 +226,7 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
     }
   };
 
-  const handlePurchaseUpgrade = async (upgradeType: string, cost: number) => {
-    audioSynth.playClick();
-    try {
-      const res = await api.purchaseUpgrade(upgradeType, cost);
-      alert(`Upgraded ${upgradeType.toUpperCase()} successfully!`);
-      audioSynth.playAchievement();
-      loadDashboardStats();
-    } catch (err: any) {
-      alert(err.message || 'Upgrade failed. Check coins level.');
-      audioSynth.playError();
-    }
-  };
+
 
   const filteredGames = selectedCategory === 'All'
     ? GAMES
@@ -303,13 +287,6 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
 
         {/* Action Buttons */}
         <div className="flex space-x-2">
-          <button
-            onClick={() => { audioSynth.playClick(); setShowShopModal(true); }}
-            className="group text-xs font-orbitron text-neon-yellow px-4 py-2 rounded-lg bg-neon-yellow/10 border border-neon-yellow/40 shadow-[0_4px_0_0_rgba(255,251,0,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(255,251,0,0.5),0_0_12px_rgba(255,251,0,0.2)] hover:bg-neon-yellow hover:text-black active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer flex items-center"
-          >
-            <span className="bg-neon-yellow group-hover:bg-black mr-2 animate-pulse w-1.5 h-1.5 rounded-full shadow-[0_0_6px_#fffb00] group-hover:shadow-none inline-block" />
-            <span>🛒 TUNING_SHOP</span>
-          </button>
           <button
             onClick={() => { audioSynth.playClick(); onLogout(); }}
             className="group text-xs font-orbitron text-red-400 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/40 shadow-[0_4px_0_0_rgba(239,68,68,0.4)] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_rgba(239,68,68,0.5),0_0_12px_rgba(239,68,68,0.2)] hover:bg-red-500 hover:text-black active:translate-y-[4px] active:shadow-none transition-all duration-100 cursor-pointer flex items-center"
@@ -542,71 +519,7 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
 
       </div>
 
-      {/* Shop Customizer Modal overlay */}
-      {showShopModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fade-in font-mono">
-          <div className="w-full max-w-md glass-panel p-6 rounded-xl border border-neon-yellow/20 bg-cyber-dark text-xs text-white space-y-4">
-            <div className="flex justify-between items-center border-b border-white/10 pb-2">
-              <span className="text-neon-yellow font-bold font-orbitron text-sm">// TUNING & PERFORMANCE UPGRADES</span>
-              <button onClick={() => setShowShopModal(false)} className="text-gray-400 hover:text-white">✕</button>
-            </div>
 
-            <p className="text-gray-400 text-[10px]">
-              Spend your Cyber-Coins to purchase ship stability cores, racing engine upgrades, or specialized tire treads.
-            </p>
-
-            <div className="space-y-4">
-              <div className="p-3 bg-black/40 border border-white/5 rounded flex justify-between items-center">
-                <div>
-                  <h5 className="font-bold text-white font-orbitron">ENGINE DRIVE THRUST (Velocity X)</h5>
-                  <p className="text-[10px] text-gray-400">Current Level: {upgrades.engine || 1} / 5</p>
-                </div>
-                <button
-                  onClick={() => handlePurchaseUpgrade('engine', 100)}
-                  className="px-3 py-1.5 bg-neon-yellow text-black font-orbitron font-bold rounded hover:bg-neon-yellow/85"
-                >
-                  UPGRADE [100🪙]
-                </button>
-              </div>
-
-              <div className="p-3 bg-black/40 border border-white/5 rounded flex justify-between items-center">
-                <div>
-                  <h5 className="font-bold text-white font-orbitron">HIGH-TRACTION TREADS (Velocity X)</h5>
-                  <p className="text-[10px] text-gray-400">Current Level: {upgrades.tires || 1} / 5</p>
-                </div>
-                <button
-                  onClick={() => handlePurchaseUpgrade('tires', 80)}
-                  className="px-3 py-1.5 bg-neon-yellow text-black font-orbitron font-bold rounded hover:bg-neon-yellow/85"
-                >
-                  UPGRADE [80🪙]
-                </button>
-              </div>
-
-              <div className="p-3 bg-black/40 border border-white/5 rounded flex justify-between items-center">
-                <div>
-                  <h5 className="font-bold text-white font-orbitron">STABILITY DAMPENER (Velocity X / Storms)</h5>
-                  <p className="text-[10px] text-gray-400">Current Level: {upgrades.stability || 1} / 5</p>
-                </div>
-                <button
-                  onClick={() => handlePurchaseUpgrade('stability', 80)}
-                  className="px-3 py-1.5 bg-neon-yellow text-black font-orbitron font-bold rounded hover:bg-neon-yellow/85"
-                >
-                  UPGRADE [80🪙]
-                </button>
-              </div>
-            </div>
-
-            <div className="text-right">
-              <button
-                onClick={() => setShowShopModal(false)}
-                className="px-4 py-1.5 border border-white/20 text-gray-400 hover:text-white rounded text-[10px]"
-              >
-                CLOSE SHOP
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );
