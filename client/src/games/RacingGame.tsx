@@ -857,7 +857,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         playerCarGroup.remove(playerController.mesh);
         const loadedModel = gltf.scene;
         loadedModel.scale.setScalar(1.25);
-        loadedModel.rotation.y = Math.PI;
+        loadedModel.rotation.y = 0;
         applyRealisticCarMaterials(loadedModel, selectedPaint);
         playerCarGroup.add(loadedModel);
       },
@@ -879,7 +879,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         botCar.remove(botController.mesh);
         const loadedModel = gltf.scene;
         loadedModel.scale.setScalar(1.25);
-        loadedModel.rotation.y = Math.PI;
+        loadedModel.rotation.y = 0;
         applyRealisticCarMaterials(loadedModel, '#ff0055');
         botCar.add(loadedModel);
       },
@@ -900,7 +900,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         bot2Car.remove(bot2Controller.mesh);
         const loadedModel = gltf.scene.clone();
         loadedModel.scale.setScalar(1.25);
-        loadedModel.rotation.y = Math.PI;
+        loadedModel.rotation.y = 0;
         applyRealisticCarMaterials(loadedModel, '#00ccff');
         bot2Car.add(loadedModel);
       },
@@ -919,7 +919,7 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         bot3Car.remove(bot3Controller.mesh);
         const loadedModel = gltf.scene.clone();
         loadedModel.scale.setScalar(1.25);
-        loadedModel.rotation.y = Math.PI;
+        loadedModel.rotation.y = 0;
         applyRealisticCarMaterials(loadedModel, '#ff00aa');
         bot3Car.add(loadedModel);
       },
