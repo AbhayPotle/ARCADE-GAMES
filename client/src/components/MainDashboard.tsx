@@ -148,7 +148,7 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [dailyClaimMsg, setDailyClaimMsg] = useState('');
 
-  const categories = ['All', 'Board Games', 'Educational Games', 'Puzzle Games', 'Sports', 'Strategy', 'Multiplayer Battle Games'];
+  const categories = ['All', 'Board Games', 'Educational Games'];
   const featuredGames = GAMES.slice(0, 4); // First 4 are featured
   const featuredGame = featuredGames[carouselIndex] || GAMES[0];
   const accent = ACCENT_CLASSES[featuredGame?.accentColor || 'neon-cyan'] || ACCENT_CLASSES['neon-cyan'];
