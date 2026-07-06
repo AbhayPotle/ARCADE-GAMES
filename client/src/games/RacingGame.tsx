@@ -298,11 +298,35 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
     const fogDensity = activeEvent.weather === 'fog' ? 0.015 : (activeEvent.weather === 'storm' ? 0.009 : 0.0035);
     scene.fog = new THREE.FogExp2(scene.background, fogDensity);
 
-    const textureLoader = new THREE.TextureLoader();
-    textureLoader.load('/cyber_lobby_bg.png', (texture) => {
-      texture.mapping = THREE.EquirectangularReflectionMapping;
-      scene.environment = texture;
-    });
+    // Generate a high-fidelity procedural equirectangular night reflection map
+    const createOvercastEnvironmentMap = (): THREE.Texture => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d')!;
+      
+      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      grad.addColorStop(0, '#0a0d14'); // deep overcast slate grey
+      grad.addColorStop(0.5, '#05070c'); // black atmospheric layer
+      grad.addColorStop(0.72, '#0c121e'); // cool slate blue horizon glow
+      grad.addColorStop(1.0, '#16181b'); // warm city light haze
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Distant warm light spots representing horizon city lights
+      ctx.fillStyle = '#ffaa33';
+      for (let i = 0; i < 40; i++) {
+        const rx = Math.random() * canvas.width;
+        const ry = 160 + Math.random() * 20;
+        const rSize = 1.0 + Math.random() * 2.0;
+        ctx.fillRect(rx, ry, rSize, rSize);
+      }
+      
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      return tex;
+    };
+    scene.environment = createOvercastEnvironmentMap();
 
     const camera = new THREE.PerspectiveCamera(65, width / height, 0.5, 800);
     
@@ -647,6 +671,17 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
         roughCtx.bezierCurveTo(sx + 40, sy + 120, sx - 20, sy + 250, sx + 15, sy + 400);
         roughCtx.stroke();
       }
+
+      // Draw organic wet puddles (low roughness = highly specular reflective patches)
+      roughCtx.fillStyle = '#262626'; // ~0.15 roughness value
+      for (let p = 0; p < 8; p++) {
+        const px = Math.random() * width;
+        const py = Math.random() * height;
+        const pr = 18 + Math.random() * 40;
+        roughCtx.beginPath();
+        roughCtx.arc(px, py, pr, 0, Math.PI * 2);
+        roughCtx.fill();
+      }
       
       const map = new THREE.CanvasTexture(diffCanvas);
       const normalMap = new THREE.CanvasTexture(normCanvas);
@@ -669,8 +704,8 @@ export default function VelocityX({ matchData, currentUser, onComplete }: Racing
       normalMap: normalMap || undefined,
       normalScale: new THREE.Vector2(0.85, 0.85),
       roughnessMap: roughnessMap || undefined,
-      roughness: 1.0,
-      metalness: 0.15
+      roughness: 0.52,
+      metalness: 0.28
     });
 
     roadSystem.buildRoadMesh(scene, roadWidth, roadMat);
