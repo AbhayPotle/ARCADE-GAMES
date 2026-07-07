@@ -49,17 +49,6 @@ ArcadeVerse is deployed across multiple high-performance cloud providers to ensu
 
 * **Vercel**: Hosts the optimized Next.js static production bundle.
 * **Netlify**: Hosts a continuous deployment copy linked directly to the main GitHub repository.
-* **Render**: Runs the persistent WebSocket and API server, enabling room creation and cross-client multiplayer sync.
-
----
-
-## 🚀 One-Click Deploy (Render Blueprint)
-
-You can launch your own full-stack copy of the backend and frontend on Render with a single click:
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/AbhayPotle/ARCADE-GAMES)
-
----
 
 ## ⚙️ Running Locally
 
