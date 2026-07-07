@@ -1,19 +1,20 @@
-# 🎮 ARCADEVERSE — Next-Gen Retro Web Arcade
+# 🎮 ARCADEVERSE: MULTIPLAYER AI-BOT RETRO ARCADE
 
-Welcome to **ArcadeVerse**, a next-generation retro arcade platform packed with immersive multiplayer games, dynamic visual themes, micro-animations, and real-time multiplayer lobbies. 
+> "The Next-Gen Retro Gaming Hub of the Cyberpunk Era."
 
-This entire project is a testament to the power of **Vibe Coding** with AI, built hand-in-hand with **Antigravity AI (Google DeepMind)**.
+[![TypeScript](https://img.shields.io/badge/typescript-v5.4-blue.svg)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/next.js-v15.0-black.svg)](https://nextjs.org/)
+[![Socket.io](https://img.shields.io/badge/socket.io-v4.7-lightgrey.svg)](https://socket.io/)
+[![Tailwind](https://img.shields.io/badge/style-Tailwind%20CSS-blueviolet.svg)](https://tailwindcss.com/)
+[![Canvas API](https://img.shields.io/badge/graphics-Canvas%20API-orange.svg)](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
+[![Audio API](https://img.shields.io/badge/audio-Web%20Audio%20API-yellow.svg)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
+[![Vibe Coded](https://img.shields.io/badge/vibe_coded-AI_generated-purple.svg)](#)
+
+> ⚡ This project was "Vibe Coded" entirely using AI assistance.
 
 ---
 
-## ⚡ Built via Vibe Coding
-> [!IMPORTANT]
-> **This codebase was created entirely via Vibe Coding.** 
-> By utilizing natural language guidance and instant iteration with **Antigravity AI**, we built custom UI frameworks, real-time socket messaging, custom physics engines, and polished, responsive retro designs in record time without writing boilerplates by hand.
-
----
-
-## 🎮 The Games
+## 🎮 Active Games Showcase
 
 ArcadeVerse hosts three flagship custom-built retro games, each featuring custom visual styles and offline/online capabilities.
 
@@ -25,7 +26,7 @@ ArcadeVerse hosts three flagship custom-built retro games, each featuring custom
 
 ---
 
-## 🛠️ The Tech Stack
+## 🛠️ Detailed Tech Stack
 
 ### 💻 Frontend (Client)
 * **Framework**: Next.js 15+ (React)
@@ -43,7 +44,7 @@ ArcadeVerse hosts three flagship custom-built retro games, each featuring custom
 
 ---
 
-## 🌐 Platforms & Deployment
+## 🌐 Deployment & Platform Hosting
 
 ArcadeVerse is deployed across multiple high-performance cloud providers to ensure maximum accessibility and unlimited gameplay:
 
