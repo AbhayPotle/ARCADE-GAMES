@@ -15,7 +15,6 @@ services:
   - type: web
     name: arcadeverse-frontend
     runtime: static
-    plan: free
     rootDir: client
     buildCommand: npm install && npm run build
     staticPublishPath: out
