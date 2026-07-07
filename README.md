@@ -4,7 +4,6 @@
 
 [![TypeScript](https://img.shields.io/badge/typescript-v5.4-blue.svg)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/next.js-v15.0-black.svg)](https://nextjs.org/)
-[![Socket.io](https://img.shields.io/badge/socket.io-v4.7-lightgrey.svg)](https://socket.io/)
 [![Tailwind](https://img.shields.io/badge/style-Tailwind%20CSS-blueviolet.svg)](https://tailwindcss.com/)
 [![Canvas API](https://img.shields.io/badge/graphics-Canvas%20API-orange.svg)](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
 [![Audio API](https://img.shields.io/badge/audio-Web%20Audio%20API-yellow.svg)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
