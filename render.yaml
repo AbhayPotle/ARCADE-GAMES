@@ -12,13 +12,13 @@ services:
       - key: NODE_ENV
         value: production
 
-  - type: static
+  - type: web
     name: arcadeverse-frontend
-    env: static
+    runtime: static
     plan: free
     rootDir: client
     buildCommand: npm install && npm run build
-    publishDir: out
+    staticPublishPath: out
     envVars:
       - key: NEXT_PUBLIC_API_URL
         value: "https://arcadeverse-backend.onrender.com"
