@@ -12,6 +12,10 @@
 
 > ⚡ This project was "Vibe Coded" entirely using AI assistance.
 
+## 🌐 Live Playable Mirrors
+* **Vercel Production**: [https://client-gamma-six-83.vercel.app](https://client-gamma-six-83.vercel.app)
+* **Netlify Production**: [https://arcadegames14.netlify.app](https://arcadegames14.netlify.app)
+
 ---
 
 ## 🎮 Active Games Showcase
