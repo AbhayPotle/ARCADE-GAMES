@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { audioSynth } from '../services/audio';
 
@@ -26,10 +26,51 @@ export default function AuthGate({ onAuthSuccess }: AuthGateProps) {
   const [selectedAvatar, setSelectedAvatar] = useState(AVATARS[0].id);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutTime, setLockoutTime] = useState<number | null>(null);
+  const [lockoutCountdown, setLockoutCountdown] = useState(0);
+
+  useEffect(() => {
+    if (!lockoutTime) return;
+    const interval = setInterval(() => {
+      const remaining = Math.ceil((lockoutTime - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setLockoutTime(null);
+        setFailedAttempts(0);
+        setLockoutCountdown(0);
+      } else {
+        setLockoutCountdown(remaining);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutTime]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Check security lockout
+    if (lockoutTime && Date.now() < lockoutTime) {
+      const remaining = Math.ceil((lockoutTime - Date.now()) / 1000);
+      setError(`Security Lockout: Try again in ${remaining}s`);
+      audioSynth.playError();
+      return;
+    }
+
+    // Input validations
+    if (username.length < 3) {
+      setError('Username must be at least 3 characters.');
+      audioSynth.playError();
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      audioSynth.playError();
+      return;
+    }
+
     setLoading(true);
     audioSynth.playClick();
 
@@ -40,9 +81,21 @@ export default function AuthGate({ onAuthSuccess }: AuthGateProps) {
       } else {
         user = await api.register(username, password, selectedAvatar);
       }
+      setFailedAttempts(0);
+      setLockoutTime(null);
       onAuthSuccess(user);
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      const nextFailed = failedAttempts + 1;
+      setFailedAttempts(nextFailed);
+      
+      if (nextFailed >= 5) {
+        const lockDuration = 30 * 1000;
+        setLockoutTime(Date.now() + lockDuration);
+        setLockoutCountdown(30);
+        setError('Too many failed attempts. Security lockout active for 30s.');
+      } else {
+        setError(err.message || 'Authentication failed');
+      }
       audioSynth.playError();
     } finally {
       setLoading(false);
@@ -117,8 +170,14 @@ export default function AuthGate({ onAuthSuccess }: AuthGateProps) {
             <input
               type="text"
               required
+              maxLength={15}
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (/^[a-zA-Z0-9_]*$/.test(val)) {
+                  setUsername(val);
+                }
+              }}
               className="w-full bg-cyber-dark/80 border border-neon-cyan/20 focus:border-neon-cyan rounded px-3 py-2 text-sm text-white focus:outline-none transition-colors"
               placeholder="NET_RUNNER_99"
             />
@@ -128,14 +187,27 @@ export default function AuthGate({ onAuthSuccess }: AuthGateProps) {
             <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1 font-orbitron">
               Password
             </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-cyber-dark/80 border border-neon-cyan/20 focus:border-neon-cyan rounded px-3 py-2 text-sm text-white focus:outline-none transition-colors"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                maxLength={32}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-cyber-dark/80 border border-neon-cyan/20 focus:border-neon-cyan rounded pl-3 pr-12 py-2 text-sm text-white focus:outline-none transition-colors"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  audioSynth.playClick();
+                  setShowPassword(!showPassword);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-orbitron font-bold text-neon-cyan/60 hover:text-neon-cyan transition-colors focus:outline-none cursor-pointer"
+              >
+                {showPassword ? 'HIDE' : 'SHOW'}
+              </button>
+            </div>
           </div>
 
           {/* Avatar Selector for Registration */}
@@ -171,10 +243,12 @@ export default function AuthGate({ onAuthSuccess }: AuthGateProps) {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || lockoutCountdown > 0}
             className="w-full mt-6 py-2 px-4 bg-transparent border border-neon-cyan text-neon-cyan hover:bg-neon-cyan hover:text-black font-orbitron uppercase text-sm tracking-wider font-semibold rounded cursor-pointer transition-all duration-300 shadow-[0_0_15px_rgba(0,240,255,0.1)] hover:shadow-[0_0_25px_rgba(0,240,255,0.3)] disabled:opacity-50"
           >
-            {loading ? 'SYNCHRONIZING...' : isLogin ? 'LOG IN' : 'CREATE ACCOUNT'}
+            {lockoutCountdown > 0 
+              ? `LOCKOUT ACTIVE (${lockoutCountdown}s)`
+              : (loading ? 'SYNCHRONIZING...' : isLogin ? 'LOG IN' : 'CREATE ACCOUNT')}
           </button>
         </form>
 
