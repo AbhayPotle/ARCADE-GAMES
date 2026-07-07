@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: arcadeverse-backend
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: JWT_SECRET
+        value: "cyberpunk_arcadeverse_secret_key_prod_2026"
+      - key: NODE_ENV
+        value: production
