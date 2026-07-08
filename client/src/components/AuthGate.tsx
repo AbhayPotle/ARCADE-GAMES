@@ -161,12 +161,6 @@ export default function AuthGate({ onAuthSuccess }: AuthGateProps) {
           </p>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-950/50 border border-red-500/40 text-red-400 text-sm rounded text-center">
-            {error}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1 font-orbitron">
@@ -214,6 +208,12 @@ export default function AuthGate({ onAuthSuccess }: AuthGateProps) {
               </button>
             </div>
           </div>
+
+          {error && (
+            <div className="mt-2 p-3 bg-red-950/50 border border-red-500/40 text-red-400 text-sm rounded text-center">
+              {error}
+            </div>
+          )}
 
           {/* Avatar Selector for Registration */}
           {!isLogin && (
