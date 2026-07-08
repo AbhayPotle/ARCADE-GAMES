@@ -94,10 +94,13 @@ export default function AuthGate({ onAuthSuccess }: AuthGateProps) {
         setLockoutCountdown(30);
         setError('Too many failed attempts. Security lockout active for 30s.');
       } else {
-        if (isLogin) {
+        const isConnectionError = err.message && (err.message.toLowerCase().includes('fetch') || err.message.toLowerCase().includes('offline') || err.message.toLowerCase().includes('network'));
+        if (isConnectionError) {
+          setError('Server is currently offline. Please use Guest Mode to play offline, or verify your network.');
+        } else if (isLogin) {
           setError('Wrong username or password');
         } else {
-          setError(err.message || 'Authentication failed');
+          setError(err.message || 'Registration failed');
         }
       }
       audioSynth.playError();
