@@ -59,9 +59,6 @@ class ApiService {
       if (!isNetworkError) {
         throw err;
       }
-      if (endpoint === '/auth/login' || endpoint === '/auth/register') {
-        throw new Error(err.message || 'Authentication server is currently offline. Please try Guest Mode or check your network.');
-      }
       console.warn(`API Connection failed on ${endpoint}, falling back to localStorage:`, err.message);
       return this.handleFallback(endpoint, options);
     }
