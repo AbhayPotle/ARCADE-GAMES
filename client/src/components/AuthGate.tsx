@@ -94,7 +94,11 @@ export default function AuthGate({ onAuthSuccess }: AuthGateProps) {
         setLockoutCountdown(30);
         setError('Too many failed attempts. Security lockout active for 30s.');
       } else {
-        setError(err.message || 'Authentication failed');
+        if (isLogin) {
+          setError('Wrong username or password');
+        } else {
+          setError(err.message || 'Authentication failed');
+        }
       }
       audioSynth.playError();
     } finally {
