@@ -93,8 +93,32 @@ class ApiService {
       return defaultUser;
     };
 
+    const getLocalUsers = (): any[] => {
+      const list = localStorage.getItem('arcadeverse_local_users_list');
+      return list ? JSON.parse(list) : [];
+    };
+
+    const saveLocalUserInList = (user: any, pass: string) => {
+      const users = getLocalUsers();
+      const existingIdx = users.findIndex(u => u.username === user.username);
+      const userEntry = { ...user, password: pass };
+      if (existingIdx >= 0) {
+        users[existingIdx] = userEntry;
+      } else {
+        users.push(userEntry);
+      }
+      localStorage.setItem('arcadeverse_local_users_list', JSON.stringify(users));
+      localStorage.setItem('arcadeverse_local_user', JSON.stringify(user));
+    };
+
     const saveLocalUser = (user: any) => {
       localStorage.setItem('arcadeverse_local_user', JSON.stringify(user));
+      const users = getLocalUsers();
+      const existingIdx = users.findIndex(u => u.username === user.username);
+      if (existingIdx >= 0) {
+        users[existingIdx] = { ...users[existingIdx], ...user };
+        localStorage.setItem('arcadeverse_local_users_list', JSON.stringify(users));
+      }
     };
 
     if (endpoint === '/auth/me') {
@@ -106,8 +130,14 @@ class ApiService {
       try {
         body = JSON.parse(options.body as string);
       } catch {
-        body = { username: `Guest_${Math.floor(Math.random()*1000)}`, avatar: 'avatar_1' };
+        body = { username: `Guest_${Math.floor(Math.random()*1000)}`, password: '', avatar: 'avatar_1' };
       }
+      
+      const users = getLocalUsers();
+      if (users.some(u => u.username === body.username)) {
+        throw new Error('Username is already taken');
+      }
+
       const newUser = {
         id: `local-${body.username}`,
         username: body.username,
@@ -120,7 +150,7 @@ class ApiService {
         favorites: [],
         dailyClaimedAt: null
       };
-      saveLocalUser(newUser);
+      saveLocalUserInList(newUser, body.password);
       this.setToken(`local-${body.username}`);
       return newUser;
     }
@@ -130,14 +160,19 @@ class ApiService {
       try {
         body = JSON.parse(options.body as string);
       } catch {
-        body = { username: 'GuestPilot' };
+        body = { username: '', password: '' };
       }
-      const user = getLocalUser();
-      user.username = body.username;
-      user.id = `local-${body.username}`;
-      saveLocalUser(user);
+
+      const users = getLocalUsers();
+      const foundUser = users.find(u => u.username === body.username);
+      if (!foundUser || foundUser.password !== body.password) {
+        throw new Error('Wrong username or password');
+      }
+
+      localStorage.setItem('arcadeverse_local_user', JSON.stringify(foundUser));
       this.setToken(`local-${body.username}`);
-      return user;
+      const { password: _, ...userWithoutPassword } = foundUser;
+      return userWithoutPassword;
     }
 
     if (endpoint.startsWith('/users/')) {
