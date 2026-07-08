@@ -35,11 +35,18 @@ class ApiService {
       ...(options.headers || {}),
     };
 
+    let isNetworkError = false;
     try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
-        headers,
-      });
+      let response;
+      try {
+        response = await fetch(`${API_URL}${endpoint}`, {
+          ...options,
+          headers,
+        });
+      } catch (fetchErr: any) {
+        isNetworkError = true;
+        throw fetchErr;
+      }
 
       const data = await response.json();
       if (!response.ok) {
@@ -47,6 +54,12 @@ class ApiService {
       }
       return data;
     } catch (err: any) {
+      if (!isNetworkError) {
+        throw err;
+      }
+      if (endpoint === '/auth/login' || endpoint === '/auth/register') {
+        throw new Error(err.message || 'Authentication server is currently offline. Please try Guest Mode or check your network.');
+      }
       console.warn(`API Connection failed on ${endpoint}, falling back to localStorage:`, err.message);
       return this.handleFallback(endpoint, options);
     }
