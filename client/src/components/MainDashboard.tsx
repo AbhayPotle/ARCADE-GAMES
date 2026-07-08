@@ -171,6 +171,27 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
   }, [leaderboardGame]);
 
   const loadDashboardStats = async () => {
+    if (currentUser.isGuest) {
+      setProfileData({
+        profile: {
+          id: currentUser.id,
+          username: currentUser.username,
+          avatar: currentUser.avatar,
+          level: 1,
+          xp: 0,
+          coins: 0,
+          ranking: 'N/A',
+          achievements: [],
+          friendsList: [],
+          favoriteGames: [],
+          purchasedItems: [],
+          upgrades: {}
+        },
+        friends: [],
+        matchHistory: []
+      });
+      return;
+    }
     try {
       const res = await api.getUserProfile(currentUser.id);
       setProfileData(res);
@@ -252,18 +273,24 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
           <div>
             <h2 className="text-lg font-bold font-orbitron text-white truncate flex items-center space-x-2">
               <span>{currentUser.username}</span>
-              <span className="text-[10px] text-neon-cyan px-2 py-0.5 border border-neon-cyan/30 rounded bg-neon-cyan/5">
-                {profileData?.profile?.ranking || currentUser.ranking || 'Bronze IV'}
-              </span>
+              {currentUser.isGuest ? (
+                <span className="text-[10px] text-red-400 px-2 py-0.5 border border-red-500/30 rounded bg-red-500/5 uppercase font-orbitron">
+                  Guest Mode
+                </span>
+              ) : (
+                <span className="text-[10px] text-neon-cyan px-2 py-0.5 border border-neon-cyan/30 rounded bg-neon-cyan/5">
+                  {profileData?.profile?.ranking || currentUser.ranking || 'Bronze IV'}
+                </span>
+              )}
             </h2>
             <div className="flex items-center space-x-4 mt-1 text-xs text-gray-400">
               <div className="flex items-center space-x-1">
                 <span>XP Level:</span>
-                <span className="text-neon-cyan font-bold">{profileData?.profile?.level || currentUser.level}</span>
+                <span className="text-neon-cyan font-bold">{currentUser.isGuest ? 'N/A' : (profileData?.profile?.level || currentUser.level)}</span>
               </div>
               <div className="flex items-center space-x-1">
                 <span>Cyber-Coins:</span>
-                <span className="text-neon-yellow font-bold">🪙 {profileData?.profile?.coins || currentUser.coins}</span>
+                <span className="text-neon-yellow font-bold">🪙 {currentUser.isGuest ? 'N/A' : (profileData?.profile?.coins || currentUser.coins)}</span>
               </div>
             </div>
           </div>
@@ -272,14 +299,14 @@ export default function MainDashboard({ currentUser, onSelectGame, onLogout }: M
         {/* Level XP Bar */}
         <div className="flex-1 max-w-xs px-4">
           <div className="flex justify-between text-[10px] font-orbitron text-gray-400 mb-1">
-            <span>XP MATRIX PROGRESS</span>
-            <span>{(profileData?.profile?.xp || 0)} / {((profileData?.profile?.level || 1) * 100)}</span>
+            <span>{currentUser.isGuest ? 'GUEST NODE (NO PROGRESS)' : 'XP MATRIX PROGRESS'}</span>
+            <span>{currentUser.isGuest ? 'N/A' : `${(profileData?.profile?.xp || 0)} / ${((profileData?.profile?.level || 1) * 100)}`}</span>
           </div>
           <div className="w-full bg-black/50 border border-white/5 h-2 rounded-full overflow-hidden">
             <div
               className="bg-gradient-to-r from-neon-cyan to-neon-magenta h-full shadow-[0_0_8px_rgba(0,240,255,0.4)]"
               style={{
-                width: `${Math.min(100, ((profileData?.profile?.xp || 0) / ((profileData?.profile?.level || 1) * 100)) * 100)}%`
+                width: currentUser.isGuest ? '0%' : `${Math.min(100, ((profileData?.profile?.xp || 0) / ((profileData?.profile?.level || 1) * 100)) * 100)}%`
               }}
             />
           </div>

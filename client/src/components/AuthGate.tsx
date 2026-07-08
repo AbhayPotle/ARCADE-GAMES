@@ -110,25 +110,26 @@ export default function AuthGate({ onAuthSuccess }: AuthGateProps) {
     // Generate random guest credentials
     const guestNum = Math.floor(Math.random() * 9000) + 1000;
     const guestUser = `Guest_${guestNum}`;
-    const guestPass = `pass_${guestNum}`;
     const randomAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)].id;
 
-    try {
-      // Register guest
-      const user = await api.register(guestUser, guestPass, randomAvatar);
-      onAuthSuccess(user);
-    } catch (err: any) {
-      try {
-        // If somehow already exists, try logging in
-        const user = await api.login(guestUser, guestPass);
-        onAuthSuccess(user);
-      } catch (loginErr: any) {
-        setError('Failed to enter Guest Mode. Please try again.');
-        audioSynth.playError();
-      }
-    } finally {
-      setLoading(false);
-    }
+    // Create a local guest object
+    const guestUserObj = {
+      id: `guest_${guestNum}`,
+      username: guestUser,
+      avatar: randomAvatar,
+      level: 1,
+      xp: 0,
+      coins: 0,
+      ranking: 'N/A',
+      isGuest: true
+    };
+
+    // Store token as 'guest-token' so API calls will send this and fail authentication on the backend
+    api.setToken('guest-token');
+    
+    // Success callback
+    onAuthSuccess(guestUserObj);
+    setLoading(false);
   };
 
   return (

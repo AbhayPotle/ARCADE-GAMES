@@ -296,6 +296,9 @@ class ApiService {
   }
 
   public async submitScore(gameId: string, score: number) {
+    if (this.token === 'guest-token') {
+      throw new Error("Guest progress is not saved. Create an account to save scores!");
+    }
     return this.request(`/leaderboard/${gameId}`, {
       method: 'POST',
       body: JSON.stringify({ score }),
@@ -307,6 +310,9 @@ class ApiService {
   }
 
   public async joinTournament(tourId: string) {
+    if (this.token === 'guest-token') {
+      throw new Error("Guests cannot join tournaments. Create an account to participate!");
+    }
     return this.request(`/tournaments/${tourId}/join`, {
       method: 'POST',
     });
@@ -321,6 +327,9 @@ class ApiService {
   }
 
   public async addFavorite(gameId: string) {
+    if (this.token === 'guest-token') {
+      throw new Error("Guests cannot save favorites. Create an account to customize your lobby!");
+    }
     return this.request('/users/add-favorite', {
       method: 'POST',
       body: JSON.stringify({ gameId }),
@@ -328,6 +337,9 @@ class ApiService {
   }
 
   public async removeFavorite(gameId: string) {
+    if (this.token === 'guest-token') {
+      throw new Error("Guests cannot save favorites. Create an account to customize your lobby!");
+    }
     return this.request('/users/remove-favorite', {
       method: 'POST',
       body: JSON.stringify({ gameId }),
@@ -335,10 +347,16 @@ class ApiService {
   }
 
   public async claimDaily() {
+    if (this.token === 'guest-token') {
+      throw new Error("Guests cannot claim daily rewards. Create an account to save progress!");
+    }
     return this.request('/daily/claim', { method: 'POST' });
   }
 
   public async purchaseUpgrade(upgradeType: string, cost: number) {
+    if (this.token === 'guest-token') {
+      throw new Error("Guests cannot purchase upgrades. Create an account to save progress!");
+    }
     return this.request('/shop/upgrade', {
       method: 'POST',
       body: JSON.stringify({ upgradeType, cost })

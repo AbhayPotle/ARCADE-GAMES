@@ -71,6 +71,16 @@ export default function GameArea({ gameId, currentUser, onBackToDashboard }: Gam
       score
     });
     setGameState('ended');
+
+    if (currentUser.isGuest) {
+      setRewards({
+        gainedCoins: 0,
+        gainedXP: 0,
+        newAchievements: [],
+        isGuestNotice: true
+      });
+      return;
+    }
     
     try {
       const rewardDetails = await api.submitScore(gameId, score);
@@ -177,22 +187,29 @@ export default function GameArea({ gameId, currentUser, onBackToDashboard }: Gam
               </div>
             )}
 
-            {/* Rewards Card */}
             {rewards && (
               <div className="glass-panel border-neon-yellow/20 rounded-lg p-5 max-w-sm w-full space-y-3 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-[2px] bg-neon-yellow animate-pulse" />
-                <h4 className="text-xs font-bold font-orbitron text-neon-yellow uppercase">// SCORE SUBMISSION RECEIVED</h4>
+                <h4 className="text-xs font-bold font-orbitron text-neon-yellow uppercase">
+                  {rewards.isGuestNotice ? '// GUEST ACCESS NOTICE' : '// SCORE SUBMISSION RECEIVED'}
+                </h4>
                 
-                <div className="grid grid-cols-2 gap-4 text-xs font-mono pt-2">
-                  <div className="bg-black/40 border border-white/5 p-2 rounded">
-                    <p className="text-gray-500 text-[10px]">XP GAINED</p>
-                    <p className="text-neon-cyan font-bold text-base">+{rewards.gainedXP || 25}</p>
+                {rewards.isGuestNotice ? (
+                  <p className="text-[11px] text-gray-300 font-sans leading-relaxed">
+                    Play session completed. Since you are in **Guest Mode**, your progress, XP, and Cyber-Coins cannot be saved. Create an account to log scores and claim achievements!
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4 text-xs font-mono pt-2">
+                    <div className="bg-black/40 border border-white/5 p-2 rounded">
+                      <p className="text-gray-500 text-[10px]">XP GAINED</p>
+                      <p className="text-neon-cyan font-bold text-base">+{rewards.gainedXP || 25}</p>
+                    </div>
+                    <div className="bg-black/40 border border-white/5 p-2 rounded">
+                      <p className="text-gray-500 text-[10px]">COINS AWARDED</p>
+                      <p className="text-neon-yellow font-bold text-base">+{rewards.gainedCoins || 10}🪙</p>
+                    </div>
                   </div>
-                  <div className="bg-black/40 border border-white/5 p-2 rounded">
-                    <p className="text-gray-500 text-[10px]">COINS AWARDED</p>
-                    <p className="text-neon-yellow font-bold text-base">+{rewards.gainedCoins || 10}🪙</p>
-                  </div>
-                </div>
+                )}
               </div>
             )}
 
