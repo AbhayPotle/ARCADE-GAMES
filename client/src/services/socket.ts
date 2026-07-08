@@ -1,6 +1,8 @@
 import { io, Socket } from 'socket.io-client';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL 
+  ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api$/, '') 
+  : 'https://arcadeverse-backend.onrender.com';
 
 class SocketService {
   private socket: Socket | null = null;
