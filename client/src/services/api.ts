@@ -1,6 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL 
   ? (process.env.NEXT_PUBLIC_API_URL.endsWith('/api') ? process.env.NEXT_PUBLIC_API_URL : `${process.env.NEXT_PUBLIC_API_URL}/api`)
-  : 'https://arcadeverse-backend.onrender.com/api';
+  : 'https://arcade-games-server-abhay.onrender.com/api';
 
 class ApiService {
   private token: string | null = null;

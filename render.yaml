@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: arcadeverse-backend
+    name: arcade-games-server-abhay
     env: node
     plan: free
     rootDir: server
@@ -20,4 +20,4 @@ services:
     staticPublishPath: out
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        value: "https://arcadeverse-backend.onrender.com"
+        value: "https://arcade-games-server-abhay.onrender.com"
