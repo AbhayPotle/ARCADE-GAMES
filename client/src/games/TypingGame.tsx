@@ -812,7 +812,7 @@ export default function TypingWarriors({ matchData, currentUser, onComplete }: T
         {/* Keystroke stardust particles canvas overlay */}
         <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-10 w-full h-full" />
  
-        <p className="text-[#e0e5ff]/80 font-mono text-2xl tracking-wide z-20 text-center relative leading-relaxed">
+        <p className="text-[#e0e5ff]/80 font-mono text-base md:text-lg lg:text-xl tracking-wide z-20 text-center relative leading-snug max-w-full px-2">
           <span className="text-[#00ff66] font-bold bg-[#00ff66]/5 border-b-2 border-[#00ff66] glow-text-mint font-mono transition-all duration-100">
             {textToType.substring(0, currentIndex)}
           </span>
