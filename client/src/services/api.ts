@@ -31,6 +31,9 @@ class ApiService {
 
   private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
     const token = this.getToken();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
     const headers = {
       'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
@@ -44,10 +47,13 @@ class ApiService {
         response = await fetch(`${API_URL}${endpoint}`, {
           ...options,
           headers,
+          signal: controller.signal,
         });
       } catch (fetchErr: any) {
         isNetworkError = true;
         throw fetchErr;
+      } finally {
+        clearTimeout(timeoutId);
       }
 
       const data = await response.json();

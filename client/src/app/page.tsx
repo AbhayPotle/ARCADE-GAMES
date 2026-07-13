@@ -20,14 +20,12 @@ export default function Home() {
     const savedToken = api.getToken();
     if (savedToken) {
       api.getMe()
-        .then(async (me) => {
+        .then((me) => {
           setUser(me);
-          // Connect real-time socket (gracefully handle offline mode)
-          try {
-            await socketService.connect(savedToken);
-          } catch (e) {
+          // Connect real-time socket asynchronously (does not block dashboard load)
+          socketService.connect(savedToken).catch((e) => {
             console.warn('Real-time socket connect failed:', e);
-          }
+          });
         })
         .catch(() => {
           api.logout();
@@ -59,11 +57,9 @@ export default function Home() {
     setUser(authUser);
     const token = api.getToken();
     if (token) {
-      try {
-        await socketService.connect(token);
-      } catch (e) {
+      socketService.connect(token).catch((e) => {
         console.warn('Real-time socket connect failed:', e);
-      }
+      });
     }
   };
 
